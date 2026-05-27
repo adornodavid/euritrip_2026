@@ -1,0 +1,14 @@
+{
+  "name": "eurotrip-2026",
+  "version": "6.0.0",
+  "description": "Eurotrip 2026 · David + Paty · Propuesta HTML interactiva con chatbox IA",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vercel dev",
+    "deploy": "vercel --prod"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.32.0"
+  }
+}
