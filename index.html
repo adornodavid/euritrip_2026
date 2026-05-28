@@ -3123,6 +3123,27 @@ function buildPlaceLinks(name, city, type) {
   return `<div class="place-links">${links.join('')}</div>`;
 }
 
+// ============ CITY-HEROS clickeables → Google Images ============
+document.querySelectorAll('.city-hero').forEach(hero => {
+  const cityName = detectCity(hero);
+  const nameEl = hero.querySelector('.name h2');
+  const heroText = nameEl ? nameEl.textContent.trim() : cityName;
+  const query = encodeURIComponent(heroText + ' ' + cityName + ' landmarks');
+  const url = `https://www.google.com/search?tbm=isch&q=${query}`;
+
+  hero.style.cursor = 'pointer';
+  hero.title = `Ver fotos REALES de ${heroText} en Google Images`;
+  hero.addEventListener('click', (e) => {
+    if (e.target.tagName === 'A' || e.target.closest('a')) return;
+    window.open(url, '_blank');
+  });
+
+  const indicator = document.createElement('div');
+  indicator.innerHTML = '🔍 VER FOTOS REALES';
+  indicator.style.cssText = 'position:absolute;top:1.5rem;right:1.5rem;background:rgba(255,238,0,0.96);color:#0A0A0A;padding:0.5rem 0.85rem;border-radius:2px;font-family:Space Mono,monospace;font-size:0.68rem;font-weight:700;letter-spacing:0.14em;pointer-events:none;z-index:3;box-shadow:0 4px 12px rgba(0,0,0,0.3);';
+  hero.appendChild(indicator);
+});
+
 // ============ PHOTOS clickeables → Google Images del lugar real ============
 document.querySelectorAll('.photo-gallery .photo').forEach(photo => {
   const caption = photo.querySelector('.caption');
