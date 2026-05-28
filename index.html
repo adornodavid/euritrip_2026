@@ -1077,9 +1077,14 @@ ul.warning li::before { content: "⚠"; position: absolute; left: 0; color: var(
   <div class="container">
     <span class="section-tag">💰 Gastos vs Presupuesto · en vivo</span>
     <h2>Lo que <em>llevamos</em> <span class="display">gastado</span></h2>
-    <p style="font-family:var(--serif);font-style:italic;font-size:1.2rem;opacity:0.7;margin-bottom:2rem;max-width:760px;">
+    <p style="font-family:var(--serif);font-style:italic;font-size:1.2rem;opacity:0.7;margin-bottom:1.4rem;max-width:760px;">
       Cada vez que pagues algo del viaje (vuelos, hoteles, cena, museo), agrégalo aquí o dile a Claudia. El sistema convierte EUR → MXN automático y compara contra el presupuesto proyectado de $145–156K MXN.
     </p>
+
+    <div class="vivo-actions" style="margin-bottom:1.8rem;">
+      <button class="btn-add" onclick="openAddModal('expense')">+ Agregar gasto 💰</button>
+      <button class="btn-add secondary" onclick="document.getElementById('chat-fab')?.click()">💬 Dile a Claudia</button>
+    </div>
 
     <div id="gastos-loading" style="font-family:var(--mono);font-size:0.8rem;opacity:0.6;padding:1rem 0;">Cargando gastos...</div>
 
