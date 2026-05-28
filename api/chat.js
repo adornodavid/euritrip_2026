@@ -68,7 +68,14 @@ Cuando David o Paty mencionen información que valga la pena guardar, usa las he
 5. **set_day_plan**: cambios a un día específico
    - Ej: "El día 19 mejor cancelamos Versalles y vamos a Montmartre" → set_day_plan(date="2026-10-19", new_plan="...")
 
-6. **list_saved**: ver qué tienen guardado (notes, reservations, bookmarks, hotel_choices, day_overrides)
+6. **add_expense**: registrar un gasto REAL del viaje (ya pagado/gastado)
+   - Categorías: flights, hotels, trains, food, attractions, transport, shopping, misc
+   - Si dan monto en EUR, conviértelo a MXN con tasa ~22 MXN/EUR (a menos que digan otra)
+   - Ej: "Gasté €85 en cena en Bistrot Paul Bert" → add_expense(category="food", description="Cena Bistrot Paul Bert", amount_mxn=1870, amount_original=85, currency="EUR", fx_rate=22, city="Paris", payer="Joint")
+   - Ej: "Pagué $9,500 MXN del hotel de Paris" → add_expense(category="hotels", description="Hotel Emile Paris", amount_mxn=9500, currency="MXN", city="Paris")
+   - Defaults: payer="Joint" si no especifican quién, expense_date=hoy si no dan fecha
+
+7. **list_saved**: ver qué tienen guardado (notes, reservations, bookmarks, hotel_choices, day_overrides, expenses, budget)
 
 CÓMO RESPONDER:
 - Sé directa, español mexicano cordial.
@@ -160,6 +167,26 @@ const TOOLS = [
     }
   },
   {
+    name: 'add_expense',
+    description: 'Registrar un gasto REAL del viaje. Usa cuando David o Paty mencionen que YA gastaron, pagaron o compraron algo.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        category: { type: 'string', enum: ['flights', 'hotels', 'trains', 'food', 'attractions', 'transport', 'shopping', 'misc'], description: 'Categoría del gasto' },
+        description: { type: 'string', description: 'Qué fue el gasto (ej: "Cena Bistrot Paul Bert", "Hotel Emile Paris noche 1")' },
+        amount_mxn: { type: 'number', description: 'Monto en MXN. Si el gasto fue en EUR, convertir a MXN con la tasa fx_rate' },
+        amount_original: { type: 'number', description: 'Monto en moneda original (opcional, solo si fue en EUR/USD)' },
+        currency: { type: 'string', enum: ['MXN', 'EUR', 'USD'], description: 'Moneda original (default MXN)' },
+        fx_rate: { type: 'number', description: 'Tasa de cambio aplicada (ej: 22 si 1 EUR = 22 MXN)' },
+        payer: { type: 'string', enum: ['David', 'Paty', 'Joint'], description: 'Quién pagó (default Joint)' },
+        expense_date: { type: 'string', description: 'Fecha del gasto YYYY-MM-DD (opcional)' },
+        city: { type: 'string', description: 'Ciudad asociada al gasto (opcional)' },
+        notes: { type: 'string', description: 'Notas adicionales' }
+      },
+      required: ['category', 'description', 'amount_mxn']
+    }
+  },
+  {
     name: 'list_saved',
     description: 'Listar lo que ya está guardado en la base de datos',
     input_schema: {
@@ -201,6 +228,14 @@ async function executeTool(sb, name, input) {
       const { data, error } = await sb.from(tableName('day_overrides')).upsert(tagged, { onConflict: 'date' }).select().single();
       if (error) throw error;
       return { ok: true, message: `Plan del ${data.date} actualizado`, data };
+    }
+    if (name === 'add_expense') {
+      const row = { ...tagged };
+      if (!row.payer) row.payer = 'Joint';
+      if (!row.currency) row.currency = 'MXN';
+      const { data, error } = await sb.from(tableName('expenses')).insert(row).select().single();
+      if (error) throw error;
+      return { ok: true, message: `Gasto registrado: ${data.description} · $${Number(data.amount_mxn).toLocaleString('es-MX')} MXN`, data };
     }
     if (name === 'list_saved') {
       let query = sb.from(tableName(input.table)).select('*').order('created_at', { ascending: false }).limit(50);

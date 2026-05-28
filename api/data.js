@@ -13,8 +13,15 @@ export default async function handler(req, res) {
   try {
     const sb = getSupabase();
     const data = {};
+    // budget se ordena por sort_order ASC; expenses por expense_date DESC; demás por created_at DESC
+    const ORDER = {
+      budget: { col: 'sort_order', asc: true },
+      expenses: { col: 'expense_date', asc: false }
+    };
     for (const logical of TABLES) {
-      const { data: rows, error } = await sb.from(tableName(logical)).select('*').order('created_at', { ascending: false });
+      const ord = ORDER[logical] || { col: 'created_at', asc: false };
+      const { data: rows, error } = await sb.from(tableName(logical))
+        .select('*').order(ord.col, { ascending: ord.asc, nullsFirst: false });
       if (error) throw new Error(`${logical}: ${error.message}`);
       data[logical] = rows || [];
     }

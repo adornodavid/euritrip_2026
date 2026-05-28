@@ -864,6 +864,7 @@ ul.warning li::before { content: "⚠"; position: absolute; left: 0; color: var(
     <nav class="primary">
       <a href="#inicio">Inicio</a>
       <a href="#vivo">📌 Vivo</a>
+      <a href="#gastos">💰 Gastos</a>
       <a href="#alternativas">Otras Rutas</a>
       <a href="#antes">Antes</a>
       <a href="#paris">Paris</a>
@@ -910,6 +911,7 @@ ul.warning li::before { content: "⚠"; position: absolute; left: 0; color: var(
       <button class="btn-add secondary" onclick="openAddModal('note')">+ Nota</button>
       <button class="btn-add secondary" onclick="openAddModal('bookmark')">+ Link</button>
       <button class="btn-add secondary" onclick="openAddModal('day_override')">+ Cambio día</button>
+      <button class="btn-add secondary" onclick="openAddModal('expense')">+ Gasto 💰</button>
     </div>
 
     <div id="vivo-loading" style="font-family:var(--mono);font-size:0.8rem;opacity:0.6;padding:1rem 0;">Cargando estado del viaje...</div>
@@ -1068,6 +1070,132 @@ ul.warning li::before { content: "⚠"; position: absolute; left: 0; color: var(
   padding: 0.15rem 0.5rem; background: var(--bolt-black); color: var(--lightning);
   border-radius: 2px; letter-spacing: 0.12em; text-transform: uppercase; margin-right: 0.4rem;
 }
+</style>
+
+<!-- ============ GASTOS VS PRESUPUESTO (Supabase) ============ -->
+<section id="gastos" style="background:linear-gradient(180deg, var(--off-white) 0%, #FFFCE8 100%);">
+  <div class="container">
+    <span class="section-tag">💰 Gastos vs Presupuesto · en vivo</span>
+    <h2>Lo que <em>llevamos</em> <span class="display">gastado</span></h2>
+    <p style="font-family:var(--serif);font-style:italic;font-size:1.2rem;opacity:0.7;margin-bottom:2rem;max-width:760px;">
+      Cada vez que pagues algo del viaje (vuelos, hoteles, cena, museo), agrégalo aquí o dile a Claudia. El sistema convierte EUR → MXN automático y compara contra el presupuesto proyectado de $145–156K MXN.
+    </p>
+
+    <div id="gastos-loading" style="font-family:var(--mono);font-size:0.8rem;opacity:0.6;padding:1rem 0;">Cargando gastos...</div>
+
+    <div id="gastos-content" style="display:none;">
+      <!-- TOTAL CARD -->
+      <div id="gastos-total-card" class="gastos-total-card"></div>
+
+      <!-- CATEGORIES BREAKDOWN -->
+      <h3 style="margin-top:2.4rem;">Por categoría</h3>
+      <div id="gastos-categorias"></div>
+
+      <!-- BY PAYER -->
+      <h3 style="margin-top:2.4rem;">Por pagador</h3>
+      <div id="gastos-payer" class="gastos-payer-grid"></div>
+
+      <!-- RECENT EXPENSES -->
+      <h3 style="margin-top:2.4rem;">Últimos gastos</h3>
+      <div id="gastos-lista" class="vivo-list"></div>
+    </div>
+
+    <div id="gastos-error" style="display:none;font-family:var(--mono);font-size:0.85rem;color:var(--accent-red);padding:1rem;background:#FEE2E2;border-radius:4px;"></div>
+  </div>
+</section>
+
+<style>
+.gastos-total-card {
+  background: var(--bolt-black); color: var(--off-white);
+  padding: 1.8rem 2rem; border-radius: 6px;
+  display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1.5rem;
+}
+@media (max-width: 720px) {
+  .gastos-total-card { grid-template-columns: 1fr; gap: 1rem; }
+}
+.gastos-total-card .gt-cell { border-left: 2px solid rgba(255,255,255,0.12); padding-left: 1.2rem; }
+.gastos-total-card .gt-cell:first-child { border-left: none; padding-left: 0; }
+.gastos-total-card .gt-label {
+  font-family: var(--mono); font-size: 0.7rem; letter-spacing: 0.16em;
+  text-transform: uppercase; opacity: 0.55; margin-bottom: 0.4rem;
+}
+.gastos-total-card .gt-value {
+  font-family: var(--mono); font-size: 1.8rem; font-weight: 700;
+  color: var(--lightning); letter-spacing: -0.01em;
+}
+.gastos-total-card .gt-sub {
+  font-family: var(--sans); font-size: 0.78rem; opacity: 0.7; margin-top: 0.3rem;
+}
+.gastos-total-card .gt-bar {
+  margin-top: 1rem; height: 8px; background: rgba(255,255,255,0.08);
+  border-radius: 4px; overflow: hidden; position: relative;
+  grid-column: 1 / -1;
+}
+.gastos-total-card .gt-bar-fill {
+  height: 100%; background: var(--lightning);
+  border-radius: 4px; transition: width 0.6s ease;
+}
+.gastos-total-card .gt-bar-fill.over { background: var(--accent-red); }
+.gastos-total-card .gt-bar-marker {
+  position: absolute; top: -4px; bottom: -4px; width: 2px;
+  background: rgba(255,255,255,0.4);
+}
+
+.gasto-cat-row {
+  background: white; border: 1px solid rgba(10,10,10,0.08);
+  border-radius: 4px; padding: 0.9rem 1.1rem;
+  margin-bottom: 0.6rem;
+  display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) auto;
+  gap: 1rem; align-items: center;
+}
+@media (max-width: 640px) {
+  .gasto-cat-row { grid-template-columns: 1fr; gap: 0.4rem; }
+}
+.gasto-cat-row .gc-name { font-weight: 700; font-size: 0.95rem; }
+.gasto-cat-row .gc-name .gc-emoji { margin-right: 0.4rem; }
+.gasto-cat-row .gc-bar-wrap {
+  position: relative; height: 10px; background: var(--off-white-2);
+  border-radius: 4px; overflow: hidden;
+}
+.gasto-cat-row .gc-bar-fill {
+  height: 100%; background: var(--accent-green);
+  border-radius: 4px; transition: width 0.6s ease;
+}
+.gasto-cat-row .gc-bar-fill.warning { background: var(--lightning); }
+.gasto-cat-row .gc-bar-fill.over { background: var(--accent-red); }
+.gasto-cat-row .gc-amount {
+  font-family: var(--mono); font-size: 0.88rem; font-weight: 700;
+  text-align: right; white-space: nowrap;
+}
+.gasto-cat-row .gc-amount .gc-budget { opacity: 0.5; font-weight: 400; font-size: 0.78rem; }
+
+.gastos-payer-grid {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.8rem;
+}
+@media (max-width: 640px) { .gastos-payer-grid { grid-template-columns: 1fr; } }
+.gastos-payer-card {
+  background: white; border: 1px solid rgba(10,10,10,0.08);
+  border-radius: 6px; padding: 1.1rem 1.3rem;
+}
+.gastos-payer-card .gp-name {
+  font-family: var(--mono); font-size: 0.72rem; letter-spacing: 0.16em;
+  text-transform: uppercase; opacity: 0.6;
+}
+.gastos-payer-card .gp-amount {
+  font-family: var(--mono); font-size: 1.4rem; font-weight: 700;
+  margin-top: 0.3rem; color: var(--bolt-black);
+}
+.gastos-payer-card .gp-count {
+  font-size: 0.78rem; opacity: 0.55; margin-top: 0.2rem;
+}
+
+.vivo-item .vi-expense-amount {
+  font-family: var(--mono); font-weight: 700; color: var(--accent-red);
+  font-size: 0.92rem; float: right;
+}
+.vivo-item.expense-david { border-left: 3px solid #3b82f6; }
+.vivo-item.expense-paty { border-left: 3px solid #ec4899; }
+.vivo-item.expense-joint { border-left: 3px solid var(--lightning); }
 </style>
 
 <!-- ============ RESUMEN RUTA + MAPA ============ -->
@@ -1490,7 +1618,7 @@ ul.warning li::before { content: "⚠"; position: absolute; left: 0; color: var(
 <section id="paris">
   <div class="container">
     <span class="section-tag">Stop 01 · Días 1-4</span>
-    <div class="city-hero" style="background:linear-gradient(135deg,#1e3a8a 0%,#312e81 50%,#1e1b4b 100%);">
+    <div class="city-hero" style="background:url('images/paris/eiffel.jpg') center/cover, linear-gradient(135deg,#1e3a8a 0%,#312e81 50%,#1e1b4b 100%);">
       <span class="badge">16-20 OCT · 4 NOCHES</span>
       <div class="name">
         <h2>París</h2>
@@ -1800,7 +1928,7 @@ ul.warning li::before { content: "⚠"; position: absolute; left: 0; color: var(
 <section id="bordeaux">
   <div class="container">
     <span class="section-tag">Stop 02 · Días 5-6</span>
-    <div class="city-hero" style="background:linear-gradient(135deg,#7c2d12 0%,#9a3412 50%,#431407 100%);">
+    <div class="city-hero" style="background:url('images/bordeaux/place-bourse.jpg') center/cover, linear-gradient(135deg,#7c2d12 0%,#9a3412 50%,#431407 100%);">
       <span class="badge">20-22 OCT · 2 NOCHES</span>
       <div class="name">
         <h2>Bordeaux</h2>
@@ -2067,7 +2195,7 @@ ul.warning li::before { content: "⚠"; position: absolute; left: 0; color: var(
 <section id="toulouse">
   <div class="container">
     <span class="section-tag">Stop 03 · Día 7</span>
-    <div class="city-hero" style="background:linear-gradient(135deg,#be185d 0%,#9d174d 50%,#500724 100%);">
+    <div class="city-hero" style="background:url('images/toulouse/capitole.jpg') center/cover, linear-gradient(135deg,#be185d 0%,#9d174d 50%,#500724 100%);">
       <span class="badge">22-23 OCT · 1 NOCHE</span>
       <div class="name">
         <h2>Toulouse · La Ville Rose</h2>
@@ -2281,7 +2409,7 @@ ul.warning li::before { content: "⚠"; position: absolute; left: 0; color: var(
 <section id="barcelona">
   <div class="container">
     <span class="section-tag">Stop 04 · Días 8-10</span>
-    <div class="city-hero" style="background:linear-gradient(135deg,#a16207 0%,#854d0e 50%,#422006 100%);">
+    <div class="city-hero" style="background:url('images/madrid/sagrada-familia.jpg') center/cover, linear-gradient(135deg,#a16207 0%,#854d0e 50%,#422006 100%);">
       <span class="badge">23-26 OCT · 3 NOCHES</span>
       <div class="name">
         <h2>Barcelona</h2>
@@ -2630,7 +2758,7 @@ ul.warning li::before { content: "⚠"; position: absolute; left: 0; color: var(
 <section id="madrid">
   <div class="container">
     <span class="section-tag">Stop 06 · Días 12-15</span>
-    <div class="city-hero" style="background:linear-gradient(135deg,#991b1b 0%,#7f1d1d 50%,#450a0a 100%);">
+    <div class="city-hero" style="background:url('images/barcelona/palacio-real.jpg') center/cover, linear-gradient(135deg,#991b1b 0%,#7f1d1d 50%,#450a0a 100%);">
       <span class="badge">27-31 OCT · 4 NOCHES</span>
       <div class="name">
         <h2>Madrid</h2>
@@ -3368,8 +3496,169 @@ async function loadVivoData() {
 // Cargar al inicio + auto-refresh cada 30s
 document.addEventListener('DOMContentLoaded', () => {
   loadVivoData();
-  setInterval(loadVivoData, 30000);
+  loadGastosData();
+  setInterval(() => { loadVivoData(); loadGastosData(); }, 30000);
 });
+
+// ============ GASTOS · render desde mismo /api/data ============
+const PAYER_EMOJI = { David: '🧔', Paty: '👩', Joint: '👫' };
+
+async function loadGastosData() {
+  const loadingEl = document.getElementById('gastos-loading');
+  const contentEl = document.getElementById('gastos-content');
+  const errorEl = document.getElementById('gastos-error');
+  if (!loadingEl || !contentEl) return;
+  try {
+    const res = await fetch('/api/data', { cache: 'no-store' });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const json = await res.json();
+    if (!json.ok) throw new Error(json.error || 'Error en el servidor');
+    const expenses = json.data.expenses || [];
+    const budget = json.data.budget || [];
+    renderGastos(expenses, budget);
+    loadingEl.style.display = 'none';
+    contentEl.style.display = 'block';
+    if (errorEl) errorEl.style.display = 'none';
+  } catch (err) {
+    loadingEl.style.display = 'none';
+    if (errorEl) {
+      errorEl.style.display = 'block';
+      errorEl.innerHTML = `⚠️ ${escapeHtml(err.message)}`;
+    }
+  }
+}
+
+function formatMxn(n) {
+  if (n == null || isNaN(n)) return '$0';
+  return '$' + Number(n).toLocaleString('es-MX', { maximumFractionDigits: 0 });
+}
+
+function renderGastos(expenses, budget) {
+  const totalGastado = expenses.reduce((s, e) => s + Number(e.amount_mxn || 0), 0);
+  const totalMin = budget.reduce((s, b) => s + Number(b.projected_min_mxn || 0), 0);
+  const totalMax = budget.reduce((s, b) => s + Number(b.projected_max_mxn || 0), 0);
+  const pctMin = totalMin > 0 ? Math.min(100, (totalGastado / totalMin) * 100) : 0;
+  const pctMax = totalMax > 0 ? (totalGastado / totalMax) * 100 : 0;
+  const over = totalGastado > totalMax;
+
+  // TOTAL CARD
+  const totalCard = document.getElementById('gastos-total-card');
+  if (totalCard) {
+    totalCard.innerHTML = `
+      <div class="gt-cell">
+        <div class="gt-label">Gastado hasta hoy</div>
+        <div class="gt-value">${formatMxn(totalGastado)}</div>
+        <div class="gt-sub">${expenses.length} ${expenses.length === 1 ? 'gasto' : 'gastos'} registrado${expenses.length === 1 ? '' : 's'}</div>
+      </div>
+      <div class="gt-cell">
+        <div class="gt-label">Proyectado (rango)</div>
+        <div class="gt-value">${formatMxn(totalMin)} – ${formatMxn(totalMax)}</div>
+        <div class="gt-sub">económico → premium</div>
+      </div>
+      <div class="gt-cell">
+        <div class="gt-label">Restante (al máx)</div>
+        <div class="gt-value" style="color:${over ? '#FF4D4F' : 'var(--lightning)'}">${formatMxn(Math.max(0, totalMax - totalGastado))}</div>
+        <div class="gt-sub">${over ? '⚠️ rebasaste el premium' : pctMax > 80 ? '⚡ cerca del límite' : 'dentro del presupuesto'}</div>
+      </div>
+      <div class="gt-bar" title="Progreso vs presupuesto premium">
+        <div class="gt-bar-fill ${over ? 'over' : ''}" style="width:${Math.min(100, pctMax)}%"></div>
+        ${totalMax > totalMin ? `<div class="gt-bar-marker" style="left:${(totalMin / totalMax) * 100}%" title="presupuesto económico"></div>` : ''}
+      </div>
+    `;
+  }
+
+  // CATEGORIES BREAKDOWN
+  const catContainer = document.getElementById('gastos-categorias');
+  if (catContainer) {
+    if (!budget.length) {
+      catContainer.innerHTML = `<div class="vivo-empty">Aún no hay presupuesto configurado. Corre la migration SQL primero.</div>`;
+    } else {
+      const byCat = {};
+      expenses.forEach(e => { byCat[e.category] = (byCat[e.category] || 0) + Number(e.amount_mxn || 0); });
+      catContainer.innerHTML = budget.map(b => {
+        const gastado = byCat[b.category] || 0;
+        const max = Number(b.projected_max_mxn || 0);
+        const min = Number(b.projected_min_mxn || 0);
+        const pct = max > 0 ? Math.min(100, (gastado / max) * 100) : 0;
+        let barClass = '';
+        if (gastado > max) barClass = 'over';
+        else if (gastado > min) barClass = 'warning';
+        return `
+          <div class="gasto-cat-row">
+            <div class="gc-name"><span class="gc-emoji">${b.emoji || '·'}</span>${escapeHtml(b.label)}</div>
+            <div class="gc-bar-wrap"><div class="gc-bar-fill ${barClass}" style="width:${pct}%"></div></div>
+            <div class="gc-amount">
+              ${formatMxn(gastado)}
+              <span class="gc-budget">/ ${formatMxn(max)}</span>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+  }
+
+  // PAYER BREAKDOWN
+  const payerEl = document.getElementById('gastos-payer');
+  if (payerEl) {
+    const byPayer = { David: { sum: 0, n: 0 }, Paty: { sum: 0, n: 0 }, Joint: { sum: 0, n: 0 } };
+    expenses.forEach(e => {
+      const p = byPayer[e.payer] ? e.payer : 'Joint';
+      byPayer[p].sum += Number(e.amount_mxn || 0);
+      byPayer[p].n += 1;
+    });
+    payerEl.innerHTML = ['David', 'Paty', 'Joint'].map(p => `
+      <div class="gastos-payer-card">
+        <div class="gp-name">${PAYER_EMOJI[p]} ${p === 'Joint' ? 'Conjunto' : p}</div>
+        <div class="gp-amount">${formatMxn(byPayer[p].sum)}</div>
+        <div class="gp-count">${byPayer[p].n} ${byPayer[p].n === 1 ? 'gasto' : 'gastos'}</div>
+      </div>
+    `).join('');
+  }
+
+  // RECENT EXPENSES LIST (top 12)
+  const listEl = document.getElementById('gastos-lista');
+  if (listEl) {
+    if (!expenses.length) {
+      listEl.innerHTML = `<div class="vivo-empty">Aún no hay gastos registrados. Usa "+ Gasto 💰" arriba o díselo a Claudia.</div>`;
+    } else {
+      const catLabel = {};
+      budget.forEach(b => { catLabel[b.category] = `${b.emoji || ''} ${b.label}`; });
+      listEl.innerHTML = expenses.slice(0, 12).map(e => {
+        const payerCls = `expense-${(e.payer || 'joint').toLowerCase()}`;
+        const dateStr = e.expense_date ? new Date(e.expense_date + 'T00:00').toLocaleDateString('es-MX', { day: '2-digit', month: 'short' }) : '';
+        const origStr = (e.currency && e.currency !== 'MXN' && e.amount_original) ? ` · ${e.currency} ${Number(e.amount_original).toLocaleString('es-MX')}` : '';
+        return `
+          <div class="vivo-item ${payerCls}">
+            <span class="vi-expense-amount">${formatMxn(e.amount_mxn)}</span>
+            <div class="vi-title">${escapeHtml(e.description)}</div>
+            <div class="vi-meta">${catLabel[e.category] || e.category} · ${PAYER_EMOJI[e.payer] || ''} ${escapeHtml(e.payer || 'Joint')}${dateStr ? ' · ' + dateStr : ''}${e.city ? ' · ' + escapeHtml(e.city) : ''}${origStr}</div>
+            ${e.notes ? `<div class="vi-desc">${escapeHtml(e.notes)}</div>` : ''}
+          </div>
+        `;
+      }).join('');
+    }
+  }
+}
+
+// Helper para modal expense: actualiza monto MXN al cambiar moneda/original/tasa
+function updateExpenseFx() {
+  const currency = document.getElementById('exp-currency')?.value || 'MXN';
+  const original = parseFloat(document.getElementById('exp-amount-original')?.value || '0');
+  const fxInput = document.getElementById('exp-fx');
+  const fxRate = parseFloat(fxInput?.value || '0');
+  // Sugerir tasa default si está vacía y cambian moneda
+  if (fxInput && !fxRate && currency !== 'MXN') {
+    fxInput.placeholder = currency === 'EUR' ? '22.00' : '18.00';
+  }
+  if (currency === 'MXN') {
+    // Si la moneda es MXN, el "original" ES el MXN
+    if (original) document.getElementById('exp-amount-mxn').value = original.toFixed(2);
+    return;
+  }
+  if (original && fxRate) {
+    document.getElementById('exp-amount-mxn').value = (original * fxRate).toFixed(2);
+  }
+}
 
 // ============ MODAL: Agregar manual ============
 let currentPaneType = null;
@@ -3378,7 +3667,8 @@ const PANE_TITLES = {
   hotel_choice: 'Hotel elegido para una ciudad',
   note: 'Nota o pendiente',
   bookmark: 'Link guardado',
-  day_override: 'Cambio al itinerario'
+  day_override: 'Cambio al itinerario',
+  expense: 'Gasto del viaje 💰'
 };
 
 function openAddModal(type) {
@@ -3463,6 +3753,36 @@ async function submitAdd() {
       notes: val('do-notes'), created_by: 'manual'
     };
     if (!row.date || !row.new_plan) { showFormStatus('Falta fecha o plan', 'error'); return; }
+  } else if (currentPaneType === 'expense') {
+    table = 'expenses';
+    const currency = val('exp-currency') || 'MXN';
+    const fxRate = parseFloat(val('exp-fx') || '0') || null;
+    const amountOriginal = parseFloat(val('exp-amount-original') || '0') || null;
+    let amountMxn = parseFloat(val('exp-amount-mxn') || '0') || null;
+    // Si dieron monto original + tasa y NO dieron MXN, calculamos
+    if (!amountMxn && amountOriginal && fxRate && currency !== 'MXN') {
+      amountMxn = +(amountOriginal * fxRate).toFixed(2);
+    }
+    // Si la moneda es MXN y dieron solo amount_original, ese ES el MXN
+    if (!amountMxn && amountOriginal && currency === 'MXN') {
+      amountMxn = amountOriginal;
+    }
+    row = {
+      category: val('exp-category'),
+      description: val('exp-description'),
+      amount_mxn: amountMxn,
+      amount_original: amountOriginal,
+      currency: currency,
+      fx_rate: fxRate,
+      payer: val('exp-payer') || 'Joint',
+      expense_date: val('exp-date'),
+      city: val('exp-city'),
+      notes: val('exp-notes'),
+      created_by: 'manual'
+    };
+    if (!row.category) { showFormStatus('Falta categoría', 'error'); return; }
+    if (!row.description) { showFormStatus('Falta descripción', 'error'); return; }
+    if (!row.amount_mxn || row.amount_mxn <= 0) { showFormStatus('Falta el monto en MXN (o monto original + tasa)', 'error'); return; }
   }
 
   // Eliminar nulls del row
@@ -3492,6 +3812,7 @@ async function submitAdd() {
       setTimeout(() => {
         closeAddModal();
         loadVivoData();
+        if (typeof loadGastosData === 'function') loadGastosData();
         // Limpiar campos
         document.querySelectorAll('.modal-pane.active input, .modal-pane.active textarea').forEach(el => el.value = '');
       }, 700);
@@ -4346,6 +4667,85 @@ document.addEventListener('DOMContentLoaded', () => {
         <div class="form-group">
           <label>Notas</label>
           <textarea id="bm-notes" rows="2"></textarea>
+        </div>
+      </div>
+    </div>
+
+    <!-- EXPENSE -->
+    <div class="modal-pane" data-pane="expense">
+      <div class="modal-body">
+        <div class="form-row">
+          <div class="form-group">
+            <label>Categoría *</label>
+            <select id="exp-category">
+              <option value="">— elige —</option>
+              <option value="flights">✈️ Vuelos transatlánticos</option>
+              <option value="hotels">🏨 Hoteles</option>
+              <option value="trains">🚄 Trenes</option>
+              <option value="food">🍽️ Comidas</option>
+              <option value="attractions">🎟️ Museos / atracciones</option>
+              <option value="transport">🚇 Transporte local</option>
+              <option value="shopping">🛍️ Compras / regalos</option>
+              <option value="misc">💰 Varios</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Ciudad</label>
+            <select id="exp-city">
+              <option value="">— ninguna —</option>
+              <option>Paris</option><option>Bordeaux</option><option>Toulouse</option>
+              <option>Barcelona</option><option>Valencia</option><option>Madrid</option>
+              <option>Toledo</option><option>Versalles</option><option>Saint-Émilion</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Descripción *</label>
+          <input id="exp-description" type="text" placeholder="Ej: Cena Bistrot Paul Bert · Hotel Emile noche 1 · Tren BCN-Valencia"/>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Moneda</label>
+            <select id="exp-currency" onchange="updateExpenseFx()">
+              <option value="MXN">MXN ($)</option>
+              <option value="EUR">EUR (€)</option>
+              <option value="USD">USD ($)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Monto en moneda original</label>
+            <input id="exp-amount-original" type="number" step="0.01" placeholder="85.00" oninput="updateExpenseFx()"/>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Tasa de cambio (a MXN)</label>
+            <input id="exp-fx" type="number" step="0.01" placeholder="22.00" oninput="updateExpenseFx()"/>
+            <div class="hint">Default sugerido: 22 MXN/EUR · 18 MXN/USD</div>
+          </div>
+          <div class="form-group">
+            <label>Monto MXN *</label>
+            <input id="exp-amount-mxn" type="number" step="0.01" placeholder="1870.00"/>
+            <div class="hint">Se calcula auto si das original + tasa</div>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Pagador</label>
+            <select id="exp-payer">
+              <option value="Joint">👫 Conjunto / tarjeta compartida</option>
+              <option value="David">🧔 David</option>
+              <option value="Paty">👩 Paty</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Fecha</label>
+            <input id="exp-date" type="date" min="2025-01-01" max="2026-12-31"/>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Notas</label>
+          <textarea id="exp-notes" rows="2" placeholder="Detalles extra, link al recibo, etc."></textarea>
         </div>
       </div>
     </div>
