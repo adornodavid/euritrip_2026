@@ -3,7 +3,7 @@
 // Claudia puede llamar tools para guardar notas, bookmarks, reservaciones, hoteles, etc.
 
 import Anthropic from '@anthropic-ai/sdk';
-import { getSupabase, TABLES } from './_supabase.js';
+import { getSupabase, TABLES, tableName } from './_supabase.js';
 
 const SYSTEM_PROMPT = `Eres "Claudia", la asistente de viaje de David y Paty para su Eurotrip 2026 (15-31 octubre 2026).
 
@@ -178,32 +178,32 @@ async function executeTool(sb, name, input) {
   const tagged = { ...input, created_by: 'claudia' };
   try {
     if (name === 'add_note') {
-      const { data, error } = await sb.from('notes').insert(tagged).select().single();
+      const { data, error } = await sb.from(tableName('notes')).insert(tagged).select().single();
       if (error) throw error;
       return { ok: true, message: `Nota guardada (id ${data.id.slice(0, 8)})`, data };
     }
     if (name === 'add_bookmark') {
-      const { data, error } = await sb.from('bookmarks').insert(tagged).select().single();
+      const { data, error } = await sb.from(tableName('bookmarks')).insert(tagged).select().single();
       if (error) throw error;
       return { ok: true, message: `Bookmark "${data.title}" guardado`, data };
     }
     if (name === 'add_reservation') {
-      const { data, error } = await sb.from('reservations').insert(tagged).select().single();
+      const { data, error } = await sb.from(tableName('reservations')).insert(tagged).select().single();
       if (error) throw error;
       return { ok: true, message: `Reservación "${data.title}" guardada`, data };
     }
     if (name === 'set_hotel_choice') {
-      const { data, error } = await sb.from('hotel_choices').upsert(tagged, { onConflict: 'city' }).select().single();
+      const { data, error } = await sb.from(tableName('hotel_choices')).upsert(tagged, { onConflict: 'city' }).select().single();
       if (error) throw error;
       return { ok: true, message: `Hotel para ${data.city}: ${data.hotel_name}`, data };
     }
     if (name === 'set_day_plan') {
-      const { data, error } = await sb.from('day_overrides').upsert(tagged, { onConflict: 'date' }).select().single();
+      const { data, error } = await sb.from(tableName('day_overrides')).upsert(tagged, { onConflict: 'date' }).select().single();
       if (error) throw error;
       return { ok: true, message: `Plan del ${data.date} actualizado`, data };
     }
     if (name === 'list_saved') {
-      let query = sb.from(input.table).select('*').order('created_at', { ascending: false }).limit(50);
+      let query = sb.from(tableName(input.table)).select('*').order('created_at', { ascending: false }).limit(50);
       if (input.city) query = query.eq('city', input.city);
       const { data, error } = await query;
       if (error) throw error;

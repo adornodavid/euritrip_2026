@@ -10,13 +10,13 @@ export function getSupabase() {
     throw new Error('Faltan env vars SUPABASE_URL o SUPABASE_SERVICE_ROLE_KEY en Vercel');
   }
   return createClient(url, serviceKey, {
-    db: { schema: 'eurotrip_2026' },
     auth: { autoRefreshToken: false, persistSession: false }
   });
 }
 
-// Tablas válidas
+// Tablas válidas (logical name → real table name en public)
 export const TABLES = ['notes', 'bookmarks', 'reservations', 'hotel_choices', 'day_overrides'];
+export const tableName = (logical) => `eurotrip_${logical}`;
 
 // Verifica write key (clave compartida David/Paty)
 export function checkWriteKey(req) {
