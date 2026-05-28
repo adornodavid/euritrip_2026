@@ -57,18 +57,24 @@ Todo por tren de alta velocidad, sin vuelos cortos, máximo 3h15min por tramo.
 7. Output Directory: dejar vacío
 8. **NO hagas deploy todavía** — primero env vars (siguiente paso)
 
-### 2. Configurar API Key de Anthropic
+### 2. Configurar Environment Variables
 
-**ANTES de hacer deploy:**
+**ANTES de hacer deploy** (o agrega después y haz Redeploy):
 
-1. En la pantalla de configuración del proyecto en Vercel
-2. Sección **Environment Variables**
-3. Agrega:
-   - **Key**: `ANTHROPIC_API_KEY`
-   - **Value**: tu nueva API key (`sk-ant-api03-...`)
-   - **Environments**: marca Production + Preview + Development
-4. Click **Add**
-5. Ahora sí, click **Deploy**
+| Name | Value | Para qué |
+|---|---|---|
+| `ANTHROPIC_API_KEY` | `sk-ant-api03-...` | Chatbot Claudia |
+| `SUPABASE_URL` | `https://qflyzgbsufvwrfkrrpfo.supabase.co` | DB Stream Match |
+| `SUPABASE_SERVICE_ROLE_KEY` | `eyJ...` (copia de Supabase dashboard) | Acceso server-side a DB |
+| `EUROTRIP_WRITE_KEY` | invéntala (ej: `paty-david-2026`) | Auth para form manual |
+
+**Para conseguir SUPABASE_SERVICE_ROLE_KEY:**
+1. Ve a https://supabase.com/dashboard/project/qflyzgbsufvwrfkrrpfo/settings/api
+2. Sección "Project API Keys"
+3. Copia el valor de **`service_role`** (no anon, el service_role)
+4. Pégalo en Vercel como `SUPABASE_SERVICE_ROLE_KEY`
+
+⚠️ **NUNCA** subas `service_role` a Git. Solo va en Vercel env vars.
 
 ### 3. Verificar que funciona
 

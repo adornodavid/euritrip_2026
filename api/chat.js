@@ -1,13 +1,14 @@
-// Vercel Serverless Function · chat con Claude API
-// API key vive en Vercel env var ANTHROPIC_API_KEY (NUNCA en el cliente)
-// David debe configurar la env var en Vercel dashboard antes del deploy
+// Vercel Serverless Function · chat con Claude API + Tool Use para escribir en Supabase
+// API key vive en Vercel env var ANTHROPIC_API_KEY
+// Claudia puede llamar tools para guardar notas, bookmarks, reservaciones, hoteles, etc.
 
 import Anthropic from '@anthropic-ai/sdk';
+import { getSupabase, TABLES } from './_supabase.js';
 
 const SYSTEM_PROMPT = `Eres "Claudia", la asistente de viaje de David y Paty para su Eurotrip 2026 (15-31 octubre 2026).
 
 TU ROL:
-Responder preguntas sobre el itinerario, hoteles, restaurantes, museos, transporte, presupuesto, gastronomía y logística del viaje. Conoces toda la info de la página y puedes profundizar con conocimiento general sobre Europa.
+Responder preguntas sobre el viaje Y ayudarles a guardar información mientras chatean: notas, links útiles, reservaciones (vuelos, hoteles, restaurantes, tours), hoteles elegidos por ciudad, cambios a días específicos.
 
 DATOS CLAVE DEL VIAJE:
 
@@ -23,88 +24,206 @@ DATOS CLAVE DEL VIAJE:
 - AM44 Aeroméxico 787-9 · MTY 15 oct 3:25 PM → CDG 16 oct 9:40 AM · Asientos 29A+29B
 - AM35 Aeroméxico 787-9 · MAD 31 oct 10:30 AM → MTY 3:45 PM · Asientos 34H+34J
 
-**Day trips:**
-- Versalles (desde Paris, día 4 / lun 19 oct, RER C €4.55, entrada €27 pp)
-- Saint-Émilion viñedo UNESCO (desde Bordeaux, día 6 / mié 21 oct, tour ~€340 pareja full-day)
-- Toledo UNESCO (desde Madrid, día 13 / mié 28 oct, Renfe AVANT 33 min, €22-30 pareja round-trip)
-- Día 29 oct (jue) FLEX: Chinchón €40-60 / Vinos Madrid DO €100-180 / Ribera del Duero €560 / Aranjuez / Alcalá / Madrid completo
+**Day trips:** Versalles (Paris), Saint-Émilion (Bordeaux), Toledo (Madrid), día 29 FLEX (Chinchón/Vinos Madrid DO/Ribera del Duero/Aranjuez/Madrid completo)
 
-**Hoteles recomendados por zona:**
+**Hoteles recomendados:**
 PARIS: Marais (Hôtel Emile €210, Jeanne d'Arc €180, La Chambre €220) · Saint-Germain (St Paul Rive Gauche €195, Villa Madame €215, Villa Saint-Germain €230)
 BORDEAUX: Chartrons (Hotel Indigo €175, Villas Foch €200, Une Chambre Chez Dupont €165) · Triangle d'Or (Hôtel de Sèze €210, Grand Hôtel Français €155, La Maison du Lierre €145)
-TOULOUSE: Mama Shelter €125, Le Grand Balcon €160, La Cour des Consuls €220, Albert 1er €115
-BARCELONA: Eixample (Ohla Eixample €195, Alma €220, Room Mate Anna €175) · Born/Gótico (Yurbban Trafalgar €185, H10 Madison €160, Wittmore €215)
-VALENCIA: Caro Hotel €180, Sorolla Centro €140, Vincci Lys €130
-MADRID: Letras/Sol (Catalonia Las Cortes €180, NH Tepa €210, Room Mate Alba €155) · Salamanca/Chamberí (Orfila €220, Único €215, Tótem €185)
+TOULOUSE: Mama Shelter €125, Le Grand Balcon €160, Cour des Consuls €220, Albert 1er €115
+BARCELONA: Eixample (Ohla €195, Alma €220, Room Mate Anna €175) · Born (Yurbban €185, H10 Madison €160, Wittmore €215)
+VALENCIA: Caro €180, Sorolla Centro €140, Vincci Lys €130
+MADRID: Letras/Sol (Catalonia €180, NH Tepa €210, Room Mate Alba €155) · Salamanca/Chamberí (Orfila €220, Único €215, Tótem €185)
 
-**Presupuesto pareja en Europa:**
-- Económico (con Chinchón día 29): ~$145,020 MXN (~€6,745)
-- Premium (con Ribera del Duero): ~$155,985 MXN (~€7,255)
+**Presupuesto pareja Europa:** Económico $145K MXN · Premium $156K MXN
 
-**Tren tramos clave:**
-- Paris → Bordeaux: TGV inOui 2h05min · €140-180 pareja anticipado
-- Bordeaux → Toulouse: TGV 2h · €100-140
-- Toulouse → Barcelona: Renfe-SNCF 3h15 · €90-130
-- Barcelona → Valencia: AVE 3h · €80-120
-- Valencia → Madrid: AVE 1h45 · €60-90
-- Madrid → Toledo AVANT: 33 min · €22-30 rt
+**Trenes anticipados pareja:** Paris-Bordeaux €140-180 · Bordeaux-Toulouse €100-140 · Toulouse-BCN €90-130 · BCN-Valencia €80-120 · Valencia-Madrid €60-90
 
-**Restaurantes top por ciudad (resumen):**
-- Paris: Le Bistrot Paul Bert, Bouillon Chartier, Bouillon Pigalle, Café de Flore, L'As du Fallafel
-- Bordeaux: La Tupina, Le Petit Commerce, Garopapilles (1 Michelin), Le 7 (Cité du Vin)
-- Toulouse: Le Colombier (cassoulet desde 1874), Émile, Au Pois Gourmand
-- Barcelona: Cal Pep, Cervecería Catalana, Bar del Pla, Quimet & Quimet, 7 Portes (paella)
-- Valencia: Casa Carmela (paella), La Pepica, Casa Roberto, Horchatería Santa Catalina
-- Madrid: Casa Botín (1725, más antiguo del mundo), Casa Lucio (huevos rotos), La Bola (cocido), Lhardy
+**Restaurantes top:**
+- Paris: Bistrot Paul Bert, Bouillon Chartier, Café de Flore, L'As du Fallafel
+- Bordeaux: La Tupina, Le Petit Commerce, Garopapilles, Le 7 (Cité du Vin)
+- Toulouse: Le Colombier (cassoulet), Émile
+- Barcelona: Cal Pep, Cervecería Catalana, Quimet & Quimet, 7 Portes
+- Valencia: Casa Carmela, La Pepica, Horchatería Santa Catalina
+- Madrid: Casa Botín, Casa Lucio, La Bola, Lhardy
 
-**Logística importante:**
-- 3 maletas total entre los 2 (1 documentada + 2 mano)
-- Mexicanos: NO requieren visa Schengen 90 días · ETIAS posible Q4 2026 (€7)
-- eSIM recomendada: Holafly Unlimited 15 días ~€80 pareja
-- Tax-free Europa: Francia 20% IVA / España 21% IVA · reembolso ~10-15.7% · validar DIVA en Barajas día de salida
-- Aeropuerto-centro: CDG taxi fijo €56-65, Barajas T1 Express Bus €10 pareja
-- Pasaporte vigente mínimo 6 meses post-regreso (hasta abril 2027)
+**Logística:** 3 maletas total, NO visa Schengen, ETIAS posible Q4 2026, eSIM Holafly €80, tax-free DIVA Barajas, pasaporte 6 meses vigencia.
 
-**Filosofía del viaje:**
-- Slow mornings con café tranquilo
-- Sin tours acelerados ni Sena bus
-- Gastronomía: bistros locales > tourist traps
-- 2 viñedos (Saint-Émilion + opcional día 29)
-- 3 días-relax distribuidos: 17 oct (Paris), 25 oct (BCN), 30 oct (Madrid)
-- Tren-only (sin vuelos cortos)
-- Máximo 3h15min por tramo
+CÓMO USAR TUS HERRAMIENTAS (tools):
+
+Cuando David o Paty mencionen información que valga la pena guardar, usa las herramientas SIN preguntar (a menos que falte info crítica):
+
+1. **add_note**: cualquier idea, pendiente, observación, recordatorio
+   - Ej: "Recuerda llevar adaptador EU" → add_note(text="...", category="todo")
+   - Ej: "Idea: ir a Sitges si sobra tiempo" → add_note(text="...", category="idea", city="Barcelona")
+
+2. **add_bookmark**: cualquier link/URL útil
+   - Ej: "Mira este restaurante https://x.com/..." → add_bookmark(title, url, city)
+
+3. **add_reservation**: vuelos, hoteles, restaurantes, tours YA CONFIRMADOS con código/link
+   - Ej: "Reservé Bistrot Paul Bert para el 17 oct 8pm via TheFork" → add_reservation(type="restaurant", title, date, time, link, city)
+
+4. **set_hotel_choice**: cuando deciden EL hotel por ciudad
+   - Ej: "Nos quedamos con Hotel Emile para Paris" → set_hotel_choice(city="Paris", hotel_name="...", confirmed=true)
+
+5. **set_day_plan**: cambios a un día específico
+   - Ej: "El día 19 mejor cancelamos Versalles y vamos a Montmartre" → set_day_plan(date="2026-10-19", new_plan="...")
+
+6. **list_saved**: ver qué tienen guardado (notes, reservations, bookmarks, hotel_choices, day_overrides)
 
 CÓMO RESPONDER:
-1. Sé directa y concreta. Si la respuesta está en los datos arriba, úsala.
-2. Si te preguntan precios, da pesos mexicanos Y euros.
-3. Si te piden links, sugiere búsquedas concretas (Google Maps, Booking, Tripadvisor, TheFork, GetYourGuide).
-4. Para day trips opcionales o restaurantes, recomienda con tu opinión basada en el perfil (gastronómico, slow, no turistic-trap).
-5. Si no sabes algo específico (ej: clima día exacto, disponibilidad real-time), dilo y sugiere dónde checarlo.
-6. Responde en español mexicano natural, tono cordial y profesional pero cercano.
-7. Markdown OK: usa **negritas**, listas, links [texto](url).
+- Sé directa, español mexicano cordial.
+- Después de guardar algo, CONFIRMA brevemente: "✅ Anoté que..."
+- Si te preguntan precios, da MXN Y euros.
+- Markdown OK: **negritas**, listas, [links](url).
+- Si te piden ver lo guardado, usa list_saved y formatea bonito.
+- No inventes datos. Si no estás segura, dilo.
 
-NO inventes precios o fechas que no estén en los datos. Si te pregunta algo fuera de scope (ej: política, otros viajes), redirige amable al tema del eurotrip.`;
+NO uses tool calls para preguntas simples informacionales. SOLO úsalas cuando el usuario mencione algo concreto que valga la pena persistir.`;
+
+// Tool definitions para Claudia
+const TOOLS = [
+  {
+    name: 'add_note',
+    description: 'Guardar una nota, idea, pendiente, recordatorio o advertencia',
+    input_schema: {
+      type: 'object',
+      properties: {
+        text: { type: 'string', description: 'Texto de la nota' },
+        category: { type: 'string', enum: ['general', 'todo', 'idea', 'reminder', 'warning'], description: 'Categoría' },
+        city: { type: 'string', description: 'Ciudad asociada (opcional): Paris, Bordeaux, Toulouse, Barcelona, Valencia, Madrid' }
+      },
+      required: ['text']
+    }
+  },
+  {
+    name: 'add_bookmark',
+    description: 'Guardar un link/URL útil para revisar después',
+    input_schema: {
+      type: 'object',
+      properties: {
+        title: { type: 'string', description: 'Título descriptivo del link' },
+        url: { type: 'string', description: 'URL completa' },
+        city: { type: 'string', description: 'Ciudad asociada (opcional)' },
+        category: { type: 'string', description: 'Categoría: restaurant, hotel, tour, museum, transport, info, etc.' },
+        notes: { type: 'string', description: 'Notas adicionales' }
+      },
+      required: ['title', 'url']
+    }
+  },
+  {
+    name: 'add_reservation',
+    description: 'Guardar una reservación CONFIRMADA: vuelo, hotel, restaurante, tour, tren, etc.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        type: { type: 'string', enum: ['flight', 'hotel', 'restaurant', 'tour', 'train', 'transfer', 'activity', 'other'] },
+        title: { type: 'string', description: 'Ej: "Hotel Emile · check-in 16 oct"' },
+        date: { type: 'string', description: 'Fecha YYYY-MM-DD' },
+        time: { type: 'string', description: 'Hora (ej: 20:00, 8 PM, etc.)' },
+        confirmation_code: { type: 'string' },
+        link: { type: 'string', description: 'Link al booking/voucher' },
+        city: { type: 'string' },
+        cost: { type: 'string', description: 'Costo total (ej: "€340 pareja", "$1,200 MXN")' },
+        notes: { type: 'string' }
+      },
+      required: ['type', 'title']
+    }
+  },
+  {
+    name: 'set_hotel_choice',
+    description: 'Marcar EL hotel elegido para una ciudad (upsert por ciudad)',
+    input_schema: {
+      type: 'object',
+      properties: {
+        city: { type: 'string', description: 'Paris, Bordeaux, Toulouse, Barcelona, Valencia, o Madrid' },
+        hotel_name: { type: 'string' },
+        zone: { type: 'string', description: 'Zona/barrio del hotel' },
+        price_per_night: { type: 'string', description: 'Ej: "€180"' },
+        confirmed: { type: 'boolean', description: 'true si ya está reservado' },
+        booking_url: { type: 'string' },
+        notes: { type: 'string' }
+      },
+      required: ['city', 'hotel_name']
+    }
+  },
+  {
+    name: 'set_day_plan',
+    description: 'Cambiar el plan de un día específico (upsert por fecha)',
+    input_schema: {
+      type: 'object',
+      properties: {
+        date: { type: 'string', description: 'Fecha YYYY-MM-DD (ej: 2026-10-19)' },
+        new_plan: { type: 'string', description: 'Nuevo plan del día' },
+        notes: { type: 'string' }
+      },
+      required: ['date', 'new_plan']
+    }
+  },
+  {
+    name: 'list_saved',
+    description: 'Listar lo que ya está guardado en la base de datos',
+    input_schema: {
+      type: 'object',
+      properties: {
+        table: { type: 'string', enum: TABLES, description: 'Qué tabla listar' },
+        city: { type: 'string', description: 'Filtrar por ciudad (opcional)' }
+      },
+      required: ['table']
+    }
+  }
+];
+
+// Ejecutor de tools
+async function executeTool(sb, name, input) {
+  const tagged = { ...input, created_by: 'claudia' };
+  try {
+    if (name === 'add_note') {
+      const { data, error } = await sb.from('notes').insert(tagged).select().single();
+      if (error) throw error;
+      return { ok: true, message: `Nota guardada (id ${data.id.slice(0, 8)})`, data };
+    }
+    if (name === 'add_bookmark') {
+      const { data, error } = await sb.from('bookmarks').insert(tagged).select().single();
+      if (error) throw error;
+      return { ok: true, message: `Bookmark "${data.title}" guardado`, data };
+    }
+    if (name === 'add_reservation') {
+      const { data, error } = await sb.from('reservations').insert(tagged).select().single();
+      if (error) throw error;
+      return { ok: true, message: `Reservación "${data.title}" guardada`, data };
+    }
+    if (name === 'set_hotel_choice') {
+      const { data, error } = await sb.from('hotel_choices').upsert(tagged, { onConflict: 'city' }).select().single();
+      if (error) throw error;
+      return { ok: true, message: `Hotel para ${data.city}: ${data.hotel_name}`, data };
+    }
+    if (name === 'set_day_plan') {
+      const { data, error } = await sb.from('day_overrides').upsert(tagged, { onConflict: 'date' }).select().single();
+      if (error) throw error;
+      return { ok: true, message: `Plan del ${data.date} actualizado`, data };
+    }
+    if (name === 'list_saved') {
+      let query = sb.from(input.table).select('*').order('created_at', { ascending: false }).limit(50);
+      if (input.city) query = query.eq('city', input.city);
+      const { data, error } = await query;
+      if (error) throw error;
+      return { ok: true, count: data.length, rows: data };
+    }
+    return { ok: false, error: `Tool desconocida: ${name}` };
+  } catch (err) {
+    return { ok: false, error: err.message };
+  }
+}
 
 export default async function handler(req, res) {
-  // CORS — Vercel mismo origen no necesita pero por si acaso
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-
-  if (req.method === 'OPTIONS') {
-    return res.status(200).end();
-  }
-
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
-  }
+  if (req.method === 'OPTIONS') return res.status(200).end();
+  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
   const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) {
-    return res.status(500).json({
-      error: 'API key no configurada. Define ANTHROPIC_API_KEY en Vercel env vars.'
-    });
-  }
+  if (!apiKey) return res.status(500).json({ error: 'ANTHROPIC_API_KEY no configurada' });
 
   try {
     const { messages } = req.body || {};
@@ -112,30 +231,51 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'messages[] requerido' });
     }
 
-    // Limitar historial a últimos 20 turnos para controlar tokens
-    const trimmedMessages = messages.slice(-20);
-
     const client = new Anthropic({ apiKey });
-    const response = await client.messages.create({
-      model: 'claude-haiku-4-5-20251001',
-      max_tokens: 1024,
-      system: SYSTEM_PROMPT,
-      messages: trimmedMessages
-    });
+    let sb = null;
+    try { sb = getSupabase(); } catch (e) { /* Supabase opcional, sin él Claudia chatea pero no escribe */ }
 
-    const reply = response.content
-      .filter(block => block.type === 'text')
-      .map(block => block.text)
-      .join('\n');
+    let conversation = messages.slice(-20);
+    let safety = 0;
+    const toolEvents = [];
 
-    return res.status(200).json({
-      reply,
-      usage: response.usage
-    });
+    while (safety < 5) {
+      safety++;
+      const response = await client.messages.create({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 1024,
+        system: SYSTEM_PROMPT,
+        tools: sb ? TOOLS : undefined,
+        messages: conversation
+      });
+
+      // Si terminó normal sin tools, devuelve respuesta
+      if (response.stop_reason !== 'tool_use') {
+        const reply = response.content.filter(b => b.type === 'text').map(b => b.text).join('\n');
+        return res.status(200).json({ reply, usage: response.usage, tool_events: toolEvents });
+      }
+
+      // Ejecutar tools
+      const toolResults = [];
+      for (const block of response.content) {
+        if (block.type !== 'tool_use') continue;
+        const result = await executeTool(sb, block.name, block.input);
+        toolEvents.push({ tool: block.name, input: block.input, result });
+        toolResults.push({
+          type: 'tool_result',
+          tool_use_id: block.id,
+          content: JSON.stringify(result)
+        });
+      }
+
+      // Agregar response del asistente + tool results al historial y continuar
+      conversation.push({ role: 'assistant', content: response.content });
+      conversation.push({ role: 'user', content: toolResults });
+    }
+
+    return res.status(500).json({ error: 'Demasiados ciclos de tool use' });
   } catch (error) {
-    console.error('Chat API error:', error);
-    return res.status(500).json({
-      error: error?.message || 'Error interno del servidor'
-    });
+    console.error('chat.js error:', error);
+    return res.status(500).json({ error: error?.message || 'Error interno' });
   }
 }

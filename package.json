@@ -1,7 +1,7 @@
 {
   "name": "eurotrip-2026",
-  "version": "6.0.0",
-  "description": "Eurotrip 2026 · David + Paty · Propuesta HTML interactiva con chatbox IA",
+  "version": "8.0.0",
+  "description": "Eurotrip 2026 · David + Paty · Propuesta HTML interactiva con chatbox IA + Supabase",
   "private": true,
   "type": "module",
   "scripts": {
@@ -9,6 +9,7 @@
     "deploy": "vercel --prod"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.32.0"
+    "@anthropic-ai/sdk": "^0.32.0",
+    "@supabase/supabase-js": "^2.45.0"
   }
 }

@@ -1,0 +1,55 @@
+// POST /api/write → escribir en cualquier tabla del eurotrip
+// Requiere header X-Write-Key con la clave EUROTRIP_WRITE_KEY (David + Paty la conocen)
+import { getSupabase, TABLES, checkWriteKey } from './_supabase.js';
+
+export default async function handler(req, res) {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, X-Write-Key');
+  if (req.method === 'OPTIONS') return res.status(200).end();
+  if (req.method !== 'POST') return res.status(405).json({ error: 'Solo POST' });
+
+  const auth = checkWriteKey(req);
+  if (!auth.ok) return res.status(401).json({ error: auth.error });
+
+  const { action, table, row, id, patch } = req.body || {};
+  if (!table || !TABLES.includes(table)) {
+    return res.status(400).json({ error: `Tabla inválida. Usa: ${TABLES.join(', ')}` });
+  }
+
+  try {
+    const sb = getSupabase();
+    let result;
+
+    if (action === 'insert') {
+      if (!row) return res.status(400).json({ error: 'row requerido' });
+      const { data, error } = await sb.from(table).insert(row).select().single();
+      if (error) throw error;
+      result = { inserted: data };
+    } else if (action === 'update') {
+      if (!id || !patch) return res.status(400).json({ error: 'id + patch requeridos' });
+      const { data, error } = await sb.from(table).update(patch).eq('id', id).select().single();
+      if (error) throw error;
+      result = { updated: data };
+    } else if (action === 'upsert') {
+      // Para hotel_choices, day_overrides (tienen UNIQUE constraint en city/date)
+      if (!row) return res.status(400).json({ error: 'row requerido' });
+      const conflictCol = table === 'hotel_choices' ? 'city' : table === 'day_overrides' ? 'date' : 'id';
+      const { data, error } = await sb.from(table).upsert(row, { onConflict: conflictCol }).select().single();
+      if (error) throw error;
+      result = { upserted: data };
+    } else if (action === 'delete') {
+      if (!id) return res.status(400).json({ error: 'id requerido' });
+      const { error } = await sb.from(table).delete().eq('id', id);
+      if (error) throw error;
+      result = { deleted: id };
+    } else {
+      return res.status(400).json({ error: 'action debe ser: insert | update | upsert | delete' });
+    }
+
+    return res.status(200).json({ ok: true, ...result });
+  } catch (err) {
+    console.error('write.js error:', err);
+    return res.status(500).json({ ok: false, error: err.message });
+  }
+}

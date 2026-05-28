@@ -863,6 +863,7 @@ ul.warning li::before { content: "⚠"; position: absolute; left: 0; color: var(
     </div>
     <nav class="primary">
       <a href="#inicio">Inicio</a>
+      <a href="#vivo">📌 Vivo</a>
       <a href="#alternativas">Otras Rutas</a>
       <a href="#antes">Antes</a>
       <a href="#paris">Paris</a>
@@ -893,6 +894,91 @@ ul.warning li::before { content: "⚠"; position: absolute; left: 0; color: var(
     </div>
   </div>
 </section>
+
+<!-- ============ ESTADO VIVO DEL VIAJE (Supabase) ============ -->
+<section id="vivo" style="background:linear-gradient(180deg, #FFFEF5 0%, var(--off-white) 100%);">
+  <div class="container">
+    <span class="section-tag">📌 Estado vivo · sincroniza en tiempo real</span>
+    <h2><em>Lo que ya</em> <span class="display">decidimos</span></h2>
+    <p style="font-family:var(--serif);font-style:italic;font-size:1.2rem;opacity:0.7;margin-bottom:2rem;max-width:700px;">
+      Todo lo que tú o Paty platican con Claudia se guarda aquí. Reservaciones, hoteles elegidos, links a revisar, notas. Paty lo ve actualizado en su computadora también.
+    </p>
+
+    <div id="vivo-loading" style="font-family:var(--mono);font-size:0.8rem;opacity:0.6;padding:1rem 0;">Cargando estado del viaje...</div>
+
+    <div id="vivo-content" style="display:none;">
+      <div class="grid grid-2" style="margin-bottom:2rem;">
+        <!-- HOTEL CHOICES -->
+        <div>
+          <h3>🏨 Hoteles confirmados</h3>
+          <div id="vivo-hotels" class="vivo-list"></div>
+        </div>
+        <!-- RESERVATIONS -->
+        <div>
+          <h3>🎟️ Reservaciones</h3>
+          <div id="vivo-reservations" class="vivo-list"></div>
+        </div>
+      </div>
+
+      <div class="grid grid-2">
+        <!-- NOTES -->
+        <div>
+          <h3>📝 Notas y pendientes</h3>
+          <div id="vivo-notes" class="vivo-list"></div>
+        </div>
+        <!-- BOOKMARKS -->
+        <div>
+          <h3>🔗 Links guardados</h3>
+          <div id="vivo-bookmarks" class="vivo-list"></div>
+        </div>
+      </div>
+
+      <!-- DAY OVERRIDES -->
+      <div style="margin-top:2rem;">
+        <h3>📅 Cambios al itinerario</h3>
+        <div id="vivo-overrides" class="vivo-list"></div>
+      </div>
+
+      <div style="margin-top:2.5rem;padding:1.2rem 1.4rem;background:var(--bolt-black);color:var(--off-white);border-radius:4px;">
+        <strong style="font-family:var(--serif);font-style:italic;font-size:1.1rem;">💬 Cómo agregar cosas:</strong>
+        <p style="margin:0.5rem 0 0;font-size:0.9rem;opacity:0.85;">
+          Click en el botón flotante <strong>💬</strong> abajo derecha y dile a Claudia cosas como:
+        </p>
+        <ul style="margin:0.6rem 0 0 1.2rem;font-size:0.9rem;opacity:0.85;font-family:var(--mono);">
+          <li>"Anota que reservé Hotel Emile en Paris confirmado a €210"</li>
+          <li>"Guarda este link: https://thefork.com/restaurant/le-bistrot-paul-bert"</li>
+          <li>"Mi vuelo Toledo AVANT 28 oct 9am ya pagado, código X42"</li>
+          <li>"Acuérdate de llevar adaptador EU"</li>
+        </ul>
+        <p style="margin:0.8rem 0 0;font-size:0.78rem;opacity:0.55;font-family:var(--mono);">Auto-refresh cada 30 segundos · Paty ve los cambios en su navegador también.</p>
+      </div>
+    </div>
+
+    <div id="vivo-error" style="display:none;font-family:var(--mono);font-size:0.85rem;color:var(--accent-red);padding:1rem;background:#FEE2E2;border-radius:4px;"></div>
+  </div>
+</section>
+
+<style>
+.vivo-list { display: flex; flex-direction: column; gap: 0.5rem; }
+.vivo-empty { font-family: var(--mono); font-size: 0.8rem; opacity: 0.5; padding: 0.8rem 1rem; background: var(--off-white-2); border-radius: 4px; }
+.vivo-item {
+  background: white; border: 1px solid rgba(10,10,10,0.08); border-radius: 4px;
+  padding: 0.85rem 1rem; transition: border-color 0.2s;
+}
+.vivo-item:hover { border-color: var(--bolt-black); }
+.vivo-item .vi-title { font-weight: 700; font-size: 0.95rem; }
+.vivo-item .vi-meta { font-family: var(--mono); font-size: 0.72rem; opacity: 0.6; margin-top: 0.25rem; letter-spacing: 0.04em; }
+.vivo-item .vi-desc { font-size: 0.88rem; margin-top: 0.4rem; opacity: 0.85; }
+.vivo-item .vi-link { font-size: 0.82rem; color: var(--accent-red); word-break: break-all; }
+.vivo-item.confirmed { border-left: 3px solid var(--accent-green); }
+.vivo-item.warning { border-left: 3px solid var(--accent-red); background: #FEF2F2; }
+.vivo-item.todo { border-left: 3px solid var(--lightning); }
+.vivo-badge {
+  display: inline-block; font-family: var(--mono); font-size: 0.65rem;
+  padding: 0.15rem 0.5rem; background: var(--bolt-black); color: var(--lightning);
+  border-radius: 2px; letter-spacing: 0.12em; text-transform: uppercase; margin-right: 0.4rem;
+}
+</style>
 
 <!-- ============ RESUMEN RUTA + MAPA ============ -->
 <section id="ruta">
@@ -3096,6 +3182,105 @@ ul.warning li::before { content: "⚠"; position: absolute; left: 0; color: var(
 
 <!-- ============ JAVASCRIPT ============ -->
 <script>
+// ============ ESTADO VIVO — carga datos de /api/data ============
+const VIVO_CITY_EMOJI = { Paris: '🇫🇷', Bordeaux: '🍷', Toulouse: '🥘', Barcelona: '🏛️', Valencia: '🥘', Madrid: '🇪🇸' };
+const VIVO_TYPE_EMOJI = { flight: '✈️', hotel: '🏨', restaurant: '🍽️', tour: '🗺️', train: '🚄', transfer: '🚕', activity: '🎟️', other: '📌' };
+function escapeHtml(s) {
+  if (!s) return '';
+  return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+function formatDate(s) {
+  if (!s) return '';
+  try { return new Date(s + 'T12:00:00').toLocaleDateString('es-MX', { weekday: 'short', day: 'numeric', month: 'short' }); }
+  catch { return s; }
+}
+function renderEmpty(msg) { return `<div class="vivo-empty">${msg}</div>`; }
+
+function renderHotels(rows) {
+  if (!rows.length) return renderEmpty('Aún no hay hoteles confirmados. Dile a Claudia: "Confirmo el Hotel Emile en Paris"');
+  return rows.map(r => `
+    <div class="vivo-item ${r.confirmed ? 'confirmed' : ''}">
+      <div class="vi-title">${VIVO_CITY_EMOJI[r.city] || '📍'} ${escapeHtml(r.city)} · ${escapeHtml(r.hotel_name)}</div>
+      <div class="vi-meta">${r.confirmed ? '✅ CONFIRMADO' : '🤔 TENTATIVO'} · ${escapeHtml(r.zone || '')} · ${escapeHtml(r.price_per_night || '')}</div>
+      ${r.booking_url ? `<div class="vi-desc"><a href="${escapeHtml(r.booking_url)}" target="_blank" class="vi-link">🔗 Ver booking</a></div>` : ''}
+      ${r.notes ? `<div class="vi-desc">${escapeHtml(r.notes)}</div>` : ''}
+    </div>
+  `).join('');
+}
+function renderReservations(rows) {
+  if (!rows.length) return renderEmpty('Sin reservaciones aún. Dile a Claudia cuando confirmes restos, tours, trenes, etc.');
+  return rows.map(r => `
+    <div class="vivo-item confirmed">
+      <div class="vi-title">${VIVO_TYPE_EMOJI[r.type] || '📌'} ${escapeHtml(r.title)}</div>
+      <div class="vi-meta">${escapeHtml(r.type.toUpperCase())}${r.date ? ' · ' + formatDate(r.date) : ''}${r.time ? ' · ' + escapeHtml(r.time) : ''}${r.city ? ' · ' + escapeHtml(r.city) : ''}${r.cost ? ' · ' + escapeHtml(r.cost) : ''}</div>
+      ${r.confirmation_code ? `<div class="vi-desc"><span class="vivo-badge">Código</span><code>${escapeHtml(r.confirmation_code)}</code></div>` : ''}
+      ${r.link ? `<div class="vi-desc"><a href="${escapeHtml(r.link)}" target="_blank" class="vi-link">🔗 ${escapeHtml(r.link.substring(0, 60))}${r.link.length > 60 ? '...' : ''}</a></div>` : ''}
+      ${r.notes ? `<div class="vi-desc">${escapeHtml(r.notes)}</div>` : ''}
+    </div>
+  `).join('');
+}
+function renderNotes(rows) {
+  if (!rows.length) return renderEmpty('Sin notas aún. Dile a Claudia cualquier idea o pendiente.');
+  return rows.map(r => `
+    <div class="vivo-item ${r.category === 'warning' ? 'warning' : r.category === 'todo' ? 'todo' : ''} ${r.resolved ? 'confirmed' : ''}">
+      <div class="vi-title">${r.resolved ? '✅' : ''} ${escapeHtml(r.text)}</div>
+      <div class="vi-meta">${escapeHtml(r.category.toUpperCase())}${r.city ? ' · ' + escapeHtml(r.city) : ''} · ${formatDate(r.created_at?.substring(0,10))}</div>
+    </div>
+  `).join('');
+}
+function renderBookmarks(rows) {
+  if (!rows.length) return renderEmpty('Sin links guardados aún. Pásale URLs a Claudia para guardarlas.');
+  return rows.map(r => `
+    <div class="vivo-item">
+      <div class="vi-title">🔗 ${escapeHtml(r.title)}</div>
+      <div class="vi-meta">${r.category ? escapeHtml(r.category.toUpperCase()) + ' · ' : ''}${r.city ? escapeHtml(r.city) + ' · ' : ''}${formatDate(r.created_at?.substring(0,10))}</div>
+      <div class="vi-desc"><a href="${escapeHtml(r.url)}" target="_blank" class="vi-link">${escapeHtml(r.url.substring(0, 70))}${r.url.length > 70 ? '...' : ''}</a></div>
+      ${r.notes ? `<div class="vi-desc">${escapeHtml(r.notes)}</div>` : ''}
+    </div>
+  `).join('');
+}
+function renderOverrides(rows) {
+  if (!rows.length) return renderEmpty('Sin cambios al itinerario aún.');
+  return rows.map(r => `
+    <div class="vivo-item">
+      <div class="vi-title">📅 ${formatDate(r.date)}</div>
+      <div class="vi-desc">${escapeHtml(r.new_plan)}</div>
+      ${r.notes ? `<div class="vi-meta">${escapeHtml(r.notes)}</div>` : ''}
+    </div>
+  `).join('');
+}
+
+async function loadVivoData() {
+  const loadingEl = document.getElementById('vivo-loading');
+  const contentEl = document.getElementById('vivo-content');
+  const errorEl = document.getElementById('vivo-error');
+  if (!contentEl) return;
+  try {
+    const res = await fetch('/api/data');
+    const json = await res.json();
+    if (!json.ok) throw new Error(json.error || 'Error cargando datos');
+    const { hotel_choices = [], reservations = [], notes = [], bookmarks = [], day_overrides = [] } = json.data;
+    document.getElementById('vivo-hotels').innerHTML = renderHotels(hotel_choices);
+    document.getElementById('vivo-reservations').innerHTML = renderReservations(reservations);
+    document.getElementById('vivo-notes').innerHTML = renderNotes(notes);
+    document.getElementById('vivo-bookmarks').innerHTML = renderBookmarks(bookmarks);
+    document.getElementById('vivo-overrides').innerHTML = renderOverrides(day_overrides);
+    loadingEl.style.display = 'none';
+    contentEl.style.display = 'block';
+    errorEl.style.display = 'none';
+  } catch (err) {
+    loadingEl.style.display = 'none';
+    errorEl.style.display = 'block';
+    errorEl.innerHTML = `⚠️ ${escapeHtml(err.message)}<br/><span style="font-size:0.75rem;opacity:0.7;">Verifica que SUPABASE_URL y SUPABASE_SERVICE_ROLE_KEY estén configuradas en Vercel.</span>`;
+  }
+}
+
+// Cargar al inicio + auto-refresh cada 30s
+document.addEventListener('DOMContentLoaded', () => {
+  loadVivoData();
+  setInterval(loadVivoData, 30000);
+});
+
 // ============ Helpers ============
 function detectCity(el) {
   const section = el.closest('section');
@@ -3708,6 +3893,10 @@ async function sendChat(userText) {
     } else {
       addMessage('assistant', data.reply);
       chatHistory.push({ role: 'assistant', content: data.reply });
+      // Si Claudia ejecutó tools, recargar sección vivo
+      if (data.tool_events && data.tool_events.length > 0) {
+        if (typeof loadVivoData === 'function') loadVivoData();
+      }
     }
   } catch (err) {
     removeTyping();
