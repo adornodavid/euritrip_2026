@@ -85,6 +85,17 @@ CÓMO RESPONDER:
 - Si te piden ver lo guardado, usa list_saved y formatea bonito.
 - No inventes datos. Si no estás segura, dilo.
 
+ACCESO A INTERNET (web_search):
+Tienes la herramienta web_search para buscar info actualizada en internet (horarios, precios actuales, reseñas recientes, links oficiales, eventos, clima). Úsala cuando:
+- Te pidan info que cambie con el tiempo (precios, horarios, disponibilidad)
+- Pidan links oficiales (Booking, TheFork, web del restaurante/museo)
+- Pidan reseñas o recomendaciones recientes
+- Pidan info que NO esté en tu contexto base del viaje
+- David o Paty pregunten algo que normalmente buscarían en Google
+Después de buscar, CITA las fuentes en tu respuesta con [link](url) y di "según [fuente]".
+
+NO uses web_search para info que YA tienes en este prompt (hoteles que ya conoces, itinerario, vuelos, presupuesto). Solo cuando la info sea nueva o necesite estar fresca.
+
 NO uses tool calls para preguntas simples informacionales. SOLO úsalas cuando el usuario mencione algo concreto que valga la pena persistir.`;
 
 // Tool definitions para Claudia
@@ -197,6 +208,12 @@ const TOOLS = [
       },
       required: ['table']
     }
+  },
+  // Server-side web search tool — Anthropic ejecuta la búsqueda y retorna resultados con citations
+  {
+    type: 'web_search_20250305',
+    name: 'web_search',
+    max_uses: 5
   }
 ];
 
@@ -278,9 +295,9 @@ export default async function handler(req, res) {
       safety++;
       const response = await client.messages.create({
         model: 'claude-haiku-4-5-20251001',
-        max_tokens: 1024,
+        max_tokens: 2048,
         system: SYSTEM_PROMPT,
-        tools: sb ? TOOLS : undefined,
+        tools: sb ? TOOLS : TOOLS.filter(t => t.type === 'web_search_20250305'),
         messages: conversation
       });
 
@@ -290,7 +307,8 @@ export default async function handler(req, res) {
         return res.status(200).json({ reply, usage: response.usage, tool_events: toolEvents });
       }
 
-      // Ejecutar tools
+      // Ejecutar SOLO custom tools (block.type === 'tool_use')
+      // Los server_tool_use (web_search) ya los ejecuta Anthropic internamente
       const toolResults = [];
       for (const block of response.content) {
         if (block.type !== 'tool_use') continue;
@@ -301,6 +319,12 @@ export default async function handler(req, res) {
           tool_use_id: block.id,
           content: JSON.stringify(result)
         });
+      }
+
+      // Si no hay custom tools que ejecutar (solo server tools), regresar respuesta
+      if (toolResults.length === 0) {
+        const reply = response.content.filter(b => b.type === 'text').map(b => b.text).join('\n');
+        return res.status(200).json({ reply, usage: response.usage, tool_events: toolEvents });
       }
 
       // Agregar response del asistente + tool results al historial y continuar
