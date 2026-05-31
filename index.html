@@ -1201,6 +1201,80 @@ ul.warning li::before { content: "⚠"; position: absolute; left: 0; color: var(
 .vivo-item.expense-david { border-left: 3px solid #3b82f6; }
 .vivo-item.expense-paty { border-left: 3px solid #ec4899; }
 .vivo-item.expense-joint { border-left: 3px solid var(--lightning); }
+
+/* ============ ITEM ACTIONS (× / ✏️) ============ */
+.vivo-item { position: relative; }
+.item-actions {
+  position: absolute; top: 0.45rem; right: 0.5rem;
+  display: flex; gap: 0.25rem; opacity: 0.45;
+  transition: opacity 0.15s ease;
+  z-index: 2;
+}
+.vivo-item:hover .item-actions,
+.gasto-cat-row:hover .item-actions { opacity: 1; }
+.item-actions button {
+  background: white; border: 1px solid rgba(10,10,10,0.18);
+  width: 26px; height: 26px; border-radius: 4px;
+  cursor: pointer; font-size: 0.78rem; line-height: 1;
+  display: inline-flex; align-items: center; justify-content: center;
+  padding: 0; color: var(--bolt-black);
+  transition: background 0.15s, border-color 0.15s, transform 0.05s;
+}
+.item-actions button:hover {
+  background: var(--lightning); border-color: var(--bolt-black);
+}
+.item-actions button.btn-delete:hover {
+  background: var(--accent-red); color: white; border-color: var(--accent-red);
+}
+.item-actions button:active { transform: scale(0.92); }
+
+/* gasto-cat-row clickable (drilldown a gastos de esa categoría) */
+.gasto-cat-row { position: relative; cursor: pointer; user-select: none; }
+.gasto-cat-row:hover { border-color: var(--bolt-black); }
+.gasto-cat-row .item-actions { top: 50%; transform: translateY(-50%); right: 0.55rem; }
+@media (max-width: 640px) {
+  .gasto-cat-row .item-actions { top: 0.5rem; transform: none; }
+}
+
+/* Breakdown modal (lista de gastos de una categoría) */
+.breakdown-empty {
+  font-family: var(--mono); font-size: 0.85rem; opacity: 0.55;
+  padding: 1.4rem 1rem; background: var(--off-white-2); border-radius: 4px; text-align: center;
+}
+.breakdown-summary {
+  background: var(--bolt-black); color: var(--off-white);
+  padding: 0.9rem 1.1rem; border-radius: 4px; margin-bottom: 0.9rem;
+  display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem;
+}
+.breakdown-summary .bs-label {
+  font-family: var(--mono); font-size: 0.65rem; letter-spacing: 0.14em;
+  text-transform: uppercase; opacity: 0.55;
+}
+.breakdown-summary .bs-value {
+  font-family: var(--mono); font-size: 1.15rem; font-weight: 700;
+  color: var(--lightning); margin-top: 0.15rem;
+}
+
+/* Itinerary edit button (lápiz por día) */
+.itin-edit-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 22px; height: 22px; margin-left: 0.4rem;
+  background: var(--lightning); border: 1px solid var(--bolt-black);
+  border-radius: 50%; cursor: pointer; font-size: 0.65rem; line-height: 1;
+  padding: 0; vertical-align: middle; opacity: 0.65;
+  transition: opacity 0.15s, transform 0.05s;
+}
+.itin-edit-btn:hover { opacity: 1; transform: scale(1.08); }
+.itin-edit-btn:active { transform: scale(0.92); }
+.itin-overridden {
+  margin-top: 0.6rem; padding: 0.6rem 0.8rem;
+  background: #FEF9C3; border-left: 3px solid var(--lightning);
+  border-radius: 4px; font-size: 0.88rem;
+}
+.itin-overridden .io-label {
+  font-family: var(--mono); font-size: 0.65rem; letter-spacing: 0.14em;
+  text-transform: uppercase; opacity: 0.65; margin-bottom: 0.25rem;
+}
 </style>
 
 <!-- ============ RESUMEN RUTA + MAPA ============ -->
@@ -3399,7 +3473,7 @@ ul.warning li::before { content: "⚠"; position: absolute; left: 0; color: var(
       Propuesta diseñada por Arkamia · Bolt Black + Lightning Yellow + Off White
     </div>
     <p class="small">Eurotrip 2026 · David + Paty · 15-31 Octubre · ¡Buen viaje! 🌍</p>
-    <p class="small mono" style="margin-top:1rem;">v5.0 · 27 mayo 2026 · Ruta Paris→Bordeaux→Toulouse→BCN→Valencia→Madrid · Hoteles/Restaurantes/Museos con links automáticos a Google Maps + Booking + Tripadvisor + TheFork + YouTube · Galería clickeable a Google Images · 6 mapas Leaflet con zonas · widgets clima · gastronomía + alternativas viñedo</p>
+    <p class="small mono" style="margin-top:1rem;">v6.0 · 31 mayo 2026 · CRUD completo (editar + borrar gastos, notas, links, hoteles, reservaciones, días) · Lápiz por día del itinerario · Click en categoría → desglose de gastos · Editor de presupuesto · Claudia con permisos update/delete (con confirmación)</p>
   </div>
 </footer>
 
@@ -3419,10 +3493,21 @@ function formatDate(s) {
 }
 function renderEmpty(msg) { return `<div class="vivo-empty">${msg}</div>`; }
 
+// Bloque genérico de acciones × / ✏️ para cualquier item.
+// Para budget pasa idAttr='category' y el id es la category text (escapado).
+function actionsHtml(table, id, label, opts = {}) {
+  const safeId = String(id).replace(/'/g, "\\'");
+  const safeLabel = String(label || '').replace(/'/g, "\\'").slice(0, 50);
+  const editBtn = opts.noEdit ? '' : `<button title="Editar" onclick="event.stopPropagation();editRecord('${table}','${safeId}')">✏️</button>`;
+  const delBtn = opts.noDelete ? '' : `<button class="btn-delete" title="Eliminar" onclick="event.stopPropagation();deleteRecord('${table}','${safeId}','${safeLabel}')">×</button>`;
+  return `<div class="item-actions">${editBtn}${delBtn}</div>`;
+}
+
 function renderHotels(rows) {
   if (!rows.length) return renderEmpty('Aún no hay hoteles confirmados. Dile a Claudia: "Confirmo el Hotel Emile en Paris"');
   return rows.map(r => `
     <div class="vivo-item ${r.confirmed ? 'confirmed' : ''}">
+      ${actionsHtml('hotel_choices', r.id, r.hotel_name)}
       <div class="vi-title">${VIVO_CITY_EMOJI[r.city] || '📍'} ${escapeHtml(r.city)} · ${escapeHtml(r.hotel_name)}</div>
       <div class="vi-meta">${r.confirmed ? '✅ CONFIRMADO' : '🤔 TENTATIVO'} · ${escapeHtml(r.zone || '')} · ${escapeHtml(r.price_per_night || '')}</div>
       ${r.booking_url ? `<div class="vi-desc"><a href="${escapeHtml(r.booking_url)}" target="_blank" class="vi-link">🔗 Ver booking</a></div>` : ''}
@@ -3434,6 +3519,7 @@ function renderReservations(rows) {
   if (!rows.length) return renderEmpty('Sin reservaciones aún. Dile a Claudia cuando confirmes restos, tours, trenes, etc.');
   return rows.map(r => `
     <div class="vivo-item confirmed">
+      ${actionsHtml('reservations', r.id, r.title)}
       <div class="vi-title">${VIVO_TYPE_EMOJI[r.type] || '📌'} ${escapeHtml(r.title)}</div>
       <div class="vi-meta">${escapeHtml(r.type.toUpperCase())}${r.date ? ' · ' + formatDate(r.date) : ''}${r.time ? ' · ' + escapeHtml(r.time) : ''}${r.city ? ' · ' + escapeHtml(r.city) : ''}${r.cost ? ' · ' + escapeHtml(r.cost) : ''}</div>
       ${r.confirmation_code ? `<div class="vi-desc"><span class="vivo-badge">Código</span><code>${escapeHtml(r.confirmation_code)}</code></div>` : ''}
@@ -3446,6 +3532,7 @@ function renderNotes(rows) {
   if (!rows.length) return renderEmpty('Sin notas aún. Dile a Claudia cualquier idea o pendiente.');
   return rows.map(r => `
     <div class="vivo-item ${r.category === 'warning' ? 'warning' : r.category === 'todo' ? 'todo' : ''} ${r.resolved ? 'confirmed' : ''}">
+      ${actionsHtml('notes', r.id, r.text)}
       <div class="vi-title">${r.resolved ? '✅' : ''} ${escapeHtml(r.text)}</div>
       <div class="vi-meta">${escapeHtml(r.category.toUpperCase())}${r.city ? ' · ' + escapeHtml(r.city) : ''} · ${formatDate(r.created_at?.substring(0,10))}</div>
     </div>
@@ -3455,6 +3542,7 @@ function renderBookmarks(rows) {
   if (!rows.length) return renderEmpty('Sin links guardados aún. Pásale URLs a Claudia para guardarlas.');
   return rows.map(r => `
     <div class="vivo-item">
+      ${actionsHtml('bookmarks', r.id, r.title)}
       <div class="vi-title">🔗 ${escapeHtml(r.title)}</div>
       <div class="vi-meta">${r.category ? escapeHtml(r.category.toUpperCase()) + ' · ' : ''}${r.city ? escapeHtml(r.city) + ' · ' : ''}${formatDate(r.created_at?.substring(0,10))}</div>
       <div class="vi-desc"><a href="${escapeHtml(r.url)}" target="_blank" class="vi-link">${escapeHtml(r.url.substring(0, 70))}${r.url.length > 70 ? '...' : ''}</a></div>
@@ -3466,12 +3554,16 @@ function renderOverrides(rows) {
   if (!rows.length) return renderEmpty('Sin cambios al itinerario aún.');
   return rows.map(r => `
     <div class="vivo-item">
+      ${actionsHtml('day_overrides', r.id, formatDate(r.date))}
       <div class="vi-title">📅 ${formatDate(r.date)}</div>
       <div class="vi-desc">${escapeHtml(r.new_plan)}</div>
       ${r.notes ? `<div class="vi-meta">${escapeHtml(r.notes)}</div>` : ''}
     </div>
   `).join('');
 }
+
+// Cache global de datos vivos (usado para prepopular modal de edición y drilldown)
+window._vivoData = { notes: [], bookmarks: [], reservations: [], hotel_choices: [], day_overrides: [], expenses: [], budget: [] };
 
 async function loadVivoData() {
   const loadingEl = document.getElementById('vivo-loading');
@@ -3482,7 +3574,9 @@ async function loadVivoData() {
     const res = await fetch('/api/data');
     const json = await res.json();
     if (!json.ok) throw new Error(json.error || 'Error cargando datos');
-    const { hotel_choices = [], reservations = [], notes = [], bookmarks = [], day_overrides = [] } = json.data;
+    const { hotel_choices = [], reservations = [], notes = [], bookmarks = [], day_overrides = [], expenses = [], budget = [] } = json.data;
+    // Actualizar cache global (mismo objeto, mismas refs — para que loadGastosData también lo use)
+    Object.assign(window._vivoData, { hotel_choices, reservations, notes, bookmarks, day_overrides, expenses, budget });
     document.getElementById('vivo-hotels').innerHTML = renderHotels(hotel_choices);
     document.getElementById('vivo-reservations').innerHTML = renderReservations(reservations);
     document.getElementById('vivo-notes').innerHTML = renderNotes(notes);
@@ -3491,6 +3585,8 @@ async function loadVivoData() {
     loadingEl.style.display = 'none';
     contentEl.style.display = 'block';
     errorEl.style.display = 'none';
+    // Re-inyectar lápiz de itinerario (las day_overrides cambiaron)
+    if (typeof refreshItineraryEditors === 'function') refreshItineraryEditors();
   } catch (err) {
     loadingEl.style.display = 'none';
     errorEl.style.display = 'block';
@@ -3588,8 +3684,12 @@ function renderGastos(expenses, budget) {
         let barClass = '';
         if (gastado > max) barClass = 'over';
         else if (gastado > min) barClass = 'warning';
+        const safeCat = b.category.replace(/'/g, "\\'");
         return `
-          <div class="gasto-cat-row">
+          <div class="gasto-cat-row" onclick="openCategoryBreakdown('${safeCat}')" title="Click para ver gastos de esta categoría">
+            <div class="item-actions">
+              <button title="Editar presupuesto" onclick="event.stopPropagation();editRecord('budget','${safeCat}')">✏️</button>
+            </div>
             <div class="gc-name"><span class="gc-emoji">${b.emoji || '·'}</span>${escapeHtml(b.label)}</div>
             <div class="gc-bar-wrap"><div class="gc-bar-fill ${barClass}" style="width:${pct}%"></div></div>
             <div class="gc-amount">
@@ -3634,6 +3734,7 @@ function renderGastos(expenses, budget) {
         const origStr = (e.currency && e.currency !== 'MXN' && e.amount_original) ? ` · ${e.currency} ${Number(e.amount_original).toLocaleString('es-MX')}` : '';
         return `
           <div class="vivo-item ${payerCls}">
+            ${actionsHtml('expenses', e.id, e.description)}
             <span class="vi-expense-amount">${formatMxn(e.amount_mxn)}</span>
             <div class="vi-title">${escapeHtml(e.description)}</div>
             <div class="vi-meta">${catLabel[e.category] || e.category} · ${PAYER_EMOJI[e.payer] || ''} ${escapeHtml(e.payer || 'Joint')}${dateStr ? ' · ' + dateStr : ''}${e.city ? ' · ' + escapeHtml(e.city) : ''}${origStr}</div>
@@ -3667,25 +3768,261 @@ function updateExpenseFx() {
 
 // ============ MODAL: Agregar manual ============
 let currentPaneType = null;
+// currentEditState: { mode:'create'|'edit', table, id }  — null en create
+let currentEditState = null;
 const PANE_TITLES = {
   reservation: 'Nueva reservación',
   hotel_choice: 'Hotel elegido para una ciudad',
   note: 'Nota o pendiente',
   bookmark: 'Link guardado',
   day_override: 'Cambio al itinerario',
-  expense: 'Gasto del viaje 💰'
+  expense: 'Gasto del viaje 💰',
+  budget: 'Editar presupuesto'
+};
+
+// Mapping table → modal-pane type
+const TABLE_TO_PANE = {
+  reservations: 'reservation',
+  hotel_choices: 'hotel_choice',
+  notes: 'note',
+  bookmarks: 'bookmark',
+  day_overrides: 'day_override',
+  expenses: 'expense',
+  budget: 'budget'
 };
 
 function openAddModal(type) {
   currentPaneType = type;
+  currentEditState = { mode: 'create' };
   document.getElementById('add-modal-title').textContent = PANE_TITLES[type] || 'Agregar';
   document.querySelectorAll('.modal-pane').forEach(p => p.classList.remove('active'));
-  document.querySelector(`.modal-pane[data-pane="${type}"]`).classList.add('active');
+  const pane = document.querySelector(`.modal-pane[data-pane="${type}"]`);
+  if (pane) pane.classList.add('active');
+  // Reset campos del pane activo
+  if (pane) pane.querySelectorAll('input, textarea').forEach(el => { if (!el.disabled) el.value = ''; });
   document.getElementById('form-status').innerHTML = '';
+  document.getElementById('submit-btn').textContent = 'GUARDAR';
   document.getElementById('add-modal').classList.add('open');
 }
 function closeAddModal() {
   document.getElementById('add-modal').classList.remove('open');
+  currentEditState = null;
+}
+
+// ============ EDIT / DELETE / DRILLDOWN ============
+function findRecord(table, id) {
+  const list = (window._vivoData || {})[table] || [];
+  const key = table === 'budget' ? 'category' : 'id';
+  return list.find(r => String(r[key]) === String(id));
+}
+
+function openEditModal(table, record) {
+  const type = TABLE_TO_PANE[table];
+  if (!type || !record) return;
+  currentPaneType = type;
+  currentEditState = { mode: 'edit', table, id: table === 'budget' ? record.category : record.id };
+  document.getElementById('add-modal-title').textContent = `✏️ Editar ${PANE_TITLES[type].toLowerCase()}`;
+  document.querySelectorAll('.modal-pane').forEach(p => p.classList.remove('active'));
+  document.querySelector(`.modal-pane[data-pane="${type}"]`).classList.add('active');
+  document.getElementById('form-status').innerHTML = '';
+  document.getElementById('submit-btn').textContent = 'GUARDAR CAMBIOS';
+  // Prepopular según tipo
+  const setV = (id, v) => { const el = document.getElementById(id); if (el) el.value = v ?? ''; };
+  if (type === 'reservation') {
+    setV('res-type', record.type || 'restaurant'); setV('res-city', record.city);
+    setV('res-title', record.title); setV('res-date', record.date); setV('res-time', record.time);
+    setV('res-code', record.confirmation_code); setV('res-cost', record.cost);
+    setV('res-link', record.link); setV('res-notes', record.notes);
+  } else if (type === 'hotel_choice') {
+    setV('hc-city', record.city); setV('hc-zone', record.zone);
+    setV('hc-name', record.hotel_name); setV('hc-price', record.price_per_night);
+    setV('hc-confirmed', record.confirmed ? 'true' : 'false');
+    setV('hc-url', record.booking_url); setV('hc-notes', record.notes);
+  } else if (type === 'note') {
+    setV('note-text', record.text); setV('note-category', record.category || 'general');
+    setV('note-city', record.city);
+  } else if (type === 'bookmark') {
+    setV('bm-title', record.title); setV('bm-url', record.url);
+    setV('bm-city', record.city); setV('bm-category', record.category);
+    setV('bm-notes', record.notes);
+  } else if (type === 'day_override') {
+    setV('do-date', record.date); setV('do-plan', record.new_plan); setV('do-notes', record.notes);
+  } else if (type === 'expense') {
+    setV('exp-category', record.category); setV('exp-city', record.city);
+    setV('exp-description', record.description);
+    setV('exp-currency', record.currency || 'MXN');
+    setV('exp-amount-original', record.amount_original);
+    setV('exp-fx', record.fx_rate);
+    setV('exp-amount-mxn', record.amount_mxn);
+    setV('exp-payer', record.payer || 'Joint');
+    setV('exp-date', record.expense_date);
+    setV('exp-notes', record.notes);
+  } else if (type === 'budget') {
+    setV('bg-category', record.category);
+    setV('bg-label', record.label); setV('bg-emoji', record.emoji);
+    setV('bg-min', record.projected_min_mxn); setV('bg-max', record.projected_max_mxn);
+    setV('bg-notes', record.notes);
+  }
+  document.getElementById('add-modal').classList.add('open');
+}
+
+function editRecord(table, id) {
+  const record = findRecord(table, id);
+  if (!record) { alert(`No encontré el registro (${table} / ${id}). Recarga la página.`); return; }
+  openEditModal(table, record);
+}
+
+async function deleteRecord(table, id, label) {
+  const key = getWriteKey();
+  if (!key) return;
+  if (!confirm(`¿Borrar "${label}"?\n\nEsta acción no se puede deshacer.`)) return;
+  try {
+    const res = await fetch('/api/write', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Write-Key': key },
+      body: JSON.stringify({ action: 'delete', table, id })
+    });
+    const data = await res.json();
+    if (!res.ok || !data.ok) {
+      if (res.status === 401) {
+        localStorage.removeItem('eurotrip_write_key');
+        alert('❌ Clave incorrecta. Vuelve a intentar.');
+      } else {
+        alert(`❌ ${data.error || 'Error desconocido'}`);
+      }
+      return;
+    }
+    // Recargar datos
+    loadVivoData();
+    if (typeof loadGastosData === 'function') loadGastosData();
+    // Si hay drilldown abierto, recargarlo
+    if (currentBreakdownCategory) openCategoryBreakdown(currentBreakdownCategory);
+  } catch (err) {
+    alert(`❌ ${err.message}`);
+  }
+}
+
+// ============ DRILLDOWN: gastos por categoría ============
+let currentBreakdownCategory = null;
+function openCategoryBreakdown(category) {
+  currentBreakdownCategory = category;
+  const budget = (window._vivoData?.budget || []).find(b => b.category === category);
+  const expenses = (window._vivoData?.expenses || []).filter(e => e.category === category);
+  if (!budget) return;
+  const total = expenses.reduce((s, e) => s + Number(e.amount_mxn || 0), 0);
+  const max = Number(budget.projected_max_mxn || 0);
+  const safeCat = category.replace(/'/g, "\\'");
+  const list = expenses.length === 0
+    ? `<div class="breakdown-empty">Sin gastos registrados en esta categoría aún.<br/><br/>Usa "+ Gasto" en la sección de arriba o díselo a Claudia.</div>`
+    : expenses.map(e => {
+        const payerCls = `expense-${(e.payer || 'joint').toLowerCase()}`;
+        const dateStr = e.expense_date ? new Date(e.expense_date + 'T00:00').toLocaleDateString('es-MX', { day: '2-digit', month: 'short' }) : '';
+        const origStr = (e.currency && e.currency !== 'MXN' && e.amount_original) ? ` · ${e.currency} ${Number(e.amount_original).toLocaleString('es-MX')}` : '';
+        return `
+          <div class="vivo-item ${payerCls}">
+            ${actionsHtml('expenses', e.id, e.description)}
+            <span class="vi-expense-amount">${formatMxn(e.amount_mxn)}</span>
+            <div class="vi-title">${escapeHtml(e.description)}</div>
+            <div class="vi-meta">${PAYER_EMOJI[e.payer] || ''} ${escapeHtml(e.payer || 'Joint')}${dateStr ? ' · ' + dateStr : ''}${e.city ? ' · ' + escapeHtml(e.city) : ''}${origStr}</div>
+            ${e.notes ? `<div class="vi-desc">${escapeHtml(e.notes)}</div>` : ''}
+          </div>
+        `;
+      }).join('');
+  document.getElementById('breakdown-modal-title').innerHTML = `${budget.emoji || ''} ${escapeHtml(budget.label)}`;
+  document.getElementById('breakdown-body').innerHTML = `
+    <div class="breakdown-summary">
+      <div>
+        <div class="bs-label">Gastado</div>
+        <div class="bs-value">${formatMxn(total)}</div>
+      </div>
+      <div>
+        <div class="bs-label">Presupuesto máx</div>
+        <div class="bs-value">${formatMxn(max)}</div>
+      </div>
+    </div>
+    <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:1rem;">
+      <button class="btn-add" onclick="closeBreakdownModal();openAddModal('expense');document.getElementById('exp-category').value='${safeCat}';">+ Gasto en esta categoría</button>
+      <button class="btn-add secondary" onclick="closeBreakdownModal();editRecord('budget','${safeCat}')">✏️ Editar presupuesto</button>
+    </div>
+    <div class="vivo-list">${list}</div>
+  `;
+  document.getElementById('breakdown-modal').classList.add('open');
+}
+function closeBreakdownModal() {
+  document.getElementById('breakdown-modal').classList.remove('open');
+  currentBreakdownCategory = null;
+}
+
+// ============ EDITOR DE ITINERARIO POR DÍA ============
+// Inyecta ✏️ junto a cada .day-num parseando el día del texto (ej "DÍA 1 · VIE 16 OCT · ...")
+// + bloque amarillo abajo del day-card si existe day_override para esa fecha.
+function refreshItineraryEditors() {
+  const overrides = (window._vivoData?.day_overrides || []);
+  const overrideByDate = {};
+  overrides.forEach(o => { overrideByDate[o.date] = o; });
+
+  document.querySelectorAll('.day-card').forEach(card => {
+    const dayNum = card.querySelector('.day-num');
+    if (!dayNum) return;
+    // Parse "DÍA N · DOW DD OCT" → DD
+    const m = dayNum.textContent.match(/(\d{1,2})\s*OCT/i);
+    if (!m) return;
+    const day = parseInt(m[1], 10);
+    if (isNaN(day) || day < 1 || day > 31) return;
+    const dateStr = `2026-10-${String(day).padStart(2, '0')}`;
+    // Botón lápiz (solo una vez)
+    if (!dayNum.querySelector('.itin-edit-btn')) {
+      const btn = document.createElement('button');
+      btn.className = 'itin-edit-btn';
+      btn.type = 'button';
+      btn.title = `Editar plan del ${dateStr}`;
+      btn.textContent = '✏️';
+      btn.dataset.date = dateStr;
+      btn.onclick = (ev) => {
+        ev.stopPropagation();
+        openItineraryEditor(dateStr);
+      };
+      dayNum.appendChild(btn);
+    }
+    // Bloque override (si existe). Reemplazar si ya estaba.
+    const existing = card.querySelector('.itin-overridden');
+    const ov = overrideByDate[dateStr];
+    if (ov) {
+      const html = `
+        <div class="io-label">⚡ Plan actualizado · ${formatDate(ov.date)}</div>
+        <div>${escapeHtml(ov.new_plan)}</div>
+        ${ov.notes ? `<div style="margin-top:0.4rem;font-size:0.78rem;opacity:0.65;">${escapeHtml(ov.notes)}</div>` : ''}
+        <div style="margin-top:0.5rem;display:flex;gap:0.4rem;">
+          <button class="btn-add secondary" style="padding:0.3rem 0.7rem;font-size:0.7rem;" onclick="editRecord('day_overrides','${ov.id}')">✏️ Editar</button>
+          <button class="btn-add secondary" style="padding:0.3rem 0.7rem;font-size:0.7rem;" onclick="deleteRecord('day_overrides','${ov.id}','plan del ${formatDate(ov.date)}')">× Quitar override</button>
+        </div>
+      `;
+      if (existing) {
+        existing.innerHTML = html;
+      } else {
+        const div = document.createElement('div');
+        div.className = 'itin-overridden';
+        div.innerHTML = html;
+        card.appendChild(div);
+      }
+    } else if (existing) {
+      existing.remove();
+    }
+  });
+}
+
+function openItineraryEditor(dateStr) {
+  // Si ya existe override para esa fecha → editar; si no, crear con fecha precargada
+  const existing = (window._vivoData?.day_overrides || []).find(o => o.date === dateStr);
+  if (existing) {
+    openEditModal('day_overrides', existing);
+  } else {
+    openAddModal('day_override');
+    setTimeout(() => {
+      const dateInput = document.getElementById('do-date');
+      if (dateInput) dateInput.value = dateStr;
+    }, 50);
+  }
 }
 
 function getWriteKey() {
@@ -3715,8 +4052,23 @@ async function submitAdd() {
   const key = getWriteKey();
   if (!key) return;
 
-  let table, action = 'insert', row = {};
-  if (currentPaneType === 'reservation') {
+  const isEdit = currentEditState?.mode === 'edit';
+  let table, action = isEdit ? 'update' : 'insert', row = {};
+  if (currentPaneType === 'budget') {
+    table = 'budget';
+    const min = parseFloat(val('bg-min') || '0');
+    const max = parseFloat(val('bg-max') || '0');
+    if (!isEdit) { showFormStatus('El presupuesto solo se puede editar, no crear nuevas categorías', 'error'); return; }
+    if (isNaN(min) || min < 0) { showFormStatus('Mínimo inválido', 'error'); return; }
+    if (isNaN(max) || max < min) { showFormStatus('Máximo debe ser ≥ mínimo', 'error'); return; }
+    row = {
+      label: val('bg-label'),
+      emoji: val('bg-emoji'),
+      projected_min_mxn: min,
+      projected_max_mxn: max,
+      notes: val('bg-notes')
+    };
+  } else if (currentPaneType === 'reservation') {
     table = 'reservations';
     row = {
       type: val('res-type'), title: val('res-title'),
@@ -3794,15 +4146,21 @@ async function submitAdd() {
   Object.keys(row).forEach(k => { if (row[k] === null || row[k] === undefined) delete row[k]; });
 
   const btn = document.getElementById('submit-btn');
+  const btnLabel = btn.textContent;
   btn.disabled = true;
   btn.textContent = 'GUARDANDO...';
   showFormStatus('Enviando...', '');
+
+  // En modo edit: action='update' + id + patch (los campos a cambiar)
+  const body = isEdit
+    ? { action: 'update', table, id: currentEditState.id, patch: row }
+    : { action, table, row };
 
   try {
     const res = await fetch('/api/write', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'X-Write-Key': key },
-      body: JSON.stringify({ action, table, row })
+      body: JSON.stringify(body)
     });
     const data = await res.json();
     if (!res.ok || !data.ok) {
@@ -3813,29 +4171,33 @@ async function submitAdd() {
         showFormStatus(`❌ ${data.error || 'Error desconocido'}`, 'error');
       }
     } else {
-      showFormStatus('✅ Guardado', 'success');
+      showFormStatus(isEdit ? '✅ Cambios guardados' : '✅ Guardado', 'success');
       setTimeout(() => {
         closeAddModal();
         loadVivoData();
         if (typeof loadGastosData === 'function') loadGastosData();
-        // Limpiar campos
-        document.querySelectorAll('.modal-pane.active input, .modal-pane.active textarea').forEach(el => el.value = '');
+        // Refrescar drilldown si está abierto
+        if (currentBreakdownCategory) setTimeout(() => openCategoryBreakdown(currentBreakdownCategory), 300);
       }, 700);
     }
   } catch (err) {
     showFormStatus(`❌ ${err.message}`, 'error');
   } finally {
     btn.disabled = false;
-    btn.textContent = 'GUARDAR';
+    btn.textContent = btnLabel;
   }
 }
 
-// Cerrar modal al click fuera
+// Cerrar modal al click fuera / Escape
 document.addEventListener('click', (e) => {
   if (e.target.id === 'add-modal') closeAddModal();
+  if (e.target.id === 'breakdown-modal') closeBreakdownModal();
 });
 document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape') closeAddModal();
+  if (e.key === 'Escape') {
+    closeAddModal();
+    closeBreakdownModal();
+  }
 });
 
 // ============ Helpers ============
@@ -4755,6 +5117,41 @@ document.addEventListener('DOMContentLoaded', () => {
       </div>
     </div>
 
+    <!-- BUDGET (solo edit) -->
+    <div class="modal-pane" data-pane="budget">
+      <div class="modal-body">
+        <p class="hint" style="font-family:var(--mono);font-size:0.72rem;opacity:0.65;margin-bottom:1rem;">Edita el presupuesto proyectado de la categoría. <em>No se puede borrar — solo modificar montos.</em></p>
+        <div class="form-group">
+          <label>Categoría</label>
+          <input id="bg-category" type="text" disabled style="opacity:0.6;cursor:not-allowed;"/>
+        </div>
+        <div class="form-group">
+          <label>Etiqueta visible</label>
+          <input id="bg-label" type="text" placeholder="Ej: Hoteles (15 noches)"/>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Mínimo MXN *</label>
+            <input id="bg-min" type="number" step="100" placeholder="48000"/>
+            <div class="hint">Escenario económico</div>
+          </div>
+          <div class="form-group">
+            <label>Máximo MXN *</label>
+            <input id="bg-max" type="number" step="100" placeholder="56000"/>
+            <div class="hint">Escenario premium</div>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Emoji</label>
+          <input id="bg-emoji" type="text" maxlength="4" placeholder="🏨"/>
+        </div>
+        <div class="form-group">
+          <label>Notas</label>
+          <textarea id="bg-notes" rows="2" placeholder="Contexto del presupuesto..."></textarea>
+        </div>
+      </div>
+    </div>
+
     <!-- DAY_OVERRIDE -->
     <div class="modal-pane" data-pane="day_override">
       <div class="modal-body">
@@ -4779,6 +5176,20 @@ document.addEventListener('DOMContentLoaded', () => {
     <div class="form-actions">
       <button class="btn-add secondary" onclick="closeAddModal()">Cancelar</button>
       <button class="btn-add" id="submit-btn" onclick="submitAdd()">GUARDAR</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ BREAKDOWN MODAL: gastos por categoría ============ -->
+<div class="modal-backdrop" id="breakdown-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="breakdown-modal-title">Desglose</h3>
+      <button class="modal-close" onclick="closeBreakdownModal()" aria-label="Cerrar">×</button>
+    </div>
+    <div class="modal-body" id="breakdown-body" style="max-height:65vh;overflow-y:auto;"></div>
+    <div class="form-actions">
+      <button class="btn-add secondary" onclick="closeBreakdownModal()">Cerrar</button>
     </div>
   </div>
 </div>

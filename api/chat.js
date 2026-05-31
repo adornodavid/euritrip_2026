@@ -77,6 +77,24 @@ Cuando David o Paty mencionen información que valga la pena guardar, usa las he
 
 7. **list_saved**: ver qué tienen guardado (notes, reservations, bookmarks, hotel_choices, day_overrides, expenses, budget)
 
+8. **update_record**: editar un registro existente. SIEMPRE PIDE CONFIRMACIÓN antes de ejecutar.
+   - Para 'budget' el id es la category text ('flights', 'hotels', 'trains', 'food', 'attractions', 'transport', 'shopping', 'misc').
+   - Para todo lo demás el id es el UUID completo (lo obtienes con list_saved).
+   - patch es un objeto con SOLO los campos a cambiar.
+   - Ej: "Cambia el gasto de Bistrot a 90 EUR" → list_saved expenses → "Voy a actualizar el gasto 'Cena Bistrot Paul Bert' (id 3f8a…) de $1,870 → $1,980 MXN. ¿Confirmas?" → esperar "sí" → update_record(table="expenses", id="3f8a-…", patch={amount_mxn:1980, amount_original:90})
+
+9. **delete_record**: borrar un registro. SIEMPRE PIDE CONFIRMACIÓN antes de ejecutar.
+   - Mismo esquema de id que update_record.
+   - Ej: "Borra la nota del adaptador" → list_saved notes → "Voy a borrar la nota 'comprar adaptador EU' (id 3f8a…). ¿Confirmas?" → esperar "sí" → delete_record(table="notes", id="3f8a-…")
+
+REGLA CRÍTICA UPDATE/DELETE — OBLIGATORIA:
+Antes de ejecutar update_record o delete_record SIEMPRE:
+1. Si no sabes el id exacto, usa list_saved primero.
+2. Resume al usuario qué exacto vas a cambiar/borrar (descripción + monto/categoría + id corto).
+3. Termina con "¿Confirmas?" o "¿Adelante?" y ESPERA respuesta afirmativa.
+4. Solo entonces ejecuta la tool. Si el usuario duda o pide ajustar, NO ejecutes.
+INSERT (add_*, set_*) NO requiere confirmación — sigue ejecutando directo.
+
 CÓMO RESPONDER:
 - Sé directa, español mexicano cordial.
 - Después de guardar algo, CONFIRMA brevemente: "✅ Anoté que..."
@@ -209,11 +227,37 @@ const TOOLS = [
       required: ['table']
     }
   },
+  {
+    name: 'update_record',
+    description: 'Editar un registro existente. REQUIERE confirmación previa del usuario.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        table: { type: 'string', enum: TABLES, description: 'Tabla a modificar' },
+        id: { type: 'string', description: 'UUID del registro (o category text si table=budget)' },
+        patch: { type: 'object', description: 'Objeto con SOLO los campos a cambiar', additionalProperties: true }
+      },
+      required: ['table', 'id', 'patch']
+    }
+  },
+  {
+    name: 'delete_record',
+    description: 'Borrar un registro existente. REQUIERE confirmación previa del usuario.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        table: { type: 'string', enum: TABLES, description: 'Tabla' },
+        id: { type: 'string', description: 'UUID del registro (o category text si table=budget)' }
+      },
+      required: ['table', 'id']
+    }
+  },
   // Server-side web search tool — Anthropic ejecuta la búsqueda y retorna resultados con citations
+  // max_uses bajo para reducir consumo de tokens (cada búsqueda mete ~5KB de contexto)
   {
     type: 'web_search_20250305',
     name: 'web_search',
-    max_uses: 5
+    max_uses: 3
   }
 ];
 
@@ -255,11 +299,38 @@ async function executeTool(sb, name, input) {
       return { ok: true, message: `Gasto registrado: ${data.description} · $${Number(data.amount_mxn).toLocaleString('es-MX')} MXN`, data };
     }
     if (name === 'list_saved') {
-      let query = sb.from(tableName(input.table)).select('*').order('created_at', { ascending: false }).limit(50);
+      const ord = input.table === 'budget' ? { col: 'sort_order', asc: true }
+                : input.table === 'expenses' ? { col: 'expense_date', asc: false }
+                : { col: 'created_at', asc: false };
+      let query = sb.from(tableName(input.table)).select('*').order(ord.col, { ascending: ord.asc, nullsFirst: false }).limit(50);
       if (input.city) query = query.eq('city', input.city);
       const { data, error } = await query;
       if (error) throw error;
       return { ok: true, count: data.length, rows: data };
+    }
+    if (name === 'update_record') {
+      const { table, id, patch } = input;
+      if (!TABLES.includes(table)) return { ok: false, error: `Tabla inválida: ${table}` };
+      if (!id || !patch || typeof patch !== 'object') return { ok: false, error: 'Faltan id o patch' };
+      const pkCol = table === 'budget' ? 'category' : 'id';
+      const cleanPatch = { ...patch };
+      // No permitir cambiar la PK ni created_at via patch
+      delete cleanPatch.id;
+      delete cleanPatch.created_at;
+      if (table === 'budget') delete cleanPatch.category;
+      const { data, error } = await sb.from(tableName(table)).update(cleanPatch).eq(pkCol, id).select().single();
+      if (error) throw error;
+      return { ok: true, message: `Actualizado registro de ${table} (${id.toString().slice(0, 8)})`, data };
+    }
+    if (name === 'delete_record') {
+      const { table, id } = input;
+      if (!TABLES.includes(table)) return { ok: false, error: `Tabla inválida: ${table}` };
+      if (!id) return { ok: false, error: 'Falta id' };
+      if (table === 'budget') return { ok: false, error: 'No se permite borrar categorías de budget (solo editar montos)' };
+      const pkCol = 'id';
+      const { error } = await sb.from(tableName(table)).delete().eq(pkCol, id);
+      if (error) throw error;
+      return { ok: true, message: `Borrado de ${table} (${id.toString().slice(0, 8)})` };
     }
     return { ok: false, error: `Tool desconocida: ${name}` };
   } catch (err) {
@@ -287,7 +358,8 @@ export default async function handler(req, res) {
     let sb = null;
     try { sb = getSupabase(); } catch (e) { /* Supabase opcional, sin él Claudia chatea pero no escribe */ }
 
-    let conversation = messages.slice(-20);
+    // Sliding window de 12 turnos (antes 20) — reduce input tokens ~40% en conversaciones largas
+    let conversation = messages.slice(-12);
     let safety = 0;
     const toolEvents = [];
 
@@ -295,7 +367,7 @@ export default async function handler(req, res) {
       safety++;
       const response = await client.messages.create({
         model: 'claude-haiku-4-5-20251001',
-        max_tokens: 2048,
+        max_tokens: 1536,
         system: SYSTEM_PROMPT,
         tools: sb ? TOOLS : TOOLS.filter(t => t.type === 'web_search_20250305'),
         messages: conversation
