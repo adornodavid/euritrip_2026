@@ -64,7 +64,7 @@ function renderPlanner(){
     html+='<div class="ci"><span style="font-size:1.2rem">'+c.flag+'</span><span class="nm">'+c.name+'</span>';
     html+='<span class="ct">'+c.range+'<br/>'+(cnt?'<span class="cprog">'+dco+'/'+cnt+' ✓</span>':'sin actividades')+'</span><span class="chev">›</span></div></div>';
     html+='<div class="city-body">';
-    if(hotel){ html+='<div class="hotel-line">🏨 '+esc(hotel.hotel_name)+(hotel.confirmed?' · ✅ confirmado':' · ⏳ por definir')+(hotel.zone?' · '+esc(hotel.zone):'')+'</div>'; }
+    html+='<div class="hotel-line" style="cursor:pointer" onclick="openHotel(\''+esc(c.key)+'\')">🏨 '+(hotel?esc(hotel.hotel_name)+(hotel.confirmed?' · ✅':' · ⏳ por definir')+(hotel.zone?' · '+esc(hotel.zone):''):'Definir hotel')+' · ✏️</div>';
     c.dates.forEach(d=>{
       const da=cityActs.filter(a=>a.activity_date===d).sort((a,b)=>(a.sort_order||0)-(b.sort_order||0)||((a.start_time||'')>(b.start_time||'')?1:-1));
       const isToday=(d===today);
@@ -79,7 +79,7 @@ function renderPlanner(){
         if(m.length)html+='<div class="a-meta">'+m.join(' · ')+'</div>';
         html+='</div><div class="a-act">'+up+dw+'<button onclick="editAct(\''+a.id+'\')">✏️</button><button onclick="delAct(\''+a.id+'\')">🗑️</button></div></div>';
       });
-      html+='<button class="addbtn" onclick="openAct({activity_date:\''+d+'\',city:\''+esc(c.key)+'\'})">+ actividad el '+dn(d)+'</button></div>';
+      html+='<button class="addbtn" onclick="openAct({activity_date:\''+d+'\',city:\''+esc(c.key)+'\'})">+ actividad el '+dn(d)+'</button>'+(da.length?'<button class="addbtn" style="margin-top:.3rem;border-style:solid;color:var(--green)" onclick="mapDay(\''+d+'\')">🗺️ Ver el día en Google Maps</button>':'')+'</div>';
     });
     html+=suggRow(c.key,c.name)+'</div></div>';
   });
@@ -120,9 +120,12 @@ function renderGastos(){
   const pct=totMax?Math.min(100,totSpent/totMax*100):0,byP=p=>exp.filter(e=>e.payer===p).reduce((s,e)=>s+Number(e.amount_mxn||0),0);
   let html='<div class="bcard"><div class="btot"><div><div class="lbl">Gastado</div><div class="big">'+money(totSpent)+'</div></div><div style="text-align:right"><div class="lbl">Presupuesto</div><div class="big" style="font-size:1.05rem;color:var(--muted)">'+money(totMin)+'–'+money(totMax)+'</div></div></div><div class="bar"><i style="width:'+pct+'%"></i></div>';
   html+='<div class="split"><div><div class="who">👤 David</div><div class="amt2">'+money(byP('David'))+'</div></div><div><div class="who">👤 Paty</div><div class="amt2">'+money(byP('Paty'))+'</div></div><div><div class="who">🤝 Juntos</div><div class="amt2">'+money(byP('Joint'))+'</div></div></div></div>';
+  const _d=byP('David'),_p=byP('Paty'),_diff=Math.abs(_d-_p)/2;
+  const _settle=_diff<1?'Están a mano 🤝':(_d>_p?'Paty le debe a David ':'David le debe a Paty ')+money(_diff);
+  html+='<div class="bcard" style="text-align:center"><div class="lbl">⚖️ Balance de la pareja</div><div style="font-weight:800;font-size:1.05rem;margin-top:.35rem">'+_settle+'</div></div>';
   html+='<div class="bcard">';
   budget.forEach(b=>{const sp=exp.filter(e=>e.category===b.category).reduce((s,e)=>s+Number(e.amount_mxn||0),0);const mx=Number(b.projected_max_mxn||0),p=mx?Math.min(100,sp/mx*100):0;
-    html+='<div class="catrow"><div class="top"><span>'+(b.emoji||'')+' '+esc(b.label)+'</span><span>'+money(sp)+' <span class="sub">/ '+money(mx)+'</span></span></div><div class="bar"><i style="width:'+p+'%;background:'+(p>=100?'var(--red)':'var(--green)')+'"></i></div></div>';});
+    html+='<div class="catrow" style="cursor:pointer" onclick="openBudget(\''+b.category+'\')"><div class="top"><span>'+(b.emoji||'')+' '+esc(b.label)+'</span><span>'+money(sp)+' <span class="sub">/ '+money(mx)+'</span></span></div><div class="bar"><i style="width:'+p+'%;background:'+(p>=100?'var(--red)':'var(--green)')+'"></i></div></div>';});
   html+='</div>';
   html+='<div class="chips"><div class="chip'+(gCity===''?' on':'')+'" onclick="setFilter(\'city\',\'\')">Todas</div>'+CITIES.map(c=>'<div class="chip'+(gCity===c.key?' on':'')+'" onclick="setFilter(\'city\',\''+esc(c.key)+'\')">'+c.flag+' '+esc(c.name)+'</div>').join('')+'</div>';
   html+='<div class="chips">'+['','David','Paty','Joint'].map(p=>'<div class="chip'+(gPayer===p?' on':'')+'" onclick="setFilter(\'payer\',\''+p+'\')">'+(p===''?'Todos':(p==='Joint'?'🤝 Juntos':'👤 '+p))+'</div>').join('')+'</div>';
@@ -173,6 +176,19 @@ function chipSend(el){$('chat-in').value=el.textContent;sendChat();}
 function pushBub(role,text){const d=document.createElement('div');d.className='bub '+(role==='user'?'u':'a');d.textContent=text;$('chat-log').appendChild(d);d.scrollIntoView({behavior:'smooth'});return d;}
 async function sendChat(){const inp=$('chat-in'),t=inp.value.trim();if(!t)return;inp.value='';pushBub('user',t);chatMsgs.push({role:'user',content:t});const typing=pushBub('assistant','…');
   try{const r=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({messages:chatMsgs})});const j=await r.json();const reply=j.reply||j.error||'(sin respuesta)';typing.textContent=reply;chatMsgs.push({role:'assistant',content:reply});if(j.tool_events&&j.tool_events.length){load();showToast('Plan actualizado ✓');}}catch(e){typing.textContent='Error: '+e.message;}}
+
+/* ---------- hoteles / budget / mapa (Push B) ---------- */
+function openHotel(city){const h=(DATA.hotel_choices||[]).find(x=>x.city===city)||{};$('mh-title').textContent='Hotel · '+city;$('mh-city').value=city;$('mh-name').value=(h.hotel_name&&h.hotel_name!=='Por definir')?h.hotel_name:'';$('mh-zone').value=h.zone||'';$('mh-price').value=h.price_per_night||'';$('mh-conf').value=h.confirmed?'true':'false';$('mh-url').value=h.booking_url||'';$('mh-notes').value=h.notes||'';$('m-hotel').classList.add('open');}
+async function saveHotel(){const city=$('mh-city').value,name=$('mh-name').value.trim();if(!name){alert('Escribe el hotel');return;}
+  const row={city:city,hotel_name:name,zone:$('mh-zone').value||null,price_per_night:$('mh-price').value||null,confirmed:$('mh-conf').value==='true',booking_url:$('mh-url').value||null,notes:$('mh-notes').value||null};
+  await write({action:'upsert',table:'hotel_choices',row:row},'Hotel guardado ✓');closeM('m-hotel');}
+function openBudget(cat){const b=(DATA.budget||[]).find(x=>x.category===cat);if(!b)return;$('mb-cat').value=cat;$('mb-label').value=(b.emoji||'')+' '+b.label;$('mb-min').value=b.projected_min_mxn||0;$('mb-max').value=b.projected_max_mxn||0;$('m-budget').classList.add('open');}
+async function saveBudget(){const cat=$('mb-cat').value,mn=parseFloat($('mb-min').value),mx=parseFloat($('mb-max').value);if(isNaN(mn)||isNaN(mx)||mx<mn){alert('Montos inválidos (máx ≥ mín)');return;}await write({action:'update',table:'budget',id:cat,patch:{projected_min_mxn:mn,projected_max_mxn:mx}},'Presupuesto actualizado ✓');closeM('m-budget');}
+function mapDay(date){const acts=(DATA.activities||[]).filter(a=>a.activity_date===date&&a.category!=='logistica');if(!acts.length){showToast('Sin lugares ese día');return;}
+  const pts=acts.map(a=>encodeURIComponent(a.title+(a.city?', '+a.city:'')));let url;
+  if(pts.length===1)url='https://www.google.com/maps/search/?api=1&query='+pts[0];
+  else url='https://www.google.com/maps/dir/?api=1&destination='+pts[pts.length-1]+'&waypoints='+pts.slice(0,-1).join('%7C');
+  window.open(url,'_blank');}
 
 /* ---------- shared ---------- */
 function closeM(id){$(id).classList.remove('open');}

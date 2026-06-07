@@ -248,6 +248,27 @@ button:active,.pf-btn:active,.sugg:active,.chip:active,.city-photo:active{transf
   <button class="cancel" onclick="closeM('m-exp')">Cancelar</button>
 </div></div>
 
+<div id="m-hotel" class="modal"><div class="sheet">
+  <h3 id="mh-title">Hotel</h3>
+  <input type="hidden" id="mh-city"/>
+  <label>Hotel</label><input type="text" id="mh-name" placeholder="Nombre del hotel"/>
+  <label>Zona / barrio</label><input type="text" id="mh-zone"/>
+  <div class="row2"><div><label>Precio/noche</label><input type="text" id="mh-price" placeholder="€150"/></div><div><label>¿Confirmado?</label><select id="mh-conf"><option value="false">⏳ Por definir</option><option value="true">✅ Confirmado</option></select></div></div>
+  <label>Link de reserva</label><input type="text" id="mh-url" placeholder="https://..."/>
+  <label>Notas</label><input type="text" id="mh-notes"/>
+  <button class="save" onclick="saveHotel()">Guardar</button>
+  <button class="cancel" onclick="closeM('m-hotel')">Cancelar</button>
+</div></div>
+
+<div id="m-budget" class="modal"><div class="sheet">
+  <h3 id="mb-title">Editar presupuesto</h3>
+  <input type="hidden" id="mb-cat"/>
+  <label>Categoría</label><input type="text" id="mb-label" disabled/>
+  <div class="row2"><div><label>Mín MXN</label><input type="number" id="mb-min" inputmode="decimal"/></div><div><label>Máx MXN</label><input type="number" id="mb-max" inputmode="decimal"/></div></div>
+  <button class="save" onclick="saveBudget()">Guardar</button>
+  <button class="cancel" onclick="closeM('m-budget')">Cancelar</button>
+</div></div>
+
 <script src="app/main.js"></script>
 </body>
 </html>
