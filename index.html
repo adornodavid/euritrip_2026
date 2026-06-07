@@ -188,6 +188,15 @@ button:active,.pf-btn:active,.sugg:active,.chip:active,.city-photo:active{transf
 
 .star{font-size:1.25rem;color:#d0d0c8;cursor:pointer;padding:0 .05rem;}
 .star.on{color:#f5a623;}
+
+/* documentos / album */
+.media-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:.4rem;margin-top:.5rem;}
+.media-item{position:relative;}
+.media-item img{width:100%;aspect-ratio:1;object-fit:cover;border-radius:8px;cursor:pointer;display:block;}
+.media-item .del{position:absolute;top:3px;right:3px;background:rgba(0,0,0,.55);color:#fff;border:0;border-radius:50%;width:20px;height:20px;font-size:.7rem;line-height:1;cursor:pointer;}
+.doc-row{display:flex;justify-content:space-between;align-items:center;padding:.5rem 0;border-top:1px solid var(--line);}
+.doc-row:first-child{border-top:0;}
+.doc-row a{font-weight:700;color:var(--ink);text-decoration:none;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 </style>
 </head>
 <body>
@@ -230,6 +239,8 @@ button:active,.pf-btn:active,.sugg:active,.chip:active,.city-photo:active{transf
   <div class="chat-input"><input id="chat-in" type="text" placeholder="Pregúntale o pídele algo…" onkeydown="if(event.key==='Enter')sendChat()"/><button onclick="sendChat()">➤</button></div>
 </section>
 
+<input type="file" id="doc-file" accept="image/*,application/pdf" style="display:none" onchange="docUpload(this)"/>
+<input type="file" id="album-file" accept="image/*,video/*" style="display:none" onchange="albumUpload(this)"/>
 <div id="toast" class="toast"></div>
 <div class="ptr" id="ptr"><span>↻</span></div>
 

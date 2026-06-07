@@ -15,7 +15,7 @@ export function getSupabase() {
 }
 
 // Tablas válidas (logical name → real table name en public)
-export const TABLES = ['notes', 'bookmarks', 'reservations', 'hotel_choices', 'day_overrides', 'expenses', 'budget', 'activities', 'trip_cities'];
+export const TABLES = ['notes', 'bookmarks', 'reservations', 'hotel_choices', 'day_overrides', 'expenses', 'budget', 'activities', 'trip_cities', 'media'];
 export const tableName = (logical) => `eurotrip_${logical}`;
 
 // Verifica write key (clave compartida David/Paty)
