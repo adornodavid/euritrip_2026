@@ -331,6 +331,15 @@ button:active,.pf-btn:active,.sugg:active,.chip:active,.city-photo:active{transf
   <button class="cancel" onclick="closeM('m-city')">Cancelar</button>
 </div></div>
 
+<div id="m-trans" class="modal"><div class="sheet">
+  <h3>🌐 Traductor</h3>
+  <label>Traducir a</label><select id="tr-lang"><option value="francés">🇫🇷 Francés</option><option value="euskera">🟢 Euskera</option><option value="inglés">🇬🇧 Inglés</option><option value="español">🇪🇸 Español</option></select>
+  <label>Texto</label><textarea id="tr-in" rows="3" placeholder="Escribe lo que quieras traducir…"></textarea>
+  <button class="save" onclick="doTranslate()">Traducir</button>
+  <div id="tr-out" style="margin-top:1rem;font-size:1.05rem;font-weight:600;min-height:1.5rem;background:var(--bg);border-radius:10px;padding:.7rem;white-space:pre-wrap"></div>
+  <button class="cancel" onclick="closeM('m-trans')">Cerrar</button>
+</div></div>
+
 <script src="app/main.js"></script>
 </body>
 </html>

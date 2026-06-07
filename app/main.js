@@ -200,9 +200,27 @@ async function saveExp(){const id=$('me-id').value,desc=$('me-desc').value.trim(
 
 /* ---------- EXPLORE ---------- */
 const TIPS=[['🛂','Schengen / ETIAS','Sin visa para mexicanos (<90 días). ETIAS podría arrancar en 2026. Pasaporte con 6+ meses de vigencia.'],['📶','eSIM','Holafly o Airalo, ~€80 datos ilimitados Europa. Actívala al aterrizar en CDG.'],['🧳','Equipaje','3 maletas total entre los dos. Cambias de hotel cada 2-4 noches — viaja ligero.'],['🔌','Enchufe','Europa tipo C/E (clavijas redondas, 230V). Lleva 1-2 adaptadores.'],['💶','Tax-free','Compras grandes: factura tax-free (DIVA) sellada en Barajas antes de volar el 31.'],['🍢','Pintxos','De pie, de barra en barra. Pide 1-2 + txakoli. Bar Néstor: apúntate 30 min antes.'],['🎨','Guggenheim','Entrada online con horario (€16). Mejor foto desde el puente de La Salve.'],['🍷','Saint-Émilion','Octubre = post-vendimia. Tour medio día con cata. Suéter + zapatos cerrados.'],['🌧️','Clima Oct','París 12-18° · Bordeaux 10-19° · País Vasco 12-20° (lluvioso) · Madrid 10-19°.'],['✈️','Vuelos','Ida AM44 MTY 15 Oct→CDG 16 (29A/B). Regreso AM35 MAD 31 Oct 10:30am→MTY (34H/J).']];
-function renderExplore(){let h=exploreTop()+'<div class="sec-h">💡 Tips del viaje</div>'+TIPS.map(t=>'<div class="tip"><h3>'+t[0]+' '+t[1]+'</h3><p>'+t[2]+'</p></div>').join('');
+function renderExplore(){let h='<button class="pf-btn" onclick="openTrans()">🌐 Traductor</button>'+exploreTop()+'<div class="sec-h">💡 Tips del viaje</div>'+TIPS.map(t=>'<div class="tip"><h3>'+t[0]+' '+t[1]+'</h3><p>'+t[2]+'</p></div>').join('');
   h+='<div class="sec-h">🎟️ Ideas para hacer</div>';CITIES.forEach(c=>{h+='<div style="font-weight:800;font-size:.86rem;margin:.6rem 0 .2rem">'+c.flag+' '+esc(c.name)+'</div>'+suggRow(c.key,c.name);});
-  h+='<a class="pf-btn" href="/guia" style="margin-top:1.2rem">📖 Abrir la guía completa por ciudad →</a>';$('explore-root').innerHTML=h;}
+  h+=packingHtml()+emergencyHtml()+'<a class="pf-btn" href="/guia" style="margin-top:1.2rem">📖 Abrir la guía completa por ciudad →</a>';$('explore-root').innerHTML=h;}
+function openTrans(){$('tr-in').value='';$('tr-out').textContent='';$('m-trans').classList.add('open');}
+async function doTranslate(){const t=$('tr-in').value.trim();if(!t)return;$('tr-out').textContent='Traduciendo…';try{const r=await fetch('/api/translate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text:t,target:$('tr-lang').value})});const j=await r.json();$('tr-out').textContent=j.translation||j.error||'(sin resultado)';}catch(e){$('tr-out').textContent='Error: '+e.message;}}
+const PACK_DEFAULT=['Pasaporte','Visa/ETIAS (si aplica)','Adaptador EU tipo C/E','Cargadores + power bank','eSIM activada','Tarjetas + efectivo €','Medicinas personales','Ropa de otoño (capas)','Paraguas/impermeable','Zapatos cómodos','Copia de reservas','Cámara'];
+function packGet(){try{const v=localStorage.getItem('eurotrip_pack');if(v)return JSON.parse(v);}catch(e){}const init=PACK_DEFAULT.map(t=>({t:t,c:false}));localStorage.setItem('eurotrip_pack',JSON.stringify(init));return init;}
+function packSet(p){localStorage.setItem('eurotrip_pack',JSON.stringify(p));}
+function packingHtml(){const p=packGet(),done=p.filter(x=>x.c).length;let h='<div class="sec-h">🧳 Empaque ('+done+'/'+p.length+')</div><div class="bcard">';
+  p.forEach((x,i)=>{h+='<div class="act"><button class="chk" onclick="packTog('+i+')" style="'+(x.c?'background:var(--green);border-color:var(--green);color:#fff':'')+'">'+(x.c?'✓':'')+'</button><div class="a-body"><div class="a-title" style="'+(x.c?'text-decoration:line-through;opacity:.5':'')+'">'+esc(x.t)+'</div></div><button class="x" onclick="packDel('+i+')">🗑️</button></div>';});
+  return h+'<button class="addbtn" onclick="packAdd()">+ Agregar al empaque</button></div>';}
+function packTog(i){const p=packGet();p[i].c=!p[i].c;packSet(p);renderExplore();}
+function packDel(i){const p=packGet();p.splice(i,1);packSet(p);renderExplore();}
+function packAdd(){const t=prompt('¿Qué agregas al empaque?');if(t){const p=packGet();p.push({t:t,c:false});packSet(p);renderExplore();showToast('Agregado al empaque');}}
+function emergencyHtml(){return '<div class="sec-h">🆘 Emergencia</div><div class="bcard">'
+  +'<div class="pf-row"><span>🚨 Emergencias (toda la UE)</span><a href="tel:112" style="color:var(--red);font-weight:800">112</a></div>'
+  +'<div class="pf-row"><span>🇫🇷 Francia · SAMU médico</span><a href="tel:15" style="color:var(--red);font-weight:800">15</a></div>'
+  +'<div class="pf-row"><span>🇫🇷 Francia · Policía</span><a href="tel:17" style="color:var(--red);font-weight:800">17</a></div>'
+  +'<div class="pf-row"><span>🇪🇸 España · Policía Nacional</span><a href="tel:091" style="color:var(--red);font-weight:800">091</a></div>'
+  +'<div class="pf-row" style="color:var(--muted);font-size:.82rem">📌 Para tel. de embajada de México y cancelar tarjetas, pídeselo a Claudia (busca el actual) o guárdalos en una nota.</div>'
+  +'</div>';}
 
 /* ---------- PERFIL ---------- */
 function renderPerfil(){const hotels=DATA.hotel_choices||[];
