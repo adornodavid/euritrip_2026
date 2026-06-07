@@ -232,6 +232,23 @@ button:active,.pf-btn:active,.sugg:active,.chip:active,.city-photo:active{transf
 .seg{display:flex;background:var(--bg);border-radius:12px;padding:.25rem;gap:.25rem;}
 .seg-btn{flex:1;border:0;background:none;padding:.55rem;border-radius:9px;font-weight:700;font-size:.82rem;color:var(--muted);cursor:pointer;}
 .seg-btn.on{background:var(--card);color:var(--brand);box-shadow:var(--shadow);}
+
+/* onboarding + animaciones (deep pass 2) */
+.onb{position:fixed;inset:0;z-index:5000;background:linear-gradient(160deg,#7C3AED 0%,#EC4899 50%,#FB923C 100%);display:none;align-items:center;justify-content:center;padding:1.6rem;}
+.onb.show{display:flex;}
+.onb-card{text-align:center;color:#fff;max-width:360px;width:100%;animation:onbup .55s cubic-bezier(.2,.7,.3,1) both;}
+@keyframes onbup{from{opacity:0;transform:translateY(22px)}to{opacity:1;transform:none}}
+.onb-logo{width:90px;height:90px;border-radius:22px;box-shadow:0 10px 34px rgba(0,0,0,.3);}
+.onb-title{font-size:2.7rem;font-weight:800;margin:.8rem 0 .15rem;letter-spacing:-.03em;}
+.onb-tag{font-size:1.12rem;opacity:.95;margin-bottom:1.6rem;}
+.onb-feats{display:flex;flex-direction:column;gap:.7rem;text-align:left;background:rgba(255,255,255,.16);border-radius:16px;padding:1.1rem 1.2rem;font-weight:600;font-size:.96rem;}
+.onb-btn{margin-top:1.7rem;background:#fff;color:#11190C;border:0;border-radius:14px;padding:.95rem 2rem;font-weight:800;font-size:1.05rem;cursor:pointer;width:100%;box-shadow:0 6px 22px rgba(0,0,0,.28);transition:transform .1s;}
+.onb-btn:active{transform:scale(.97);}
+.fab{animation:fabin .45s cubic-bezier(.2,.9,.3,1.2) both;}
+@keyframes fabin{from{transform:scale(0);opacity:0}to{transform:scale(1);opacity:1}}
+.btn-add,.pf-btn,.chip,.addbtn,.save,.sadd{transition:transform .1s,background .15s,box-shadow .15s;}
+.act-detail{animation:detin .25s ease both;}
+@keyframes detin{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
 </style>
 <script>(function(){try{var m=localStorage.getItem("bayu_theme")||"auto";var d=m==="dark"||(m==="auto"&&matchMedia("(prefers-color-scheme:dark)").matches);document.documentElement.setAttribute("data-theme",d?"dark":"light");}catch(e){}})();</script>
 </head>
@@ -279,6 +296,20 @@ button:active,.pf-btn:active,.sugg:active,.chip:active,.city-photo:active{transf
 <input type="file" id="album-file" accept="image/*,video/*" style="display:none" onchange="albumUpload(this)"/>
 <div id="toast" class="toast"></div>
 <div class="ptr" id="ptr"><span>↻</span></div>
+
+<!-- ONBOARDING -->
+<div id="onb" class="onb"><div class="onb-card">
+  <img src="app/icon-192.png" class="onb-logo" alt="Bayu"/>
+  <h1 class="onb-title">Bayu</h1>
+  <p class="onb-tag">Tu viaje, en un solo lugar.</p>
+  <div class="onb-feats">
+    <div>🗺️ Planea tu itinerario día por día</div>
+    <div>💰 Controla gastos y presupuesto</div>
+    <div>📸 Guarda fotos, documentos y reservas</div>
+    <div>🤖 Claudia te ayuda con todo</div>
+  </div>
+  <button class="onb-btn" onclick="closeOnb()">Empezar →</button>
+</div></div>
 
 <!-- TABBAR -->
 <nav class="tabbar">

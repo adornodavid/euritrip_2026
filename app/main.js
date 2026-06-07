@@ -326,4 +326,6 @@ document.addEventListener('touchend',()=>{if(ptrOn&&$('ptr').classList.contains(
 
 load();
 flushQueue();
+if(!localStorage.getItem('bayu_onboarded')){var _o=document.getElementById('onb');if(_o)_o.classList.add('show');}
+function closeOnb(){var o=document.getElementById('onb');if(o)o.classList.remove('show');localStorage.setItem('bayu_onboarded','1');}
 if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('/sw.js').catch(()=>{}));}
