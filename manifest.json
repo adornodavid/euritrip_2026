@@ -1,15 +1,25 @@
 {
-  "name": "Eurotrip 2026 · David & Paty",
-  "short_name": "Eurotrip 26",
-  "description": "Planner de viaje, gastos, presupuesto y tips — Francia + País Vasco + Madrid",
+  "name": "Bayu · Trip Planner",
+  "short_name": "Bayu",
+  "description": "Bayu — planea tu viaje: itinerario, gastos, documentos, álbum y más",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait",
   "background_color": "#EFF0EC",
-  "theme_color": "#DA4143",
+  "theme_color": "#2563EB",
   "icons": [
-    { "src": "/app/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
-    { "src": "/app/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+    {
+      "src": "/app/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/app/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
   ]
 }

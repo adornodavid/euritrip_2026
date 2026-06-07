@@ -3,13 +3,14 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no"/>
-<meta name="theme-color" content="#DA4143"/>
+<meta name="theme-color" content="#2563EB"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-status-bar-style" content="default"/>
-<meta name="apple-mobile-web-app-title" content="Eurotrip 26"/>
+<meta name="apple-mobile-web-app-title" content="Bayu"/>
 <link rel="manifest" href="/manifest.json"/>
-<link rel="apple-touch-icon" href="/app/icon-192.png"/>
-<title>Eurotrip 2026</title>
+<link rel="apple-touch-icon" href="/app/apple-touch.png"/>
+<link rel="icon" href="/app/favicon.png"/>
+<title>Bayu · Trip Planner</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
 :root{--bg:#EFF0EC;--card:#fff;--ink:#11190C;--red:#DA4143;--green:#2e7d32;--muted:#8c8c84;--line:rgba(0,0,0,.08);--shadow:0 1px 4px rgba(0,0,0,.06);}
@@ -197,13 +198,17 @@ button:active,.pf-btn:active,.sugg:active,.chip:active,.city-photo:active{transf
 .doc-row{display:flex;justify-content:space-between;align-items:center;padding:.5rem 0;border-top:1px solid var(--line);}
 .doc-row:first-child{border-top:0;}
 .doc-row a{font-weight:700;color:var(--ink);text-decoration:none;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+
+.brandbar{display:flex;align-items:center;gap:.55rem;}
+.brandbar img{width:34px;height:34px;border-radius:9px;box-shadow:0 1px 4px rgba(0,0,0,.15);}
+.brandbar .bn{font-size:1.5rem;font-weight:800;letter-spacing:-.03em;background:linear-gradient(120deg,#4F46E5,#06B6D4);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;line-height:1;}
 </style>
 </head>
 <body>
 
 <!-- PLANNER -->
 <section id="s-planner" class="screen active">
-  <div class="app-bar"><div><h1>Mi viaje</h1><div class="sub">15-31 Oct 2026 · David & Paty</div></div></div>
+  <div class="app-bar"><div class="brandbar"><img src="app/icon-192.png" alt="Bayu"/><div><div class="bn">Bayu</div><div class="sub">Tu viaje · 15–31 Oct 2026</div></div></div></div>
   <div class="hero">
     <img src="images/paris/eiffel.jpg" alt="" onerror="this.style.display='none'"/>
     <div class="ov"></div>
