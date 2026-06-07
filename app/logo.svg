@@ -1,21 +1,20 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
   <defs>
     <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#4F46E5"/>
-      <stop offset="0.5" stop-color="#2563EB"/>
-      <stop offset="1" stop-color="#06B6D4"/>
+      <stop offset="0" stop-color="#7C3AED"/>
+      <stop offset="0.4" stop-color="#EC4899"/>
+      <stop offset="0.72" stop-color="#FB7185"/>
+      <stop offset="1" stop-color="#FBBF24"/>
     </linearGradient>
   </defs>
   <rect width="512" height="512" rx="118" fill="url(#g)"/>
-  <!-- breeze trails -->
-  <g stroke="#ffffff" stroke-linecap="round" fill="none" opacity="0.55">
+  <g stroke="#ffffff" stroke-linecap="round" fill="none" opacity="0.6">
     <path d="M96 300 q60 -26 120 -8" stroke-width="14"/>
-    <path d="M104 348 q70 -24 140 -2" stroke-width="12" opacity="0.7"/>
+    <path d="M104 348 q70 -24 140 -2" stroke-width="12" opacity="0.75"/>
   </g>
-  <!-- paper plane -->
   <g fill="#ffffff">
     <path d="M406 120 L150 262 L262 296 Z"/>
-    <path d="M406 120 L262 296 L300 404 Z" opacity="0.82"/>
-    <path d="M406 120 L262 296 L312 286 Z" opacity="0.6"/>
+    <path d="M406 120 L262 296 L300 404 Z" opacity="0.84"/>
+    <path d="M406 120 L262 296 L312 286 Z" opacity="0.62"/>
   </g>
 </svg>

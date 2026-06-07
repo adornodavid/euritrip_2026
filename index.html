@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no"/>
-<meta name="theme-color" content="#2563EB"/>
+<meta name="theme-color" content="#FF5A5F"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-status-bar-style" content="default"/>
 <meta name="apple-mobile-web-app-title" content="Bayu"/>
@@ -13,7 +13,7 @@
 <title>Bayu · Trip Planner</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
-:root{--bg:#EFF0EC;--card:#fff;--ink:#11190C;--red:#DA4143;--green:#2e7d32;--muted:#8c8c84;--line:rgba(0,0,0,.08);--shadow:0 1px 4px rgba(0,0,0,.06);}
+:root{--bg:#FAF6F1;--card:#fff;--ink:#11190C;--red:#FF5A5F;--green:#10B981;--muted:#8c8c84;--line:rgba(0,0,0,.08);--shadow:0 1px 4px rgba(0,0,0,.06);}
 html,body{background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Sora,system-ui,sans-serif;}
 body{padding-bottom:calc(72px + env(safe-area-inset-bottom));min-height:100vh;}
 .screen{display:none;animation:fade .2s ease;}
@@ -201,10 +201,10 @@ button:active,.pf-btn:active,.sugg:active,.chip:active,.city-photo:active{transf
 
 .brandbar{display:flex;align-items:center;gap:.55rem;}
 .brandbar img{width:34px;height:34px;border-radius:9px;box-shadow:0 1px 4px rgba(0,0,0,.15);}
-.brandbar .bn{font-size:1.5rem;font-weight:800;letter-spacing:-.03em;background:linear-gradient(120deg,#4F46E5,#06B6D4);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;line-height:1;}
+.brandbar .bn{font-size:1.5rem;font-weight:800;letter-spacing:-.03em;background:linear-gradient(120deg,#7C3AED,#EC4899,#FB923C);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;line-height:1;}
 
 /* ===== BAYU brand + dark mode ===== */
-:root{--brand:#2563EB;}
+:root{--brand:#FF5A5F;}
 .tabbar button.on{color:var(--brand) !important;}
 [data-theme="dark"]{--bg:#0f1420;--card:#1a2030;--ink:#e8eaf0;--muted:#8b93a7;--line:rgba(255,255,255,.10);--shadow:0 1px 5px rgba(0,0,0,.5);}
 [data-theme="dark"] body{background:var(--bg);color:var(--ink);}
@@ -220,8 +220,20 @@ button:active,.pf-btn:active,.sugg:active,.chip:active,.city-photo:active{transf
 [data-theme="dark"] .bub.a{background:var(--card);}
 [data-theme="dark"] .chat-input,[data-theme="dark"] .chat-input input{background:var(--bg);}
 [data-theme="dark"] .bub.u{background:var(--brand);}
+
+/* Bayu colorful UX polish v9.2 */
+.bcard,.city,.pl-summary,.tip,.planner-day{border-radius:18px;}
+.save{background:linear-gradient(120deg,#FF5A5F,#FB923C) !important;box-shadow:0 4px 14px rgba(255,90,95,.35);}
+.fab{background:linear-gradient(135deg,#10B981,#14B8A6) !important;box-shadow:0 6px 18px rgba(16,185,129,.4);}
+.pf-btn{border-radius:14px;}
+.tabbar button{position:relative;}
+.tabbar button.on::after{content:'';position:absolute;top:0;left:50%;transform:translateX(-50%);width:26px;height:3px;border-radius:0 0 4px 4px;background:var(--brand);}
+.sec-h{color:var(--brand);}
+.seg{display:flex;background:var(--bg);border-radius:12px;padding:.25rem;gap:.25rem;}
+.seg-btn{flex:1;border:0;background:none;padding:.55rem;border-radius:9px;font-weight:700;font-size:.82rem;color:var(--muted);cursor:pointer;}
+.seg-btn.on{background:var(--card);color:var(--brand);box-shadow:var(--shadow);}
 </style>
-<script>(function(){try{var t=localStorage.getItem("bayu_theme");if(!t)t=matchMedia("(prefers-color-scheme:dark)").matches?"dark":"light";document.documentElement.setAttribute("data-theme",t);}catch(e){}})();</script>
+<script>(function(){try{var m=localStorage.getItem("bayu_theme")||"auto";var d=m==="dark"||(m==="auto"&&matchMedia("(prefers-color-scheme:dark)").matches);document.documentElement.setAttribute("data-theme",d?"dark":"light");}catch(e){}})();</script>
 </head>
 <body>
 
