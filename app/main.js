@@ -239,8 +239,10 @@ function renderPerfil(){const hotels=DATA.hotel_choices||[];
   CITIES.forEach(c=>{const ho=hotels.find(x=>x.city===c.key);h+='<div class="pf-row"><span>'+c.flag+' '+esc(c.name)+'</span><span style="color:var(--muted)">'+(ho?(ho.confirmed?'✅ '+esc(ho.hotel_name):'⏳ por definir'):'—')+'</span></div>';});
   h+='</div>';
   const _pq=queueGet().length;if(_pq)h+='<div class="bcard" style="background:#FFF3B0;color:#7a6a00;font-weight:700">⏳ '+_pq+' cambios pendientes <button class="chip" onclick="flushQueue()">Sincronizar</button></div>';
+  h+='<button class="pf-btn" onclick="toggleTheme()">'+(document.documentElement.getAttribute('data-theme')==='dark'?'☀️ Modo claro':'🌙 Modo oscuro')+'</button>';
   h+='<button class="pf-btn" onclick="changeKey()">🔑 Cambiar clave de escritura</button><a class="pf-btn" href="/guia">📖 Guía editorial completa</a><button class="pf-btn" onclick="alert(\'Para instalar: Safari → Compartir → Agregar a inicio. Chrome: ⋮ → Instalar app.\')">📲 Cómo instalar la app</button><button class="pf-btn" onclick="load();showToast(\'Actualizado ✓\')">🔄 Recargar datos</button>';
   h+='<div style="text-align:center;color:var(--muted);font-size:.74rem;margin-top:1rem">Eurotrip PWA v8.4 · Arkamia Lab</div>';$('perfil-root').innerHTML=h;}
+function toggleTheme(){var cur=document.documentElement.getAttribute('data-theme')==='dark'?'light':'dark';document.documentElement.setAttribute('data-theme',cur);localStorage.setItem('bayu_theme',cur);renderPerfil();showToast(cur==='dark'?'🌙 Modo oscuro':'☀️ Modo claro');}
 function changeKey(){localStorage.removeItem('eurotrip_write_key');const k=prompt('Nueva clave de escritura:');if(k){localStorage.setItem('eurotrip_write_key',k);showToast('Clave guardada ✓');}}
 
 /* ---------- CLAUDIA ---------- */
