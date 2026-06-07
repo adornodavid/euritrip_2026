@@ -307,6 +307,17 @@ button:active,.pf-btn:active,.sugg:active,.chip:active,.city-photo:active{transf
   <button class="cancel" onclick="closeM('m-link')">Cancelar</button>
 </div></div>
 
+<div id="m-city" class="modal"><div class="sheet">
+  <h3>Ciudad / parada</h3>
+  <input type="hidden" id="mc-id"/>
+  <div class="row2"><div><label>Nombre</label><input type="text" id="mc-name" placeholder="Ej: Bayonne"/></div><div><label>Bandera</label><input type="text" id="mc-flag" value="📍" maxlength="4"/></div></div>
+  <div class="row2"><div><label>Desde</label><input type="date" id="mc-start" min="2026-10-15" max="2026-10-31"/></div><div><label>Hasta</label><input type="date" id="mc-end" min="2026-10-15" max="2026-10-31"/></div></div>
+  <label>Foto de fondo (URL, opcional)</label><input type="url" id="mc-photo" placeholder="https://..."/>
+  <label>Notas</label><input type="text" id="mc-notes"/>
+  <button class="save" onclick="saveCity()">Guardar</button>
+  <button class="cancel" onclick="closeM('m-city')">Cancelar</button>
+</div></div>
+
 <script src="app/main.js"></script>
 </body>
 </html>

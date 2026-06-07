@@ -20,7 +20,9 @@ export default async function handler(req, res) {
     };
     for (const logical of TABLES) {
       let q = sb.from(tableName(logical)).select('*');
-      if (logical === 'activities') {
+      if (logical === 'trip_cities') {
+        q = q.order('start_date', { ascending: true, nullsFirst: false }).order('sort_order', { ascending: true });
+      } else if (logical === 'activities') {
         // Planner: por día, luego orden manual dentro del día, luego hora
         q = q.order('activity_date', { ascending: true, nullsFirst: false })
              .order('sort_order', { ascending: true, nullsFirst: false })

@@ -1,13 +1,14 @@
 'use strict';
 const DOW=['DOM','LUN','MAR','MIÉ','JUE','VIE','SÁB'];
 const CAT={comida:'🍽️',museo:'🏛️',paseo:'🚶','viñedo':'🍷',vinedo:'🍷',actividad:'🎟️',compras:'🛍️',traslado:'🚄',logistica:'🧳',flex:'✨'};
-const CITIES=[
+const BASE_CITIES=[
   {key:'Paris',name:'París',flag:'🇫🇷',img:'images/paris/eiffel.jpg',dates:['2026-10-16','2026-10-17','2026-10-18','2026-10-19'],range:'16-20 Oct · 4N'},
   {key:'Bordeaux',name:'Bordeaux',flag:'🇫🇷',img:'images/bordeaux/place-bourse.jpg',dates:['2026-10-20','2026-10-21'],range:'20-22 Oct · 2N'},
   {key:'San Sebastián',name:'San Sebastián',flag:'🇪🇸',img:'images/san-sebastian/bahia.jpg',dates:['2026-10-22','2026-10-23'],range:'22-24 Oct · 2N'},
   {key:'Bilbao',name:'Bilbao',flag:'🇪🇸',img:'images/bilbao/panoramica.jpg',dates:['2026-10-24','2026-10-25'],range:'24-26 Oct · 2N'},
   {key:'Madrid',name:'Madrid',flag:'🇪🇸',img:'images/madrid/palacio-real.jpg',dates:['2026-10-26','2026-10-27','2026-10-28','2026-10-29','2026-10-30','2026-10-31'],range:'26-31 Oct · 5N'}
 ];
+let CITIES=BASE_CITIES.slice();
 const SUGG={
   'Paris':[{t:'Crucero por el Sena',img:'images/paris/sena.jpg',r:'8.1',rev:'13577',p:'$19',cat:'actividad'},{t:'Louvre sin filas',img:'images/paris/louvre.jpg',r:'8.5',rev:'9200',p:'$32',cat:'museo'},{t:'Cima de la Torre Eiffel',img:'images/paris/eiffel.jpg',r:'8.7',rev:'21043',p:'$45',cat:'actividad'},{t:'Versalles día completo',img:'images/paris/versalles.jpg',r:'8.6',rev:'7810',p:'$65',cat:'museo'}],
   'Bordeaux':[{t:'Tour viñedos Saint-Émilion',img:'images/bordeaux/saint-emilion.jpg',r:'9.0',rev:'3412',p:'$115',cat:'viñedo'},{t:'Cité du Vin + cata',img:'images/bordeaux/cite-du-vin.jpg',r:'8.2',rev:'2104',p:'$22',cat:'museo'},{t:'Ostras + vino en el mercado',img:'images/bordeaux/oysters.jpg',r:'8.8',rev:'915',p:'$35',cat:'comida'}],
@@ -21,10 +22,24 @@ function esc(t){return (t==null?'':String(t)).replace(/[&<>"]/g,c=>({'&':'&amp;'
 function dn(iso){const p=iso.split('-');const d=new Date(Date.UTC(+p[0],+p[1]-1,+p[2]));return DOW[d.getUTCDay()]+' '+(+p[2]);}
 function wkey(){let k=localStorage.getItem('eurotrip_write_key');if(!k){k=prompt('Clave de escritura (David/Paty):');if(k)localStorage.setItem('eurotrip_write_key',k);}return k;}
 function money(n){return '$'+Number(n||0).toLocaleString('es-MX',{maximumFractionDigits:0});}
-const CITYKEYS=CITIES.map(c=>c.key);
+let CITYKEYS=CITIES.map(c=>c.key);
 function cityByDate(date){const c=CITIES.find(c=>c.dates.includes(date));return c?c.key:null;}
 function resolveCity(a){if(a.city&&CITYKEYS.includes(a.city))return a.city;return cityByDate(a.activity_date)||CITIES[0].key;}
 function snapDateToCity(){const c=CITIES.find(c=>c.key===$('ma-city').value);if(!c)return;if(!c.dates.includes($('ma-date').value))$('ma-date').value=c.dates[0];}
+function pad(n){return n<10?'0'+n:''+n;}
+function dateRange(s,e){const out=[];if(!s)return out;const a=new Date(s+'T00:00:00'),b=new Date((e||s)+'T00:00:00');for(let d=new Date(a);d<=b;d.setDate(d.getDate()+1))out.push(d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate()));return out;}
+function fmtRange(s,e){const dd=x=>x?(+x.slice(8,10))+'':'';if(!e||e===s)return dd(s)+' Oct · parada';return dd(s)+'-'+dd(e)+' Oct';}
+const DAYTRIPS=['Versalles','Saint-Émilion','Toledo'];
+function rebuildCities(){
+  const custom=(DATA.trip_cities||[]).map(tc=>({key:tc.name,name:tc.name,flag:tc.country_flag||'📍',img:tc.photo_url||'',custom:true,id:tc.id,start_date:tc.start_date,end_date:tc.end_date,notes:tc.notes,dates:dateRange(tc.start_date,tc.end_date),range:fmtRange(tc.start_date,tc.end_date)}));
+  CITIES=[...BASE_CITIES.map(c=>({...c})),...custom].sort((a,b)=>((a.dates[0]||'9')<(b.dates[0]||'9'))?-1:1);
+  CITYKEYS=CITIES.map(c=>c.key);
+  const sel=$('ma-city');if(sel)sel.innerHTML='<option value="">—</option>'+CITIES.map(c=>'<option value="'+esc(c.key)+'">'+esc(c.flag)+' '+esc(c.name)+'</option>').join('')+DAYTRIPS.map(d=>'<option value="'+d+'">🚏 '+d+'</option>').join('');
+}
+function openCity(c){$('mc-id').value=c.id||'';$('mc-name').value=c.name||'';$('mc-flag').value=c.country_flag||c.flag||'📍';$('mc-start').value=c.start_date||'';$('mc-end').value=c.end_date||'';$('mc-photo').value=c.photo_url||c.img||'';$('mc-notes').value=c.notes||'';$('m-city').classList.add('open');}
+function openCity2(id){const c=(DATA.trip_cities||[]).find(x=>x.id===id);if(c)openCity(c);}
+async function saveCity(){const id=$('mc-id').value,n=$('mc-name').value.trim(),st=$('mc-start').value;if(!n||!st){alert('Nombre y fecha de inicio requeridos');return;}const row={name:n,country_flag:$('mc-flag').value||'📍',start_date:st,end_date:$('mc-end').value||st,photo_url:$('mc-photo').value||null,notes:$('mc-notes').value||null};if(id)await write({action:'update',table:'trip_cities',id:id,patch:row},'Ciudad guardada ✓');else{row.created_by='manual';await write({action:'insert',table:'trip_cities',row:row},'Ciudad agregada ✓');}closeM('m-city');}
+async function delCity(id){if(confirm('¿Quitar esta parada? Las actividades quedan guardadas.'))await write({action:'delete',table:'trip_cities',id:id},'Quitada');}
 let toastT;
 function showToast(msg,err){const t=$('toast');if(!t)return;t.textContent=msg;t.className='toast show'+(err?' err':'');clearTimeout(toastT);toastT=setTimeout(()=>{t.className='toast'+(err?' err':'');},1900);}
 function tripInfo(){const start=new Date('2026-10-16T00:00:00'),end=new Date('2026-10-31T23:59:59'),now=new Date();
@@ -49,7 +64,7 @@ async function load(){
   if(!DATA.activities)$('planner-root').innerHTML='<div class="skel skel-city"></div><div class="skel skel-city"></div><div class="skel skel-city"></div>';
   try{
     const r=await fetch('/api/data',{cache:'no-store'});const j=await r.json();
-    DATA=j.data||{};renderPlanner();renderGastos();
+    DATA=j.data||{};rebuildCities();renderPlanner();renderGastos();
     if($('s-perfil').classList.contains('active'))renderPerfil();
     if($('s-explore').classList.contains('active'))renderExplore();
   }catch(e){ $('planner-root').innerHTML='<p class="empty">Sin conexión. '+esc(e.message)+'</p>'; }
@@ -65,10 +80,11 @@ function renderPlanner(){
     const hotel=hotels.find(h=>h.city===c.key), cnt=cityActs.length, dco=cityActs.filter(a=>a.status==='hecho').length;
     const isOpen=oset.has(c.key);
     html+='<div class="city'+(isOpen?' open':'')+'" id="city-'+ci+'">';
-    html+='<div class="city-photo" onclick="toggleCity('+ci+')"><img src="'+c.img+'" alt="" onerror="this.style.display=\'none\'"/><div class="ov"></div>';
+    html+='<div class="city-photo"'+(c.img?'':' style="background:linear-gradient(135deg,#475569 0%,#1e293b 100%)"')+' onclick="toggleCity('+ci+')">'+(c.img?'<img src="'+c.img+'" alt="" onerror="this.style.display=\'none\'"/>':'')+'<div class="ov"></div>';
     html+='<div class="ci"><span style="font-size:1.2rem">'+c.flag+'</span><span class="nm">'+c.name+'</span>';
     html+='<span class="ct">'+c.range+'<br/>'+(cnt?'<span class="cprog">'+dco+'/'+cnt+' ✓</span>':'sin actividades')+'</span><span class="chev">›</span></div></div>';
     html+='<div class="city-body">';
+    if(c.custom)html+='<div style="display:flex;gap:.4rem;margin-bottom:.6rem"><button class="chip" onclick="openCity2(\''+c.id+'\')">✏️ Editar parada</button><button class="chip" onclick="delCity(\''+c.id+'\')">🗑️ Quitar</button></div>';
     html+='<div class="hotel-line" style="cursor:pointer" onclick="openHotel(\''+esc(c.key)+'\')">🏨 '+(hotel?esc(hotel.hotel_name)+(hotel.confirmed?' · ✅':' · ⏳ por definir')+(hotel.zone?' · '+esc(hotel.zone):''):'Definir hotel')+' · ✏️</div>';
     const _extra=[...new Set(cityActs.map(a=>a.activity_date))].filter(d=>!c.dates.includes(d));
     [...c.dates,..._extra].sort().forEach(d=>{
@@ -89,6 +105,7 @@ function renderPlanner(){
     });
     html+=suggRow(c.key,c.name)+'</div></div>';
   });
+  html+='<button class="addbtn" style="margin-top:.7rem" onclick="openCity({})">+ Agregar ciudad o parada</button>';
   $('planner-root').innerHTML=html;
 }
 function suggRow(key,name){
@@ -126,9 +143,6 @@ function renderGastos(){
   const pct=totMax?Math.min(100,totSpent/totMax*100):0,byP=p=>exp.filter(e=>e.payer===p).reduce((s,e)=>s+Number(e.amount_mxn||0),0);
   let html='<div class="bcard"><div class="btot"><div><div class="lbl">Gastado</div><div class="big">'+money(totSpent)+'</div></div><div style="text-align:right"><div class="lbl">Presupuesto</div><div class="big" style="font-size:1.05rem;color:var(--muted)">'+money(totMin)+'–'+money(totMax)+'</div></div></div><div class="bar"><i style="width:'+pct+'%"></i></div>';
   html+='<div class="split"><div><div class="who">👤 David</div><div class="amt2">'+money(byP('David'))+'</div></div><div><div class="who">👤 Paty</div><div class="amt2">'+money(byP('Paty'))+'</div></div><div><div class="who">🤝 Juntos</div><div class="amt2">'+money(byP('Joint'))+'</div></div></div></div>';
-  const _d=byP('David'),_p=byP('Paty'),_diff=Math.abs(_d-_p)/2;
-  const _settle=_diff<1?'Están a mano 🤝':(_d>_p?'Paty le debe a David ':'David le debe a Paty ')+money(_diff);
-  html+='<div class="bcard" style="text-align:center"><div class="lbl">⚖️ Balance de la pareja</div><div style="font-weight:800;font-size:1.05rem;margin-top:.35rem">'+_settle+'</div></div>';
   html+='<div class="bcard">';
   budget.forEach(b=>{const sp=exp.filter(e=>e.category===b.category).reduce((s,e)=>s+Number(e.amount_mxn||0),0);const mx=Number(b.projected_max_mxn||0),p=mx?Math.min(100,sp/mx*100):0;
     html+='<div class="catrow" style="cursor:pointer" onclick="openBudget(\''+b.category+'\')"><div class="top"><span>'+(b.emoji||'')+' '+esc(b.label)+'</span><span>'+money(sp)+' <span class="sub">/ '+money(mx)+'</span></span></div><div class="bar"><i style="width:'+p+'%;background:'+(p>=100?'var(--red)':'var(--green)')+'"></i></div></div>';});
