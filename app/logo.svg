@@ -8,13 +8,7 @@
     </linearGradient>
   </defs>
   <rect width="512" height="512" rx="118" fill="url(#g)"/>
-  <g stroke="#ffffff" stroke-linecap="round" fill="none" opacity="0.6">
-    <path d="M96 300 q60 -26 120 -8" stroke-width="14"/>
-    <path d="M104 348 q70 -24 140 -2" stroke-width="12" opacity="0.75"/>
-  </g>
-  <g fill="#ffffff">
-    <path d="M406 120 L150 262 L262 296 Z"/>
-    <path d="M406 120 L262 296 L300 404 Z" opacity="0.84"/>
-    <path d="M406 120 L262 296 L312 286 Z" opacity="0.62"/>
+  <g fill="none" stroke="#ffffff" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M92 268 C 150 214, 210 218, 256 286 C 302 218, 362 214, 420 268" stroke-width="36"/>
   </g>
 </svg>
