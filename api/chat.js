@@ -81,6 +81,7 @@ Cuando David o Paty mencionen información que valga la pena guardar, usa las he
 7. **add_activity**: agregar una actividad al planner de un día (museo, comida, paseo, traslado...). El planner es editable: estas actividades se ven en el sitio y David/Paty las marcan como hechas, las editan o las borran.
    - Ej: "El 25 quiero ir al Guggenheim" → add_activity(activity_date="2026-10-25", title="Museo Guggenheim", category="museo", city="Bilbao")
    - Para editar o quitar una actividad usa update_record / delete_record con table="activities".
+   - Puedes ENRIQUECER una actividad (sobre todo day-trips como Saint-Émilion) con update_record table="activities": campos link (info), map_url (cómo llegar), tickets (boletos), notes. Ej: "ponle a Saint-Émilion el link del tour y cómo llegar".
 
 8. **list_saved**: ver qué tienen guardado (notes, reservations, bookmarks, hotel_choices, day_overrides, expenses, budget)
 
@@ -234,6 +235,9 @@ const TOOLS = [
         category: { type: 'string', description: 'Tipo: comida, museo, paseo, actividad, vinedo, compras, traslado, logistica, flex' },
         city: { type: 'string', description: 'Ciudad: Paris, Bordeaux, San Sebastian, Bilbao, Madrid, Versalles, Saint-Emilion, Toledo' },
         notes: { type: 'string', description: 'Notas (opcional)' },
+        link: { type: 'string', description: 'URL de info del lugar (opcional)' },
+        map_url: { type: 'string', description: 'URL de como llegar / Google Maps (opcional)' },
+        tickets: { type: 'string', description: 'Boletos: link o nota si ya los compraron (opcional)' },
         sort_order: { type: 'number', description: 'Orden dentro del dia (opcional)' }
       },
       required: ['activity_date', 'title']

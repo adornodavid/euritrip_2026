@@ -101,10 +101,10 @@ function renderPlanner(){
         const up=idx>0?'<button class="mvbtn" onclick="moveAct(\''+a.id+'\',-1)">▲</button>':'';
         const dw=idx<da.length-1?'<button class="mvbtn" onclick="moveAct(\''+a.id+'\',1)">▼</button>':'';
         html+='<div class="act'+(done?' done':'')+'"><button class="chk" onclick="togAct(\''+a.id+'\','+done+')">'+(done?'✓':'')+'</button>';
-        html+='<div class="a-body"><div class="a-title">'+(a.start_time?'<span class="a-time">'+esc(a.start_time.slice(0,5))+'</span>':'')+esc(a.title)+(a.is_suggestion?'<span class="sug">sugerida</span>':'')+'</div>';
-        const m=[];if(a.category)m.push((CAT[a.category]||'•')+' '+esc(a.category));if(a.notes)m.push(esc(a.notes));
+        html+='<div class="a-body" onclick="toggleDetail(\''+a.id+'\')"><div class="a-title">'+(a.start_time?'<span class="a-time">'+esc(a.start_time.slice(0,5))+'</span>':'')+esc(a.title)+(a.is_suggestion?'<span class="sug">sugerida</span>':'')+((a.link||a.map_url||a.tickets||a.notes)?' <span style="opacity:.4;font-size:.7rem">▾</span>':'')+'</div>';
+        const m=[];if(a.category)m.push((CAT[a.category]||'•')+' '+esc(a.category));
         if(m.length)html+='<div class="a-meta">'+m.join(' · ')+'</div>';
-        html+='</div><div class="a-act">'+up+dw+'<button onclick="editAct(\''+a.id+'\')">✏️</button><button onclick="delAct(\''+a.id+'\')">🗑️</button></div></div>';
+        html+='</div><div class="a-act">'+up+dw+'<button onclick="editAct(\''+a.id+'\')">✏️</button><button onclick="delAct(\''+a.id+'\')">🗑️</button></div></div>'+detailHtml(a);
       });
       html+='<button class="addbtn" onclick="openAct({activity_date:\''+d+'\',city:\''+esc(c.key)+'\'})">+ actividad el '+dn(d)+'</button>'+(da.length?'<button class="addbtn" style="margin-top:.3rem;border-style:solid;color:var(--green)" onclick="mapDay(\''+d+'\')">🗺️ Ver el día en Google Maps</button>':'')+'</div>';
     });
@@ -113,6 +113,15 @@ function renderPlanner(){
   html+='<button class="addbtn" style="margin-top:.7rem" onclick="openCity({})">+ Agregar ciudad o parada</button>';
   $('planner-root').innerHTML=html;
 }
+function detailHtml(a){
+  const p=[];
+  if(a.notes)p.push('<div class="dt-row">📝 '+esc(a.notes)+'</div>');
+  if(a.link)p.push('<div class="dt-row">🔗 <a href="'+esc(a.link)+'" target="_blank">Más info</a></div>');
+  if(a.map_url)p.push('<div class="dt-row">🧭 <a href="'+esc(a.map_url)+'" target="_blank">Cómo llegar</a></div>');
+  if(a.tickets)p.push('<div class="dt-row">🎫 '+esc(a.tickets)+'</div>');
+  return '<div class="act-detail" id="det-'+a.id+'" style="display:none">'+(p.length?p.join(''):'<div class="dt-empty">Sin detalles aún. Agrega links, cómo llegar, boletos…</div>')+'<button class="addbtn" style="margin-top:.45rem" onclick="editAct(\''+a.id+'\')">✏️ Editar detalles</button></div>';
+}
+function toggleDetail(id){const d=$('det-'+id);if(d)d.style.display=(d.style.display==='none'?'block':'none');}
 function wishHtml(wish){
   let h='<div class="bcard"><div class="lbl" style="margin-bottom:.3rem">💡 Cosas por hacer (sin fecha)</div>';
   if(!wish.length)h+='<div class="empty" style="padding:.9rem">Ideas que te recomienden y aún no sabes cuándo. Agrégalas aquí y luego les pones día.</div>';
@@ -130,7 +139,7 @@ function suggRow(key,name){
 function firstDay(key){const c=CITIES.find(c=>c.key===key);return c?c.dates[0]:'2026-10-16';}
 function addSug(key,i){const x=(SUGG[key]||[])[i];if(!x)return;go('planner');openAct({title:x.t,category:x.cat,city:key});}
 function openSug(key,i){const x=(SUGG[key]||[])[i];if(!x)return;window.open('https://www.getyourguide.com/s/?q='+encodeURIComponent(x.t+' '+key),'_blank');}
-function openAct(a){$('ma-title').textContent=a.id?'Editar actividad':'Nueva actividad';$('ma-id').value=a.id||'';$('ma-date').value=a.activity_date||'';$('ma-time').value=a.start_time?a.start_time.slice(0,5):'';$('ma-tit').value=a.title||'';$('ma-cat').value=a.category||'';$('ma-city').value=a.city||'';$('ma-notes').value=a.notes||'';$('m-act').classList.add('open');}
+function openAct(a){$('ma-title').textContent=a.id?'Editar actividad':'Nueva actividad';$('ma-id').value=a.id||'';$('ma-date').value=a.activity_date||'';$('ma-time').value=a.start_time?a.start_time.slice(0,5):'';$('ma-tit').value=a.title||'';$('ma-cat').value=a.category||'';$('ma-city').value=a.city||'';$('ma-notes').value=a.notes||'';$('ma-link').value=a.link||'';$('ma-map').value=a.map_url||'';$('ma-tickets').value=a.tickets||'';$('m-act').classList.add('open');}
 function editAct(id){const a=(DATA.activities||[]).find(x=>x.id===id);if(a)openAct(a);}
 async function togAct(id,done){await write({action:'update',table:'activities',id:id,patch:{status:done?'pendiente':'hecho'}},done?'Pendiente':'¡Hecho! ✓');}
 async function delAct(id){if(confirm('¿Borrar esta actividad?'))await write({action:'delete',table:'activities',id:id},'Borrado');}
@@ -143,7 +152,7 @@ async function moveAct(id,dir){
   await writeMany([{id:a.id,patch:{sort_order:na}},{id:b.id,patch:{sort_order:nb}}],'Reordenado');
 }
 async function saveAct(){const id=$('ma-id').value,tit=$('ma-tit').value.trim();if(!tit){alert('Escribe la actividad');return;}
-  const row={activity_date:$('ma-date').value||null,start_time:$('ma-time').value||null,title:tit,category:$('ma-cat').value||null,city:$('ma-city').value||null,notes:$('ma-notes').value||null};
+  const row={activity_date:$('ma-date').value||null,start_time:$('ma-time').value||null,title:tit,category:$('ma-cat').value||null,city:$('ma-city').value||null,notes:$('ma-notes').value||null,link:$('ma-link').value||null,map_url:$('ma-map').value||null,tickets:$('ma-tickets').value||null};
   if(id)await write({action:'update',table:'activities',id:id,patch:row},'Guardado ✓');else{row.created_by='manual';row.is_suggestion=false;row.status='pendiente';await write({action:'insert',table:'activities',row:row},'Agregado ✓');}
   closeM('m-act');}
 

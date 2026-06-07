@@ -178,6 +178,13 @@ button:active,.pf-btn:active,.sugg:active,.chip:active,.city-photo:active{transf
 .linkrow{display:flex;justify-content:space-between;align-items:center;padding:.55rem 0;border-top:1px solid var(--line);}
 .linkrow:first-child{border-top:0;}
 .linkrow a{font-weight:700;font-size:.88rem;color:var(--ink);text-decoration:none;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+
+/* detalle expandible de actividad */
+.act-detail{background:var(--bg);border-radius:10px;padding:.55rem .7rem;margin:0 0 .55rem 2.1rem;font-size:.85rem;}
+.dt-row{padding:.22rem 0;line-height:1.35;}
+.dt-row a{color:var(--red);font-weight:700;}
+.dt-empty{color:var(--muted);font-size:.8rem;}
+.a-body{cursor:pointer;}
 </style>
 </head>
 <body>
@@ -241,6 +248,9 @@ button:active,.pf-btn:active,.sugg:active,.chip:active,.city-photo:active{transf
   <div class="row2"><div><label>Categoría</label><select id="ma-cat"><option value="">—</option><option>comida</option><option>museo</option><option>paseo</option><option>actividad</option><option>viñedo</option><option>compras</option><option>traslado</option><option>logistica</option><option>flex</option></select></div>
   <div><label>Ciudad</label><select id="ma-city" onchange="snapDateToCity()"><option value="">—</option><option>Paris</option><option>Bordeaux</option><option>San Sebastián</option><option>Bilbao</option><option>Madrid</option><option>Versalles</option><option>Saint-Émilion</option><option>Toledo</option></select></div></div>
   <label>Notas</label><textarea id="ma-notes" rows="2"></textarea>
+  <label>🔗 Link de info (opcional)</label><input type="url" id="ma-link" placeholder="https://..."/>
+  <label>🧭 Cómo llegar / ruta (URL)</label><input type="url" id="ma-map" placeholder="Google Maps, web del lugar…"/>
+  <label>🎫 Boletos (link o nota, si ya compraste)</label><input type="text" id="ma-tickets"/>
   <button class="save" onclick="saveAct()">Guardar</button>
   <button class="cancel" onclick="closeM('m-act')">Cancelar</button>
 </div></div>
