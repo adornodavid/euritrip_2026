@@ -119,9 +119,12 @@ function detailHtml(a){
   if(a.link)p.push('<div class="dt-row">🔗 <a href="'+esc(a.link)+'" target="_blank">Más info</a></div>');
   if(a.map_url)p.push('<div class="dt-row">🧭 <a href="'+esc(a.map_url)+'" target="_blank">Cómo llegar</a></div>');
   if(a.tickets)p.push('<div class="dt-row">🎫 '+esc(a.tickets)+'</div>');
-  return '<div class="act-detail" id="det-'+a.id+'" style="display:none">'+(p.length?p.join(''):'<div class="dt-empty">Sin detalles aún. Agrega links, cómo llegar, boletos…</div>')+'<button class="addbtn" style="margin-top:.45rem" onclick="editAct(\''+a.id+'\')">✏️ Editar detalles</button></div>';
+  const rt=a.rating||0;
+  const stars='<div class="dt-row">⭐ Rating: '+[1,2,3,4,5].map(function(n){return '<span class="star'+(n<=rt?' on':'')+'" onclick="rateAct(\''+a.id+'\','+n+')">★</span>';}).join('')+(rt?' <a onclick="rateAct(\''+a.id+'\',0)" style="font-size:.72rem;color:var(--muted)">quitar</a>':'')+'</div>';
+  return '<div class="act-detail" id="det-'+a.id+'" style="display:none">'+stars+p.join('')+'<button class="addbtn" style="margin-top:.45rem" onclick="editAct(\''+a.id+'\')">✏️ Editar detalles, links, boletos</button></div>';
 }
 function toggleDetail(id){const d=$('det-'+id);if(d)d.style.display=(d.style.display==='none'?'block':'none');}
+async function rateAct(id,n){await write({action:'update',table:'activities',id:id,patch:{rating:n||null}},n?('⭐ '+n+' estrellas'):'Rating quitado');}
 function wishHtml(wish){
   let h='<div class="bcard"><div class="lbl" style="margin-bottom:.3rem">💡 Cosas por hacer (sin fecha)</div>';
   if(!wish.length)h+='<div class="empty" style="padding:.9rem">Ideas que te recomienden y aún no sabes cuándo. Agrégalas aquí y luego les pones día.</div>';

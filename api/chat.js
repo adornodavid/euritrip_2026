@@ -25,6 +25,12 @@ OJO: La ruta CAMBIÓ. Ya NO se va a Toulouse, Barcelona ni Valencia. Ahora es Sa
 
 **El PLANNER (tabla activities):** El plan de cada día vive en actividades editables. David y Paty arman su día agregando, quitando, editando y marcando actividades como hechas. Las que ya existen son SUGERENCIAS editables. Usa add_activity cuando mencionen algo que quieran hacer un día concreto; update_record/delete_record (tabla 'activities') para mover, editar o quitar.
 
+**TUS PODERES (CRUD COMPLETO):** Tienes control total de los datos del viaje — CREAR, EDITAR y BORRAR: actividades, gastos, reservas, hoteles, notas, links, ciudades/paradas (add_trip_city) y editar presupuesto. Si David dice "investiga y llénale info a la actividad X", usa web_search para datos reales y guárdalos con update_record en los campos: link (info), map_url (cómo llegar), tickets (boletos), notes, rating. Hazlo proactivamente cuando lo pida.
+
+**REPOSITORIO TURÍSTICO (Francia + España):** Para pases turísticos (Bordeaux Métropole City Pass, Paris Passlib'/Museum Pass, pases de Madrid/Bilbao/San Sebastián), tickets, museos, transporte o actividades por ciudad y tipo, usa web_search → da info actual + link oficial + precio + cita la fuente, y ofrece guardarlo en una actividad o nota.
+
+**LÍMITE HONESTO:** Buscas y dejas el link listo, pero NO puedes iniciar sesión, pagar ni COMPRAR/RESERVAR por ellos en apps externas. Diles claro: "te dejo el link, tú completas la compra".
+
 **Vuelos (ya pagados):**
 - AM44 Aeroméxico 787-9 · MTY 15 oct 3:25 PM → CDG 16 oct 9:40 AM · Asientos 29A+29B
 - AM35 Aeroméxico 787-9 · MAD 31 oct 10:30 AM → MTY 3:45 PM · Asientos 34H+34J
@@ -238,9 +244,25 @@ const TOOLS = [
         link: { type: 'string', description: 'URL de info del lugar (opcional)' },
         map_url: { type: 'string', description: 'URL de como llegar / Google Maps (opcional)' },
         tickets: { type: 'string', description: 'Boletos: link o nota si ya los compraron (opcional)' },
+        rating: { type: 'number', description: '1-5 estrellas, normalmente despues de hacerla (opcional)' },
         sort_order: { type: 'number', description: 'Orden dentro del dia (opcional)' }
       },
       required: ['activity_date', 'title']
+    }
+  },
+  {
+    name: 'add_trip_city',
+    description: 'Agregar una ciudad o parada al itinerario (ej: Bayonne como stopover entre Bordeaux y San Sebastian). Usa cuando David quiera meter una ciudad nueva a la ruta.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        name: { type: 'string', description: 'Nombre de la ciudad/parada' },
+        country_flag: { type: 'string', description: 'Emoji bandera (🇫🇷 🇪🇸)' },
+        start_date: { type: 'string', description: 'Fecha inicio YYYY-MM-DD' },
+        end_date: { type: 'string', description: 'Fecha fin YYYY-MM-DD (igual a inicio si es 1 dia)' },
+        notes: { type: 'string' }
+      },
+      required: ['name', 'start_date']
     }
   },
   {
@@ -334,6 +356,13 @@ async function executeTool(sb, name, input) {
       const { data, error } = await sb.from(tableName('activities')).insert(row).select().single();
       if (error) throw error;
       return { ok: true, message: `Actividad agregada al ${data.activity_date}: ${data.title}`, data };
+    }
+    if (name === 'add_trip_city') {
+      const row = { ...tagged };
+      if (!row.end_date) row.end_date = row.start_date;
+      const { data, error } = await sb.from(tableName('trip_cities')).insert(row).select().single();
+      if (error) throw error;
+      return { ok: true, message: `Parada agregada: ${data.name}`, data };
     }
     if (name === 'list_saved') {
       const ord = input.table === 'budget' ? { col: 'sort_order', asc: true }
