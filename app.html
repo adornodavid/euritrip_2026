@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no"/>
+<meta name="theme-color" content="#DA4143"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="default"/>
+<meta name="apple-mobile-web-app-title" content="Eurotrip 26"/>
+<link rel="manifest" href="/manifest.json"/>
+<link rel="apple-touch-icon" href="/app/icon-192.png"/>
+<title>Eurotrip 2026</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+:root{--bg:#EFF0EC;--card:#fff;--ink:#11190C;--red:#DA4143;--green:#2e7d32;--muted:#8c8c84;--line:rgba(0,0,0,.08);--shadow:0 1px 4px rgba(0,0,0,.06);}
+html,body{background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Sora,system-ui,sans-serif;}
+body{padding-bottom:calc(72px + env(safe-area-inset-bottom));min-height:100vh;}
+.screen{display:none;animation:fade .2s ease;}
+.screen.active{display:block;}
+@keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.app-bar{position:sticky;top:0;z-index:50;background:var(--bg);padding:calc(env(safe-area-inset-top) + .9rem) 1.1rem .7rem;display:flex;align-items:center;justify-content:space-between;}
+.app-bar h1{font-size:1.5rem;font-weight:800;letter-spacing:-.02em;}
+.app-bar .sub{font-size:.78rem;color:var(--muted);font-weight:600;margin-top:.1rem;}
+.wrap{padding:0 1.1rem 1.5rem;}
+.hero{position:relative;border-radius:18px;overflow:hidden;height:170px;margin:0 1.1rem 1.1rem;box-shadow:var(--shadow);display:flex;align-items:flex-end;}
+.hero img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;}
+.hero .ov{position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.05),rgba(0,0,0,.6));}
+.hero .ht{position:relative;padding:1rem;color:#fff;}
+.hero .ht h2{font-size:1.35rem;font-weight:800;line-height:1.1;text-shadow:0 1px 6px rgba(0,0,0,.4);}
+.hero .pill{display:inline-flex;align-items:center;gap:.4rem;background:#fff;color:var(--ink);font-size:.78rem;font-weight:700;padding:.3rem .7rem;border-radius:20px;margin-top:.5rem;}
+.city{background:var(--card);border-radius:16px;box-shadow:var(--shadow);margin-bottom:.8rem;overflow:hidden;}
+.city-head{display:flex;align-items:center;gap:.7rem;padding:1rem 1.1rem;cursor:pointer;}
+.city-head .nm{font-size:1.18rem;font-weight:800;flex:1;}
+.city-head .ct{font-size:.74rem;color:var(--muted);font-weight:600;text-align:right;line-height:1.3;}
+.city-head .chev{transition:transform .2s;color:var(--muted);font-size:1.1rem;}
+.city.open .chev{transform:rotate(90deg);}
+.city-body{display:none;padding:0 1.1rem 1rem;}
+.city.open .city-body{display:block;}
+.hotel-line{font-size:.82rem;color:var(--muted);background:var(--bg);border-radius:10px;padding:.55rem .7rem;margin-bottom:.8rem;}
+.day{margin-bottom:.5rem;}
+.day-h{font-family:ui-monospace,'Space Mono',monospace;font-size:.7rem;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);font-weight:700;padding:.5rem 0 .3rem;border-top:1px solid var(--line);}
+.day:first-child .day-h{border-top:0;}
+.act{display:flex;align-items:flex-start;gap:.6rem;padding:.5rem 0;}
+.chk{flex:0 0 auto;width:24px;height:24px;border-radius:50%;border:2px solid #c9c9c2;background:none;font-size:.8rem;line-height:1;display:flex;align-items:center;justify-content:center;cursor:pointer;margin-top:.1rem;}
+.act.done .chk{background:var(--green);border-color:var(--green);color:#fff;}
+.act.done .a-title{text-decoration:line-through;opacity:.5;}
+.a-body{flex:1;min-width:0;}
+.a-title{font-weight:600;font-size:.94rem;line-height:1.25;}
+.a-time{font-family:ui-monospace,'Space Mono',monospace;font-weight:700;font-size:.76rem;color:var(--red);margin-right:.35rem;}
+.a-meta{font-size:.76rem;color:var(--muted);margin-top:.1rem;}
+.sug{font-size:.6rem;background:#FFF3B0;color:#7a6a00;border-radius:20px;padding:.05rem .4rem;margin-left:.3rem;vertical-align:middle;}
+.a-act{display:flex;gap:.05rem;flex:0 0 auto;}
+.a-act button{background:none;border:0;font-size:.92rem;opacity:.45;padding:.2rem;cursor:pointer;min-width:30px;min-height:32px;}
+.addbtn{margin-top:.5rem;background:none;border:1px dashed #cfcfc7;border-radius:10px;padding:.55rem;width:100%;font-size:.84rem;color:#555;cursor:pointer;font-weight:600;}
+.addbtn:active{background:var(--bg);}
+/* gastos */
+.bcard{background:var(--card);border-radius:16px;box-shadow:var(--shadow);padding:1.1rem;margin-bottom:.9rem;}
+.btot{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:.7rem;}
+.btot .big{font-size:1.7rem;font-weight:800;}
+.btot .lbl{font-size:.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;font-weight:700;}
+.bar{height:10px;border-radius:6px;background:var(--bg);overflow:hidden;margin:.3rem 0 .1rem;}
+.bar > i{display:block;height:100%;border-radius:6px;background:var(--green);}
+.catrow{padding:.6rem 0;border-top:1px solid var(--line);}
+.catrow:first-child{border-top:0;}
+.catrow .top{display:flex;justify-content:space-between;font-size:.9rem;font-weight:600;}
+.catrow .sub{font-size:.74rem;color:var(--muted);}
+.exp{display:flex;justify-content:space-between;align-items:center;padding:.6rem 0;border-top:1px solid var(--line);}
+.exp .d{font-weight:600;font-size:.9rem;}
+.exp .m{font-size:.72rem;color:var(--muted);}
+.exp .amt{font-weight:800;font-size:.95rem;}
+.exp .x{background:none;border:0;color:var(--muted);font-size:1rem;padding:.2rem .4rem;cursor:pointer;}
+/* tips */
+.tip{background:var(--card);border-radius:14px;box-shadow:var(--shadow);padding:1rem 1.1rem;margin-bottom:.7rem;}
+.tip h3{font-size:1rem;margin-bottom:.3rem;}
+.tip p{font-size:.86rem;color:#444;line-height:1.45;}
+/* claudia */
+#chat-log{padding:0 1.1rem 1rem;display:flex;flex-direction:column;gap:.6rem;}
+.bub{max-width:85%;padding:.65rem .85rem;border-radius:16px;font-size:.9rem;line-height:1.4;}
+.bub.u{align-self:flex-end;background:var(--ink);color:#fff;border-bottom-right-radius:5px;}
+.bub.a{align-self:flex-start;background:var(--card);box-shadow:var(--shadow);border-bottom-left-radius:5px;}
+.chat-input{position:fixed;left:0;right:0;bottom:calc(72px + env(safe-area-inset-bottom));background:var(--bg);padding:.5rem 1.1rem;display:flex;gap:.5rem;border-top:1px solid var(--line);}
+.chat-input input{flex:1;border:1px solid #ccc;border-radius:22px;padding:.6rem .9rem;font-size:16px;background:#fff;}
+.chat-input button{background:var(--red);color:#fff;border:0;border-radius:50%;width:44px;height:44px;font-size:1.1rem;cursor:pointer;flex:0 0 auto;}
+/* fab */
+.fab{position:fixed;right:1.1rem;bottom:calc(86px + env(safe-area-inset-bottom));background:var(--green);color:#fff;border:0;width:54px;height:54px;border-radius:50%;font-size:1.6rem;box-shadow:0 4px 14px rgba(0,0,0,.25);cursor:pointer;z-index:60;}
+/* tabbar */
+.tabbar{position:fixed;left:0;right:0;bottom:0;z-index:70;background:#fff;border-top:1px solid var(--line);display:flex;padding-bottom:env(safe-area-inset-bottom);box-shadow:0 -1px 8px rgba(0,0,0,.04);}
+.tabbar button{flex:1;background:none;border:0;padding:.6rem 0 .5rem;display:flex;flex-direction:column;align-items:center;gap:.2rem;font-size:.66rem;font-weight:700;color:var(--muted);cursor:pointer;}
+.tabbar button .ic{font-size:1.25rem;line-height:1;}
+.tabbar button.on{color:var(--red);}
+/* modal */
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;z-index:200;align-items:flex-end;justify-content:center;}
+.modal.open{display:flex;}
+.sheet{background:#fff;width:100%;max-width:540px;border-radius:20px 20px 0 0;padding:1.2rem 1.2rem 1.8rem;max-height:92vh;overflow-y:auto;}
+.sheet h3{margin-bottom:.3rem;}
+.sheet label{display:block;font-size:.74rem;font-weight:700;text-transform:uppercase;letter-spacing:.03em;color:var(--muted);margin:.65rem 0 .2rem;}
+.sheet input,.sheet select,.sheet textarea{width:100%;padding:.65rem;border:1px solid #ccc;border-radius:11px;font-size:16px;font-family:inherit;}
+.row2{display:flex;gap:.6rem;}.row2>div{flex:1;}
+.save{background:var(--ink);color:#fff;border:0;border-radius:13px;padding:.85rem;width:100%;font-weight:700;font-size:1rem;margin-top:1.1rem;cursor:pointer;}
+.cancel{background:none;border:0;color:var(--muted);width:100%;padding:.6rem;margin-top:.2rem;cursor:pointer;}
+@media(min-width:560px){.modal{align-items:center;}.sheet{border-radius:20px;}}
+.empty{text-align:center;color:var(--muted);font-size:.9rem;padding:2rem 1rem;}
+.loading{text-align:center;color:var(--muted);font-family:ui-monospace,monospace;padding:2rem;}
+</style>
+</head>
+<body>
+
+<!-- PLANNER -->
+<section id="s-planner" class="screen active">
+  <div class="app-bar"><div><h1>Mi viaje</h1><div class="sub">15-31 Oct 2026 · David & Paty</div></div></div>
+  <div class="hero">
+    <img src="images/paris/eiffel.jpg" alt="" onerror="this.style.display='none'"/>
+    <div class="ov"></div>
+    <div class="ht"><h2>Eurotrip · Francia + País Vasco</h2><span class="pill">📅 16 Oct → 31 Oct 2026</span></div>
+  </div>
+  <div class="wrap"><div id="planner-root" class="loading">Cargando tu plan…</div></div>
+  <button class="fab" onclick="openAct({})" title="Agregar actividad">+</button>
+</section>
+
+<!-- GASTOS -->
+<section id="s-gastos" class="screen">
+  <div class="app-bar"><div><h1>Gastos</h1><div class="sub">Presupuesto y gastos reales</div></div></div>
+  <div class="wrap"><div id="gastos-root" class="loading">Cargando…</div></div>
+  <button class="fab" onclick="openExp({})" title="Agregar gasto">+</button>
+</section>
+
+<!-- TIPS -->
+<section id="s-tips" class="screen">
+  <div class="app-bar"><div><h1>Tips</h1><div class="sub">Lo que hay que saber</div></div></div>
+  <div class="wrap" id="tips-root"></div>
+</section>
+
+<!-- CLAUDIA -->
+<section id="s-claudia" class="screen">
+  <div class="app-bar"><div><h1>Claudia</h1><div class="sub">Tu asistente de viaje</div></div></div>
+  <div id="chat-log"></div>
+  <div class="chat-input"><input id="chat-in" type="text" placeholder="Pregúntale o pídele algo…" onkeydown="if(event.key==='Enter')sendChat()"/><button onclick="sendChat()">➤</button></div>
+</section>
+
+<!-- TABBAR -->
+<nav class="tabbar">
+  <button data-tab="planner" class="on" onclick="go('planner')"><span class="ic">🗺️</span>Planner</button>
+  <button data-tab="gastos" onclick="go('gastos')"><span class="ic">💰</span>Gastos</button>
+  <button data-tab="tips" onclick="go('tips')"><span class="ic">💡</span>Tips</button>
+  <button data-tab="claudia" onclick="go('claudia')"><span class="ic">🤖</span>Claudia</button>
+</nav>
+
+<!-- MODAL actividad -->
+<div id="m-act" class="modal"><div class="sheet">
+  <h3 id="ma-title">Nueva actividad</h3>
+  <input type="hidden" id="ma-id"/>
+  <div class="row2"><div><label>Día</label><input type="date" id="ma-date" min="2026-10-16" max="2026-10-31"/></div><div><label>Hora</label><input type="time" id="ma-time"/></div></div>
+  <label>Actividad</label><input type="text" id="ma-tit" placeholder="Ej: Museo Guggenheim"/>
+  <div class="row2"><div><label>Categoría</label><select id="ma-cat"><option value="">—</option><option>comida</option><option>museo</option><option>paseo</option><option>actividad</option><option>viñedo</option><option>compras</option><option>traslado</option><option>logistica</option><option>flex</option></select></div>
+  <div><label>Ciudad</label><select id="ma-city"><option value="">—</option><option>Paris</option><option>Bordeaux</option><option>San Sebastián</option><option>Bilbao</option><option>Madrid</option><option>Versalles</option><option>Saint-Émilion</option><option>Toledo</option></select></div></div>
+  <label>Notas</label><textarea id="ma-notes" rows="2"></textarea>
+  <button class="save" onclick="saveAct()">Guardar</button>
+  <button class="cancel" onclick="closeM('m-act')">Cancelar</button>
+</div></div>
+
+<!-- MODAL gasto -->
+<div id="m-exp" class="modal"><div class="sheet">
+  <h3 id="me-title">Nuevo gasto</h3>
+  <input type="hidden" id="me-id"/>
+  <label>Descripción</label><input type="text" id="me-desc" placeholder="Ej: Cena en Arzak"/>
+  <div class="row2"><div><label>Monto MXN</label><input type="number" id="me-mxn" inputmode="decimal" placeholder="0"/></div><div><label>Categoría</label><select id="me-cat"></select></div></div>
+  <div class="row2"><div><label>Pagó</label><select id="me-payer"><option>Joint</option><option>David</option><option>Paty</option></select></div><div><label>Ciudad</label><select id="me-city"><option value="">—</option><option>Paris</option><option>Bordeaux</option><option>San Sebastián</option><option>Bilbao</option><option>Madrid</option></select></div></div>
+  <label>Notas</label><input type="text" id="me-notes"/>
+  <button class="save" onclick="saveExp()">Guardar</button>
+  <button class="cancel" onclick="closeM('m-exp')">Cancelar</button>
+</div></div>
+
+<script src="app/main.js"></script>
+</body>
+</html>
