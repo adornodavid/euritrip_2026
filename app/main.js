@@ -21,6 +21,10 @@ function esc(t){return (t==null?'':String(t)).replace(/[&<>"]/g,c=>({'&':'&amp;'
 function dn(iso){const p=iso.split('-');const d=new Date(Date.UTC(+p[0],+p[1]-1,+p[2]));return DOW[d.getUTCDay()]+' '+(+p[2]);}
 function wkey(){let k=localStorage.getItem('eurotrip_write_key');if(!k){k=prompt('Clave de escritura (David/Paty):');if(k)localStorage.setItem('eurotrip_write_key',k);}return k;}
 function money(n){return '$'+Number(n||0).toLocaleString('es-MX',{maximumFractionDigits:0});}
+const CITYKEYS=CITIES.map(c=>c.key);
+function cityByDate(date){const c=CITIES.find(c=>c.dates.includes(date));return c?c.key:null;}
+function resolveCity(a){if(a.city&&CITYKEYS.includes(a.city))return a.city;return cityByDate(a.activity_date)||CITIES[0].key;}
+function snapDateToCity(){const c=CITIES.find(c=>c.key===$('ma-city').value);if(!c)return;if(!c.dates.includes($('ma-date').value))$('ma-date').value=c.dates[0];}
 let toastT;
 function showToast(msg,err){const t=$('toast');if(!t)return;t.textContent=msg;t.className='toast show'+(err?' err':'');clearTimeout(toastT);toastT=setTimeout(()=>{t.className='toast'+(err?' err':'');},1900);}
 function tripInfo(){const start=new Date('2026-10-16T00:00:00'),end=new Date('2026-10-31T23:59:59'),now=new Date();
@@ -57,7 +61,7 @@ function renderPlanner(){
   const totalA=acts.length, doneA=acts.filter(a=>a.status==='hecho').length, pg=totalA?Math.round(doneA/totalA*100):0;
   let html='<div class="pl-summary"><div class="cd">'+tripInfo()+'</div><div class="pg"><span>Avance del plan</span><span>'+doneA+'/'+totalA+' ('+pg+'%)</span></div><div class="bar"><i style="width:'+pg+'%"></i></div></div>';
   CITIES.forEach((c,ci)=>{
-    const cityActs=acts.filter(a=>c.dates.includes(a.activity_date));
+    const cityActs=acts.filter(a=>resolveCity(a)===c.key);
     const hotel=hotels.find(h=>h.city===c.key), cnt=cityActs.length, dco=cityActs.filter(a=>a.status==='hecho').length;
     const isOpen=oset.has(c.key);
     html+='<div class="city'+(isOpen?' open':'')+'" id="city-'+ci+'">';
@@ -66,7 +70,8 @@ function renderPlanner(){
     html+='<span class="ct">'+c.range+'<br/>'+(cnt?'<span class="cprog">'+dco+'/'+cnt+' ✓</span>':'sin actividades')+'</span><span class="chev">›</span></div></div>';
     html+='<div class="city-body">';
     html+='<div class="hotel-line" style="cursor:pointer" onclick="openHotel(\''+esc(c.key)+'\')">🏨 '+(hotel?esc(hotel.hotel_name)+(hotel.confirmed?' · ✅':' · ⏳ por definir')+(hotel.zone?' · '+esc(hotel.zone):''):'Definir hotel')+' · ✏️</div>';
-    c.dates.forEach(d=>{
+    const _extra=[...new Set(cityActs.map(a=>a.activity_date))].filter(d=>!c.dates.includes(d));
+    [...c.dates,..._extra].sort().forEach(d=>{
       const da=cityActs.filter(a=>a.activity_date===d).sort((a,b)=>(a.sort_order||0)-(b.sort_order||0)||((a.start_time||'')>(b.start_time||'')?1:-1));
       const isToday=(d===today);
       html+='<div class="day'+(isToday?' today':'')+'"><div class="day-h">'+dn(d)+' Oct'+(isToday?'<span class="hoy-badge">HOY</span>':'')+'</div>'+resHtml(d);

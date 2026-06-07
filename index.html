@@ -239,7 +239,7 @@ button:active,.pf-btn:active,.sugg:active,.chip:active,.city-photo:active{transf
   <div class="row2"><div><label>Día</label><input type="date" id="ma-date" min="2026-10-16" max="2026-10-31"/></div><div><label>Hora</label><input type="time" id="ma-time"/></div></div>
   <label>Actividad</label><input type="text" id="ma-tit" placeholder="Ej: Museo Guggenheim"/>
   <div class="row2"><div><label>Categoría</label><select id="ma-cat"><option value="">—</option><option>comida</option><option>museo</option><option>paseo</option><option>actividad</option><option>viñedo</option><option>compras</option><option>traslado</option><option>logistica</option><option>flex</option></select></div>
-  <div><label>Ciudad</label><select id="ma-city"><option value="">—</option><option>Paris</option><option>Bordeaux</option><option>San Sebastián</option><option>Bilbao</option><option>Madrid</option><option>Versalles</option><option>Saint-Émilion</option><option>Toledo</option></select></div></div>
+  <div><label>Ciudad</label><select id="ma-city" onchange="snapDateToCity()"><option value="">—</option><option>Paris</option><option>Bordeaux</option><option>San Sebastián</option><option>Bilbao</option><option>Madrid</option><option>Versalles</option><option>Saint-Émilion</option><option>Toledo</option></select></div></div>
   <label>Notas</label><textarea id="ma-notes" rows="2"></textarea>
   <button class="save" onclick="saveAct()">Guardar</button>
   <button class="cancel" onclick="closeM('m-act')">Cancelar</button>
