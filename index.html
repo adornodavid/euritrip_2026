@@ -101,6 +101,28 @@ body{padding-bottom:calc(72px + env(safe-area-inset-bottom));min-height:100vh;}
 @media(min-width:560px){.modal{align-items:center;}.sheet{border-radius:20px;}}
 .empty{text-align:center;color:var(--muted);font-size:.9rem;padding:2rem 1rem;}
 .loading{text-align:center;color:var(--muted);font-family:ui-monospace,monospace;padding:2rem;}
+
+/* city photo header */
+.city-photo{position:relative;height:98px;display:flex;align-items:flex-end;cursor:pointer;}
+.city-photo>img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;}
+.city-photo .ov{position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.05),rgba(0,0,0,.58));}
+.city-photo .ci{position:relative;padding:.7rem .9rem;color:#fff;display:flex;align-items:center;gap:.5rem;width:100%;}
+.city-photo .nm{font-size:1.22rem;font-weight:800;flex:1;text-shadow:0 1px 5px rgba(0,0,0,.5);}
+.city-photo .ct{font-size:.72rem;font-weight:700;text-align:right;line-height:1.3;text-shadow:0 1px 4px rgba(0,0,0,.6);}
+.city-photo .chev{color:#fff;font-size:1.2rem;transition:transform .2s;text-shadow:0 1px 4px rgba(0,0,0,.6);}
+.city.open .city-photo .chev{transform:rotate(90deg);}
+/* suggestions */
+.sugg-wrap{margin-top:.9rem;}
+.sugg-h{font-size:.84rem;font-weight:800;margin-bottom:.5rem;}
+.sugg-row{display:flex;gap:.6rem;overflow-x:auto;padding-bottom:.4rem;-webkit-overflow-scrolling:touch;scroll-snap-type:x mandatory;}
+.sugg-row::-webkit-scrollbar{display:none;}
+.sugg{flex:0 0 152px;scroll-snap-align:start;background:var(--bg);border-radius:12px;overflow:hidden;}
+.sugg>img{width:100%;height:84px;object-fit:cover;display:block;}
+.sugg .si{padding:.5rem .55rem .6rem;}
+.sugg .st{font-size:.78rem;font-weight:700;line-height:1.2;min-height:2.4em;}
+.sugg .sr{font-size:.68rem;color:var(--muted);margin-top:.25rem;}
+.sugg .sp{font-size:.74rem;font-weight:800;margin-top:.15rem;}
+.sugg .sadd{margin-top:.45rem;width:100%;background:var(--green);color:#fff;border:0;border-radius:8px;padding:.4rem;font-size:.72rem;font-weight:800;cursor:pointer;}
 </style>
 </head>
 <body>

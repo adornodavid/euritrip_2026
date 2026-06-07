@@ -2,12 +2,41 @@
 const DOW=['DOM','LUN','MAR','MIÉ','JUE','VIE','SÁB'];
 const CAT={comida:'🍽️',museo:'🏛️',paseo:'🚶','viñedo':'🍷',vinedo:'🍷',actividad:'🎟️',compras:'🛍️',traslado:'🚄',logistica:'🧳',flex:'✨'};
 const CITIES=[
-  {key:'Paris',name:'París',flag:'🇫🇷',dates:['2026-10-16','2026-10-17','2026-10-18','2026-10-19'],range:'16-20 Oct · 4N'},
-  {key:'Bordeaux',name:'Bordeaux',flag:'🇫🇷',dates:['2026-10-20','2026-10-21'],range:'20-22 Oct · 2N'},
-  {key:'San Sebastián',name:'San Sebastián',flag:'🇪🇸',dates:['2026-10-22','2026-10-23'],range:'22-24 Oct · 2N'},
-  {key:'Bilbao',name:'Bilbao',flag:'🇪🇸',dates:['2026-10-24','2026-10-25'],range:'24-26 Oct · 2N'},
-  {key:'Madrid',name:'Madrid',flag:'🇪🇸',dates:['2026-10-26','2026-10-27','2026-10-28','2026-10-29','2026-10-30','2026-10-31'],range:'26-31 Oct · 5N'}
+  {key:'Paris',name:'París',flag:'🇫🇷',img:'images/paris/eiffel.jpg',dates:['2026-10-16','2026-10-17','2026-10-18','2026-10-19'],range:'16-20 Oct · 4N'},
+  {key:'Bordeaux',name:'Bordeaux',flag:'🇫🇷',img:'images/bordeaux/place-bourse.jpg',dates:['2026-10-20','2026-10-21'],range:'20-22 Oct · 2N'},
+  {key:'San Sebastián',name:'San Sebastián',flag:'🇪🇸',img:'images/san-sebastian/bahia.jpg',dates:['2026-10-22','2026-10-23'],range:'22-24 Oct · 2N'},
+  {key:'Bilbao',name:'Bilbao',flag:'🇪🇸',img:'images/bilbao/panoramica.jpg',dates:['2026-10-24','2026-10-25'],range:'24-26 Oct · 2N'},
+  {key:'Madrid',name:'Madrid',flag:'🇪🇸',img:'images/madrid/palacio-real.jpg',dates:['2026-10-26','2026-10-27','2026-10-28','2026-10-29','2026-10-30','2026-10-31'],range:'26-31 Oct · 5N'}
 ];
+const SUGG={
+  'Paris':[
+    {t:'Crucero por el Sena',img:'images/paris/sena.jpg',r:'8.1',rev:'13577',p:'$19',cat:'actividad'},
+    {t:'Louvre sin filas',img:'images/paris/louvre.jpg',r:'8.5',rev:'9200',p:'$32',cat:'museo'},
+    {t:'Cima de la Torre Eiffel',img:'images/paris/eiffel.jpg',r:'8.7',rev:'21043',p:'$45',cat:'actividad'},
+    {t:'Versalles día completo',img:'images/paris/versalles.jpg',r:'8.6',rev:'7810',p:'$65',cat:'museo'}
+  ],
+  'Bordeaux':[
+    {t:'Tour viñedos Saint-Émilion',img:'images/bordeaux/saint-emilion.jpg',r:'9.0',rev:'3412',p:'$115',cat:'viñedo'},
+    {t:'Cité du Vin + cata',img:'images/bordeaux/cite-du-vin.jpg',r:'8.2',rev:'2104',p:'$22',cat:'museo'},
+    {t:'Ostras + vino en el mercado',img:'images/bordeaux/oysters.jpg',r:'8.8',rev:'915',p:'$35',cat:'comida'}
+  ],
+  'San Sebastián':[
+    {t:'Ruta de pintxos guiada',img:'images/san-sebastian/pintxos.jpg',r:'9.1',rev:'2630',p:'$89',cat:'comida'},
+    {t:'Monte Igueldo + bahía',img:'images/san-sebastian/igueldo.jpg',r:'8.4',rev:'1180',p:'$15',cat:'actividad'},
+    {t:'Donostia + Getaria',img:'images/san-sebastian/zurriola.jpg',r:'8.7',rev:'604',p:'$70',cat:'paseo'}
+  ],
+  'Bilbao':[
+    {t:'Entrada Museo Guggenheim',img:'images/bilbao/guggenheim.jpg',r:'9.0',rev:'5421',p:'$16',cat:'museo'},
+    {t:'Txikiteo de pintxos',img:'images/bilbao/mercado-ribera.jpg',r:'8.9',rev:'1106',p:'$55',cat:'comida'},
+    {t:'Bilbao esencial a pie',img:'images/bilbao/casco-viejo.jpg',r:'8.5',rev:'842',p:'$25',cat:'paseo'}
+  ],
+  'Madrid':[
+    {t:'Museo del Prado sin filas',img:'images/madrid/plaza-mayor.jpg',r:'8.6',rev:'12044',p:'$28',cat:'museo'},
+    {t:'Show de flamenco',img:'images/madrid/tapas-madrid.jpg',r:'8.8',rev:'6530',p:'$35',cat:'actividad'},
+    {t:'Toledo día completo',img:'images/madrid/toledo.jpg',r:'8.7',rev:'9012',p:'$55',cat:'museo'},
+    {t:'Palacio Real',img:'images/madrid/palacio-real.jpg',r:'8.5',rev:'4310',p:'$18',cat:'museo'}
+  ]
+};
 let DATA={};
 const $=id=>document.getElementById(id);
 function esc(t){return (t==null?'':String(t)).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
@@ -21,12 +50,10 @@ function go(tab){
   document.querySelectorAll('.tabbar button').forEach(b=>b.classList.toggle('on',b.dataset.tab===tab));
   window.scrollTo(0,0);
 }
-
 async function load(){
   try{
     const r=await fetch('/api/data',{cache:'no-store'});const j=await r.json();
-    DATA=j.data||{};
-    renderPlanner();renderGastos();
+    DATA=j.data||{};renderPlanner();renderGastos();
   }catch(e){ $('planner-root').innerHTML='<p class="empty">Sin conexión. '+esc(e.message)+'</p>'; }
 }
 
@@ -39,9 +66,10 @@ function renderPlanner(){
     const hotel=hotels.find(h=>h.city===c.key);
     const cnt=cityActs.length;
     html+='<div class="city'+(ci===0?' open':'')+'" id="city-'+ci+'">';
-    html+='<div class="city-head" onclick="document.getElementById(\'city-'+ci+'\').classList.toggle(\'open\')">';
-    html+='<span style="font-size:1.3rem">'+c.flag+'</span><span class="nm">'+c.name+'</span>';
-    html+='<span class="ct">'+c.range+'<br/>'+(cnt?cnt+' actividades':'sin actividades')+'</span><span class="chev">›</span></div>';
+    html+='<div class="city-photo" onclick="document.getElementById(\'city-'+ci+'\').classList.toggle(\'open\')">';
+    html+='<img src="'+c.img+'" alt="" onerror="this.style.display=\'none\'"/><div class="ov"></div>';
+    html+='<div class="ci"><span style="font-size:1.2rem">'+c.flag+'</span><span class="nm">'+c.name+'</span>';
+    html+='<span class="ct">'+c.range+'<br/>'+(cnt?cnt+' actividades':'sin actividades')+'</span><span class="chev">›</span></div></div>';
     html+='<div class="city-body">';
     if(hotel){ html+='<div class="hotel-line">🏨 '+esc(hotel.hotel_name)+(hotel.confirmed?' · ✅ confirmado':' · ⏳ por definir')+(hotel.zone?' · '+esc(hotel.zone):'')+'</div>'; }
     c.dates.forEach(d=>{
@@ -56,12 +84,26 @@ function renderPlanner(){
         if(m.length)html+='<div class="a-meta">'+m.join(' · ')+'</div>';
         html+='</div><div class="a-act"><button onclick="editAct(\''+a.id+'\')">✏️</button><button onclick="delAct(\''+a.id+'\')">🗑️</button></div></div>';
       });
-      html+='<button class="addbtn" onclick="openAct({activity_date:\''+d+'\',city:\''+c.key+'\'})">+ actividad el '+dn(d)+'</button></div>';
+      html+='<button class="addbtn" onclick="openAct({activity_date:\''+d+'\',city:\''+esc(c.key)+'\'})">+ actividad el '+dn(d)+'</button></div>';
     });
+    // sugerencias estilo Civitatis
+    const sg=SUGG[c.key]||[];
+    if(sg.length){
+      html+='<div class="sugg-wrap"><div class="sugg-h">✨ Sugerencias para llenar '+esc(c.name)+'</div><div class="sugg-row">';
+      sg.forEach((x,xi)=>{
+        html+='<div class="sugg"><img src="'+x.img+'" alt="" onerror="this.style.display=\'none\'" onclick="openSug(\''+esc(c.key)+'\','+xi+')"/>';
+        html+='<div class="si"><div class="st">'+esc(x.t)+'</div><div class="sr">⭐ '+x.r+' · '+x.rev+' reseñas</div><div class="sp">desde '+x.p+'</div>';
+        html+='<button class="sadd" onclick="addSug(\''+esc(c.key)+'\','+xi+')">+ Agregar</button></div></div>';
+      });
+      html+='</div></div>';
+    }
     html+='</div></div>';
   });
   $('planner-root').innerHTML=html;
 }
+function firstDay(key){const c=CITIES.find(c=>c.key===key);return c?c.dates[0]:'2026-10-16';}
+function addSug(key,i){const x=(SUGG[key]||[])[i];if(!x)return;openAct({activity_date:firstDay(key),title:x.t,category:x.cat,city:key});}
+function openSug(key,i){const x=(SUGG[key]||[])[i];if(!x)return;window.open('https://www.getyourguide.com/s/?q='+encodeURIComponent(x.t+' '+key),'_blank');}
 function openAct(a){
   $('ma-title').textContent=a.id?'Editar actividad':'Nueva actividad';
   $('ma-id').value=a.id||'';$('ma-date').value=a.activity_date||'2026-10-16';
@@ -89,15 +131,13 @@ function renderGastos(){
   const totMax=budget.reduce((s,b)=>s+Number(b.projected_max_mxn||0),0);
   const pct=totMax?Math.min(100,totSpent/totMax*100):0;
   let html='<div class="bcard"><div class="btot"><div><div class="lbl">Gastado</div><div class="big">'+money(totSpent)+'</div></div><div style="text-align:right"><div class="lbl">Presupuesto</div><div class="big" style="font-size:1.1rem;color:var(--muted)">'+money(totMin)+'–'+money(totMax)+'</div></div></div><div class="bar"><i style="width:'+pct+'%"></i></div></div>';
-  // categorias
   html+='<div class="bcard">';
   budget.forEach(b=>{
     const sp=exp.filter(e=>e.category===b.category).reduce((s,e)=>s+Number(e.amount_mxn||0),0);
     const mx=Number(b.projected_max_mxn||0);const p=mx?Math.min(100,sp/mx*100):0;
-    html+='<div class="catrow"><div class="top"><span>'+(b.emoji||'')+' '+esc(b.label)+'</span><span>'+money(sp)+' <span class="sub">/ '+money(mx)+'</span></span></div><div class="bar"><i style="width:'+p+'%;background:'+(p>100?'var(--red)':'var(--green)')+'"></i></div></div>';
+    html+='<div class="catrow"><div class="top"><span>'+(b.emoji||'')+' '+esc(b.label)+'</span><span>'+money(sp)+' <span class="sub">/ '+money(mx)+'</span></span></div><div class="bar"><i style="width:'+p+'%;background:'+(p>=100?'var(--red)':'var(--green)')+'"></i></div></div>';
   });
   html+='</div>';
-  // lista gastos
   html+='<div class="bcard"><div class="lbl" style="margin-bottom:.3rem">Últimos gastos</div>';
   if(!exp.length)html+='<div class="empty">Aún no hay gastos. Toca + para agregar.</div>';
   exp.slice(0,40).forEach(e=>{
@@ -105,9 +145,7 @@ function renderGastos(){
   });
   html+='</div>';
   $('gastos-root').innerHTML=html;
-  // poblar selects de categoría
-  const opts=budget.map(b=>'<option value="'+b.category+'">'+(b.emoji||'')+' '+esc(b.label)+'</option>').join('');
-  $('me-cat').innerHTML=opts;
+  $('me-cat').innerHTML=budget.map(b=>'<option value="'+b.category+'">'+(b.emoji||'')+' '+esc(b.label)+'</option>').join('');
 }
 function openExp(e){
   $('me-title').textContent=e.id?'Editar gasto':'Nuevo gasto';
@@ -140,9 +178,7 @@ const TIPS=[
   ['🌧️','Clima Oct','París 12-18°C · Bordeaux 10-19°C · País Vasco 12-20°C (lluvioso, lleva paraguas) · Madrid 10-19°C seco.'],
   ['✈️','Vuelos','Ida AM44 MTY 15 Oct 3:25pm → CDG 16 Oct 9:40am (29A/29B). Regreso AM35 MAD 31 Oct 10:30am → MTY 3:45pm (34H/34J).']
 ];
-function renderTips(){
-  $('tips-root').innerHTML=TIPS.map(t=>'<div class="tip"><h3>'+t[0]+' '+t[1]+'</h3><p>'+t[2]+'</p></div>').join('');
-}
+function renderTips(){ $('tips-root').innerHTML=TIPS.map(t=>'<div class="tip"><h3>'+t[0]+' '+t[1]+'</h3><p>'+t[2]+'</p></div>').join('')+'<div class="tip"><h3>📖 Guía completa</h3><p>¿Quieres el detalle largo por ciudad? <a href="/guia" style="color:var(--red);font-weight:700;">Abrir la guía editorial →</a></p></div>'; }
 
 /* ---------- CLAUDIA ---------- */
 let chatMsgs=[];
@@ -155,7 +191,7 @@ async function sendChat(){
     const r=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({messages:chatMsgs})});
     const j=await r.json();const reply=j.reply||j.error||'(sin respuesta)';
     typing.textContent=reply;chatMsgs.push({role:'assistant',content:reply});
-    if(j.tool_events&&j.tool_events.length)load(); // refrescar si Claudia escribió algo
+    if(j.tool_events&&j.tool_events.length)load();
   }catch(e){typing.textContent='Error: '+e.message;}
 }
 
