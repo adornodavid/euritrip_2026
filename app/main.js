@@ -25,7 +25,7 @@ function money(n){return '$'+Number(n||0).toLocaleString('es-MX',{maximumFractio
 let CITYKEYS=CITIES.map(c=>c.key);
 function cityByDate(date){const c=CITIES.find(c=>c.dates.includes(date));return c?c.key:null;}
 function resolveCity(a){if(a.city&&CITYKEYS.includes(a.city))return a.city;return cityByDate(a.activity_date)||CITIES[0].key;}
-function snapDateToCity(){const c=CITIES.find(c=>c.key===$('ma-city').value);if(!c)return;if(!c.dates.includes($('ma-date').value))$('ma-date').value=c.dates[0];}
+function snapDateToCity(){const c=CITIES.find(c=>c.key===$('ma-city').value);if(!c)return;if($('ma-date').value&&!c.dates.includes($('ma-date').value))$('ma-date').value=c.dates[0];}
 function pad(n){return n<10?'0'+n:''+n;}
 function dateRange(s,e){const out=[];if(!s)return out;const a=new Date(s+'T00:00:00'),b=new Date((e||s)+'T00:00:00');for(let d=new Date(a);d<=b;d.setDate(d.getDate()+1))out.push(d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate()));return out;}
 function fmtRange(s,e){const dd=x=>x?(+x.slice(8,10))+'':'';if(!e||e===s)return dd(s)+' Oct · parada';return dd(s)+'-'+dd(e)+' Oct';}
@@ -73,10 +73,15 @@ async function load(){
 /* ---------- PLANNER ---------- */
 function renderPlanner(){
   const acts=DATA.activities||[], hotels=DATA.hotel_choices||[], today=todayISO(), oset=openKeys();
-  const totalA=acts.length, doneA=acts.filter(a=>a.status==='hecho').length, pg=totalA?Math.round(doneA/totalA*100):0;
-  let html='<div class="pl-summary"><div class="cd">'+tripInfo()+'</div><div class="pg"><span>Avance del plan</span><span>'+doneA+'/'+totalA+' ('+pg+'%)</span></div><div class="bar"><i style="width:'+pg+'%"></i></div></div>';
+  const wish=acts.filter(a=>!a.activity_date), dated=acts.filter(a=>a.activity_date);
+  const totalA=dated.length, doneA=dated.filter(a=>a.status==='hecho').length, pg=totalA?Math.round(doneA/totalA*100):0;
+  const started=new Date()>=new Date('2026-10-16T00:00:00');
+  let html='<div class="pl-summary"><div class="cd">'+tripInfo()+'</div>';
+  if(started)html+='<div class="pg"><span>✓ Actividades hechas</span><span>'+doneA+' / '+totalA+' ('+pg+'%)</span></div><div class="bar"><i style="width:'+pg+'%"></i></div>';
+  else html+='<div class="pg"><span>📋 '+totalA+' actividades · '+(DATA.reservations||[]).length+' reservas</span><span>'+CITIES.length+' ciudades</span></div>';
+  html+='</div>'+wishHtml(wish);
   CITIES.forEach((c,ci)=>{
-    const cityActs=acts.filter(a=>resolveCity(a)===c.key);
+    const cityActs=acts.filter(a=>a.activity_date&&resolveCity(a)===c.key);
     const hotel=hotels.find(h=>h.city===c.key), cnt=cityActs.length, dco=cityActs.filter(a=>a.status==='hecho').length;
     const isOpen=oset.has(c.key);
     html+='<div class="city'+(isOpen?' open':'')+'" id="city-'+ci+'">';
@@ -108,6 +113,14 @@ function renderPlanner(){
   html+='<button class="addbtn" style="margin-top:.7rem" onclick="openCity({})">+ Agregar ciudad o parada</button>';
   $('planner-root').innerHTML=html;
 }
+function wishHtml(wish){
+  let h='<div class="bcard"><div class="lbl" style="margin-bottom:.3rem">💡 Cosas por hacer (sin fecha)</div>';
+  if(!wish.length)h+='<div class="empty" style="padding:.9rem">Ideas que te recomienden y aún no sabes cuándo. Agrégalas aquí y luego les pones día.</div>';
+  wish.forEach(a=>{const m=[];if(a.city)m.push('📍 '+esc(a.city));if(a.category)m.push((CAT[a.category]||'•')+' '+esc(a.category));
+    h+='<div class="act"><span style="flex:0 0 auto;font-size:1.05rem;margin-top:.1rem">💡</span><div class="a-body"><div class="a-title">'+esc(a.title)+'</div>'+(m.length?'<div class="a-meta">'+m.join(' · ')+'</div>':'')+'</div><div class="a-act"><button onclick="editAct(\''+a.id+'\')" title="Ponerle día">📅</button><button onclick="delAct(\''+a.id+'\')">🗑️</button></div></div>';});
+  h+='<button class="addbtn" style="margin-top:.5rem" onclick="openAct({})">+ Cosa por hacer (sin fecha)</button></div>';
+  return h;
+}
 function suggRow(key,name){
   const sg=SUGG[key]||[]; if(!sg.length)return '';
   let h='<div class="sugg-wrap"><div class="sugg-h">✨ Sugerencias para '+esc(name)+'</div><div class="sugg-row">';
@@ -115,9 +128,9 @@ function suggRow(key,name){
   return h+'</div></div>';
 }
 function firstDay(key){const c=CITIES.find(c=>c.key===key);return c?c.dates[0]:'2026-10-16';}
-function addSug(key,i){const x=(SUGG[key]||[])[i];if(!x)return;go('planner');openAct({activity_date:firstDay(key),title:x.t,category:x.cat,city:key});}
+function addSug(key,i){const x=(SUGG[key]||[])[i];if(!x)return;go('planner');openAct({title:x.t,category:x.cat,city:key});}
 function openSug(key,i){const x=(SUGG[key]||[])[i];if(!x)return;window.open('https://www.getyourguide.com/s/?q='+encodeURIComponent(x.t+' '+key),'_blank');}
-function openAct(a){$('ma-title').textContent=a.id?'Editar actividad':'Nueva actividad';$('ma-id').value=a.id||'';$('ma-date').value=a.activity_date||'2026-10-16';$('ma-time').value=a.start_time?a.start_time.slice(0,5):'';$('ma-tit').value=a.title||'';$('ma-cat').value=a.category||'';$('ma-city').value=a.city||'';$('ma-notes').value=a.notes||'';$('m-act').classList.add('open');}
+function openAct(a){$('ma-title').textContent=a.id?'Editar actividad':'Nueva actividad';$('ma-id').value=a.id||'';$('ma-date').value=a.activity_date||'';$('ma-time').value=a.start_time?a.start_time.slice(0,5):'';$('ma-tit').value=a.title||'';$('ma-cat').value=a.category||'';$('ma-city').value=a.city||'';$('ma-notes').value=a.notes||'';$('m-act').classList.add('open');}
 function editAct(id){const a=(DATA.activities||[]).find(x=>x.id===id);if(a)openAct(a);}
 async function togAct(id,done){await write({action:'update',table:'activities',id:id,patch:{status:done?'pendiente':'hecho'}},done?'Pendiente':'¡Hecho! ✓');}
 async function delAct(id){if(confirm('¿Borrar esta actividad?'))await write({action:'delete',table:'activities',id:id},'Borrado');}
@@ -130,7 +143,7 @@ async function moveAct(id,dir){
   await writeMany([{id:a.id,patch:{sort_order:na}},{id:b.id,patch:{sort_order:nb}}],'Reordenado');
 }
 async function saveAct(){const id=$('ma-id').value,tit=$('ma-tit').value.trim();if(!tit){alert('Escribe la actividad');return;}
-  const row={activity_date:$('ma-date').value,start_time:$('ma-time').value||null,title:tit,category:$('ma-cat').value||null,city:$('ma-city').value||null,notes:$('ma-notes').value||null};
+  const row={activity_date:$('ma-date').value||null,start_time:$('ma-time').value||null,title:tit,category:$('ma-cat').value||null,city:$('ma-city').value||null,notes:$('ma-notes').value||null};
   if(id)await write({action:'update',table:'activities',id:id,patch:row},'Guardado ✓');else{row.created_by='manual';row.is_suggestion=false;row.status='pendiente';await write({action:'insert',table:'activities',row:row},'Agregado ✓');}
   closeM('m-act');}
 
