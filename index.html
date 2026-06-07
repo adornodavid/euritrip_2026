@@ -146,6 +146,26 @@ body{padding-bottom:calc(72px + env(safe-area-inset-bottom));min-height:100vh;}
 .city-photo{height:112px;}
 .city-photo>img{object-position:center 42%;}
 .sugg>img{height:90px;width:100%;object-position:center;}
+
+/* === Push A: toasts, skeleton, progreso, hoy, pull-refresh, tap === */
+button:active,.pf-btn:active,.sugg:active,.chip:active,.city-photo:active{transform:scale(.985);}
+.toast{position:fixed;left:50%;transform:translateX(-50%) translateY(20px);bottom:calc(84px + env(safe-area-inset-bottom));background:var(--ink);color:#fff;padding:.7rem 1.1rem;border-radius:24px;font-size:.85rem;font-weight:700;z-index:300;opacity:0;transition:.25s;pointer-events:none;box-shadow:0 4px 16px rgba(0,0,0,.3);max-width:90%;text-align:center;}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+.toast.err{background:var(--red);}
+.skel{background:linear-gradient(90deg,#e8e8e2 25%,#f3f3ed 50%,#e8e8e2 75%);background-size:200% 100%;animation:sh 1.2s infinite;border-radius:16px;}
+@keyframes sh{0%{background-position:200% 0}100%{background-position:-200% 0}}
+.skel-city{height:98px;margin-bottom:.8rem;}
+.pl-summary{background:var(--card);border-radius:16px;box-shadow:var(--shadow);padding:.9rem 1.1rem;margin-bottom:1rem;}
+.pl-summary .cd{font-size:1rem;font-weight:800;}
+.pl-summary .pg{font-size:.74rem;color:var(--muted);margin:.5rem 0 .25rem;display:flex;justify-content:space-between;font-weight:700;}
+.day.today{background:#FFF8E6;border-radius:10px;padding:.1rem .55rem .3rem;margin:0 -.55rem .4rem;}
+.day.today .day-h{color:var(--red);}
+.hoy-badge{background:var(--red);color:#fff;font-size:.58rem;font-weight:800;padding:.05rem .4rem;border-radius:20px;margin-left:.4rem;vertical-align:middle;}
+.cprog{display:inline-block;font-size:.62rem;background:rgba(255,255,255,.25);color:#fff;padding:.05rem .4rem;border-radius:20px;margin-top:.2rem;}
+.ptr{position:fixed;top:0;left:0;right:0;display:flex;justify-content:center;padding-top:env(safe-area-inset-top);z-index:40;pointer-events:none;}
+.ptr span{background:#fff;border-radius:50%;width:34px;height:34px;display:flex;align-items:center;justify-content:center;box-shadow:var(--shadow);margin-top:6px;transform:translateY(-52px);transition:transform .2s;font-size:1.05rem;}
+.ptr.show span{transform:translateY(0);}
+.mvbtn{background:none;border:0;font-size:.7rem;opacity:.4;cursor:pointer;padding:0 .15rem;line-height:1;}
 </style>
 </head>
 <body>
@@ -187,6 +207,9 @@ body{padding-bottom:calc(72px + env(safe-area-inset-bottom));min-height:100vh;}
   <div id="chat-log"></div>
   <div class="chat-input"><input id="chat-in" type="text" placeholder="Pregúntale o pídele algo…" onkeydown="if(event.key==='Enter')sendChat()"/><button onclick="sendChat()">➤</button></div>
 </section>
+
+<div id="toast" class="toast"></div>
+<div class="ptr" id="ptr"><span>↻</span></div>
 
 <!-- TABBAR -->
 <nav class="tabbar">
