@@ -47,6 +47,7 @@ async function load(){
     const r=await fetch('/api/data',{cache:'no-store'});const j=await r.json();
     DATA=j.data||{};renderPlanner();renderGastos();
     if($('s-perfil').classList.contains('active'))renderPerfil();
+    if($('s-explore').classList.contains('active'))renderExplore();
   }catch(e){ $('planner-root').innerHTML='<p class="empty">Sin conexión. '+esc(e.message)+'</p>'; }
 }
 
@@ -68,7 +69,7 @@ function renderPlanner(){
     c.dates.forEach(d=>{
       const da=cityActs.filter(a=>a.activity_date===d).sort((a,b)=>(a.sort_order||0)-(b.sort_order||0)||((a.start_time||'')>(b.start_time||'')?1:-1));
       const isToday=(d===today);
-      html+='<div class="day'+(isToday?' today':'')+'"><div class="day-h">'+dn(d)+' Oct'+(isToday?'<span class="hoy-badge">HOY</span>':'')+'</div>';
+      html+='<div class="day'+(isToday?' today':'')+'"><div class="day-h">'+dn(d)+' Oct'+(isToday?'<span class="hoy-badge">HOY</span>':'')+'</div>'+resHtml(d);
       da.forEach((a,idx)=>{
         const done=a.status==='hecho';
         const up=idx>0?'<button class="mvbtn" onclick="moveAct(\''+a.id+'\',-1)">▲</button>':'';
@@ -154,7 +155,7 @@ async function saveExp(){const id=$('me-id').value,desc=$('me-desc').value.trim(
 
 /* ---------- EXPLORE ---------- */
 const TIPS=[['🛂','Schengen / ETIAS','Sin visa para mexicanos (<90 días). ETIAS podría arrancar en 2026. Pasaporte con 6+ meses de vigencia.'],['📶','eSIM','Holafly o Airalo, ~€80 datos ilimitados Europa. Actívala al aterrizar en CDG.'],['🧳','Equipaje','3 maletas total entre los dos. Cambias de hotel cada 2-4 noches — viaja ligero.'],['🔌','Enchufe','Europa tipo C/E (clavijas redondas, 230V). Lleva 1-2 adaptadores.'],['💶','Tax-free','Compras grandes: factura tax-free (DIVA) sellada en Barajas antes de volar el 31.'],['🍢','Pintxos','De pie, de barra en barra. Pide 1-2 + txakoli. Bar Néstor: apúntate 30 min antes.'],['🎨','Guggenheim','Entrada online con horario (€16). Mejor foto desde el puente de La Salve.'],['🍷','Saint-Émilion','Octubre = post-vendimia. Tour medio día con cata. Suéter + zapatos cerrados.'],['🌧️','Clima Oct','París 12-18° · Bordeaux 10-19° · País Vasco 12-20° (lluvioso) · Madrid 10-19°.'],['✈️','Vuelos','Ida AM44 MTY 15 Oct→CDG 16 (29A/B). Regreso AM35 MAD 31 Oct 10:30am→MTY (34H/J).']];
-function renderExplore(){let h='<div class="sec-h">💡 Tips del viaje</div>'+TIPS.map(t=>'<div class="tip"><h3>'+t[0]+' '+t[1]+'</h3><p>'+t[2]+'</p></div>').join('');
+function renderExplore(){let h=exploreTop()+'<div class="sec-h">💡 Tips del viaje</div>'+TIPS.map(t=>'<div class="tip"><h3>'+t[0]+' '+t[1]+'</h3><p>'+t[2]+'</p></div>').join('');
   h+='<div class="sec-h">🎟️ Ideas para hacer</div>';CITIES.forEach(c=>{h+='<div style="font-weight:800;font-size:.86rem;margin:.6rem 0 .2rem">'+c.flag+' '+esc(c.name)+'</div>'+suggRow(c.key,c.name);});
   h+='<a class="pf-btn" href="/guia" style="margin-top:1.2rem">📖 Abrir la guía completa por ciudad →</a>';$('explore-root').innerHTML=h;}
 
@@ -176,6 +177,37 @@ function chipSend(el){$('chat-in').value=el.textContent;sendChat();}
 function pushBub(role,text){const d=document.createElement('div');d.className='bub '+(role==='user'?'u':'a');d.textContent=text;$('chat-log').appendChild(d);d.scrollIntoView({behavior:'smooth'});return d;}
 async function sendChat(){const inp=$('chat-in'),t=inp.value.trim();if(!t)return;inp.value='';pushBub('user',t);chatMsgs.push({role:'user',content:t});const typing=pushBub('assistant','…');
   try{const r=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({messages:chatMsgs})});const j=await r.json();const reply=j.reply||j.error||'(sin respuesta)';typing.textContent=reply;chatMsgs.push({role:'assistant',content:reply});if(j.tool_events&&j.tool_events.length){load();showToast('Plan actualizado ✓');}}catch(e){typing.textContent='Error: '+e.message;}}
+
+/* ---------- reservas / links (Push C) ---------- */
+const RES_ICON={flight:'✈️',hotel:'🏨',restaurant:'🍽️',train:'🚄',tour:'🎟️',transfer:'🚐',activity:'🎫',other:'📋'};
+function resHtml(date){const rs=(DATA.reservations||[]).filter(r=>r.date===date);if(!rs.length)return '';
+  return rs.map(r=>{const ic=RES_ICON[r.type]||'📋';const meta=[r.time,(r.confirmation_code?'cód '+r.confirmation_code:''),r.cost].filter(Boolean).map(esc).join(' · ');
+    return '<div class="resv"><span class="ri">'+ic+'</span><div class="rb"><div class="rt">'+esc(r.title)+'</div><div class="rm">'+meta+(r.link?' · <a href="'+esc(r.link)+'" target="_blank">abrir</a>':'')+'</div></div><button class="rx" onclick="delRes(\''+r.id+'\')">🗑️</button></div>';}).join('');}
+function exploreTop(){
+  let h='<div class="sec-h">📋 Reservas <button class="chip" style="float:right" onclick="openRes({})">+ Reserva</button></div><div class="bcard">';
+  const rs=(DATA.reservations||[]).slice().sort((a,b)=>((a.date||'')+(a.time||''))<((b.date||'')+(b.time||''))?-1:1);
+  if(!rs.length)h+='<div class="empty">Sin reservas aún. Agrega vuelos, hoteles, tours…</div>';
+  rs.forEach(r=>{const ic=RES_ICON[r.type]||'📋';const meta=[r.date,r.time,(r.confirmation_code?'cód '+r.confirmation_code:''),r.cost].filter(Boolean).map(esc).join(' · ');
+    h+='<div class="resv"><span class="ri">'+ic+'</span><div class="rb"><div class="rt">'+esc(r.title)+'</div><div class="rm">'+meta+(r.link?' · <a href="'+esc(r.link)+'" target="_blank">abrir</a>':'')+'</div></div><button class="rx" onclick="openRes2(\''+r.id+'\')">✏️</button><button class="rx" onclick="delRes(\''+r.id+'\')">🗑️</button></div>';});
+  h+='</div>';
+  const bm=(DATA.bookmarks||[]);
+  h+='<div class="sec-h">🔖 Links <button class="chip" style="float:right" onclick="openLink({})">+ Link</button></div><div class="bcard">';
+  if(!bm.length)h+='<div class="empty">Sin links guardados.</div>';
+  bm.forEach(b=>{h+='<div class="linkrow"><a href="'+esc(b.url)+'" target="_blank">'+esc(b.title)+'</a><button class="rx" onclick="delBookmark(\''+b.id+'\')">🗑️</button></div>';});
+  h+='</div>';
+  return h;
+}
+function openRes(r){$('mr-id').value=r.id||'';$('mr-type').value=r.type||'hotel';$('mr-title').value=r.title||'';$('mr-date').value=r.date||'';$('mr-time').value=r.time||'';$('mr-code').value=r.confirmation_code||'';$('mr-link').value=r.link||'';$('mr-city').value=r.city||'';$('mr-cost').value=r.cost||'';$('mr-notes').value=r.notes||'';$('m-res').classList.add('open');}
+function openRes2(id){const r=(DATA.reservations||[]).find(x=>x.id===id);if(r)openRes(r);}
+async function saveRes(){const id=$('mr-id').value,t=$('mr-title').value.trim();if(!t){alert('Título requerido');return;}
+  const row={type:$('mr-type').value,title:t,date:$('mr-date').value||null,time:$('mr-time').value||null,confirmation_code:$('mr-code').value||null,link:$('mr-link').value||null,city:$('mr-city').value||null,cost:$('mr-cost').value||null,notes:$('mr-notes').value||null};
+  if(id)await write({action:'update',table:'reservations',id:id,patch:row},'Guardado ✓');else{row.created_by='manual';await write({action:'insert',table:'reservations',row:row},'Reserva agregada ✓');}closeM('m-res');}
+async function delRes(id){if(confirm('¿Borrar esta reserva?'))await write({action:'delete',table:'reservations',id:id},'Borrado');}
+function openLink(b){$('ml-id').value=b.id||'';$('ml-title').value=b.title||'';$('ml-url').value=b.url||'';$('ml-city').value=b.city||'';$('m-link').classList.add('open');}
+async function saveLink(){const id=$('ml-id').value,t=$('ml-title').value.trim(),u=$('ml-url').value.trim();if(!t||!u){alert('Título y URL requeridos');return;}
+  const row={title:t,url:u,city:$('ml-city').value||null};
+  if(id)await write({action:'update',table:'bookmarks',id:id,patch:row},'Guardado ✓');else{row.created_by='manual';await write({action:'insert',table:'bookmarks',row:row},'Link guardado ✓');}closeM('m-link');}
+async function delBookmark(id){if(confirm('¿Borrar este link?'))await write({action:'delete',table:'bookmarks',id:id},'Borrado');}
 
 /* ---------- hoteles / budget / mapa (Push B) ---------- */
 function openHotel(city){const h=(DATA.hotel_choices||[]).find(x=>x.city===city)||{};$('mh-title').textContent='Hotel · '+city;$('mh-city').value=city;$('mh-name').value=(h.hotel_name&&h.hotel_name!=='Por definir')?h.hotel_name:'';$('mh-zone').value=h.zone||'';$('mh-price').value=h.price_per_night||'';$('mh-conf').value=h.confirmed?'true':'false';$('mh-url').value=h.booking_url||'';$('mh-notes').value=h.notes||'';$('m-hotel').classList.add('open');}

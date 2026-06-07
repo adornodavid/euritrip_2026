@@ -166,6 +166,18 @@ button:active,.pf-btn:active,.sugg:active,.chip:active,.city-photo:active{transf
 .ptr span{background:#fff;border-radius:50%;width:34px;height:34px;display:flex;align-items:center;justify-content:center;box-shadow:var(--shadow);margin-top:6px;transform:translateY(-52px);transition:transform .2s;font-size:1.05rem;}
 .ptr.show span{transform:translateY(0);}
 .mvbtn{background:none;border:0;font-size:.7rem;opacity:.4;cursor:pointer;padding:0 .15rem;line-height:1;}
+
+/* reservas / links (Push C) */
+.resv{display:flex;gap:.5rem;align-items:flex-start;background:#EEF6FF;border:1px solid #d6e6f7;border-radius:10px;padding:.5rem .6rem;margin:.35rem 0;}
+.resv .ri{font-size:1.15rem;flex:0 0 auto;}
+.resv .rb{flex:1;min-width:0;}
+.resv .rt{font-weight:700;font-size:.85rem;line-height:1.2;}
+.resv .rm{font-size:.72rem;color:var(--muted);margin-top:.1rem;}
+.resv .rm a{color:var(--red);font-weight:700;}
+.resv .rx{background:none;border:0;color:var(--muted);cursor:pointer;font-size:.85rem;padding:.1rem .3rem;}
+.linkrow{display:flex;justify-content:space-between;align-items:center;padding:.55rem 0;border-top:1px solid var(--line);}
+.linkrow:first-child{border-top:0;}
+.linkrow a{font-weight:700;font-size:.88rem;color:var(--ink);text-decoration:none;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 </style>
 </head>
 <body>
@@ -267,6 +279,29 @@ button:active,.pf-btn:active,.sugg:active,.chip:active,.city-photo:active{transf
   <div class="row2"><div><label>Mín MXN</label><input type="number" id="mb-min" inputmode="decimal"/></div><div><label>Máx MXN</label><input type="number" id="mb-max" inputmode="decimal"/></div></div>
   <button class="save" onclick="saveBudget()">Guardar</button>
   <button class="cancel" onclick="closeM('m-budget')">Cancelar</button>
+</div></div>
+
+<div id="m-res" class="modal"><div class="sheet">
+  <h3>Reserva</h3>
+  <input type="hidden" id="mr-id"/>
+  <div class="row2"><div><label>Tipo</label><select id="mr-type"><option value="flight">✈️ Vuelo</option><option value="hotel">🏨 Hotel</option><option value="restaurant">🍽️ Restaurante</option><option value="train">🚄 Tren</option><option value="tour">🎟️ Tour</option><option value="transfer">🚐 Traslado</option><option value="activity">🎫 Actividad</option><option value="other">📋 Otro</option></select></div><div><label>Ciudad</label><select id="mr-city"><option value="">—</option><option>Paris</option><option>Bordeaux</option><option>San Sebastián</option><option>Bilbao</option><option>Madrid</option></select></div></div>
+  <label>Título</label><input type="text" id="mr-title" placeholder="Ej: Cena en Arzak"/>
+  <div class="row2"><div><label>Fecha</label><input type="date" id="mr-date" min="2026-10-15" max="2026-10-31"/></div><div><label>Hora</label><input type="time" id="mr-time"/></div></div>
+  <div class="row2"><div><label>Código</label><input type="text" id="mr-code"/></div><div><label>Costo</label><input type="text" id="mr-cost" placeholder="€340"/></div></div>
+  <label>Link</label><input type="text" id="mr-link" placeholder="https://..."/>
+  <label>Notas</label><input type="text" id="mr-notes"/>
+  <button class="save" onclick="saveRes()">Guardar</button>
+  <button class="cancel" onclick="closeM('m-res')">Cancelar</button>
+</div></div>
+
+<div id="m-link" class="modal"><div class="sheet">
+  <h3>Link guardado</h3>
+  <input type="hidden" id="ml-id"/>
+  <label>Título</label><input type="text" id="ml-title" placeholder="Ej: Reseña del restaurante"/>
+  <label>URL</label><input type="url" id="ml-url" placeholder="https://..."/>
+  <label>Ciudad</label><select id="ml-city"><option value="">—</option><option>Paris</option><option>Bordeaux</option><option>San Sebastián</option><option>Bilbao</option><option>Madrid</option></select>
+  <button class="save" onclick="saveLink()">Guardar</button>
+  <button class="cancel" onclick="closeM('m-link')">Cancelar</button>
 </div></div>
 
 <script src="app/main.js"></script>
