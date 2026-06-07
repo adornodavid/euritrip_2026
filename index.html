@@ -850,6 +850,61 @@ ul.warning li::before { content: "⚠"; position: absolute; left: 0; color: var(
   }
   .chat-fab { width: 56px; height: 56px; bottom: 1rem; right: 1rem; font-size: 1.5rem; }
 }
+
+/* ===== MOBILE-FIRST LAYER (v7) ===== */
+.nav-toggle{display:none;background:none;border:0;font-size:1.7rem;cursor:pointer;color:inherit;line-height:1;padding:.2rem .5rem;}
+@media (max-width:860px){
+  .header-inner{flex-wrap:wrap;align-items:center;}
+  .nav-toggle{display:block;margin-left:auto;}
+  nav.primary{display:none;flex-direction:column;width:100%;gap:.1rem;margin-top:.6rem;}
+  nav.primary.open{display:flex;}
+  nav.primary a{padding:.8rem .3rem;border-bottom:1px solid rgba(0,0,0,.07);min-height:44px;display:flex;align-items:center;}
+  .container{padding-left:1rem !important;padding-right:1rem !important;}
+  .grid-2,.grid-3{grid-template-columns:1fr !important;}
+  .hero h1{font-size:clamp(2rem,8.5vw,3.2rem) !important;line-height:1.08;}
+  .hero-meta{grid-template-columns:1fr 1fr !important;}
+  .city-hero{min-height:190px !important;}
+  .tabs{overflow-x:auto;flex-wrap:nowrap !important;-webkit-overflow-scrolling:touch;}
+  .tab-btn{white-space:nowrap;}
+  .photo-gallery{grid-template-columns:1fr 1fr !important;}
+  .map,.map-small{height:260px !important;}
+  button,.btn-add,.tab-btn{min-height:42px;}
+  table{display:block;overflow-x:auto;}
+}
+/* ===== PLANNER ===== */
+#planner{background:linear-gradient(180deg,#FFFEF5 0%,var(--off-white,#EFF0EC) 100%);}
+.planner-day{background:#fff;border:1px solid rgba(0,0,0,.08);border-radius:14px;padding:1rem 1.1rem;margin-bottom:1rem;box-shadow:0 1px 3px rgba(0,0,0,.04);}
+.planner-day h3{margin:0 0 .15rem;font-size:1.05rem;}
+.planner-day .pl-city{font-family:var(--mono,'Space Mono',monospace);font-size:.7rem;letter-spacing:.06em;text-transform:uppercase;opacity:.6;}
+.pl-act{display:flex;align-items:flex-start;gap:.6rem;padding:.55rem 0;border-top:1px solid rgba(0,0,0,.06);}
+.pl-act:first-of-type{border-top:0;}
+.pl-check{flex:0 0 auto;width:26px;height:26px;border-radius:50%;border:2px solid #bbb;background:none;cursor:pointer;font-size:.85rem;line-height:1;display:flex;align-items:center;justify-content:center;margin-top:.1rem;}
+.pl-act.done .pl-check{background:#16a34a;border-color:#16a34a;color:#fff;}
+.pl-act.done .pl-body{opacity:.5;}
+.pl-act.done .pl-title{text-decoration:line-through;}
+.pl-body{flex:1;min-width:0;}
+.pl-title{font-weight:600;font-size:.96rem;}
+.pl-meta{font-size:.78rem;opacity:.75;margin-top:.12rem;}
+.pl-time{font-family:var(--mono,'Space Mono',monospace);font-weight:700;font-size:.8rem;color:#DA4143;margin-right:.35rem;}
+.pl-chip{display:inline-block;font-size:.68rem;background:rgba(0,0,0,.06);border-radius:20px;padding:.05rem .5rem;margin-left:.3rem;}
+.pl-sug{font-size:.62rem;background:#FFF3B0;color:#7a6a00;border-radius:20px;padding:.05rem .45rem;margin-left:.3rem;vertical-align:middle;}
+.pl-actions{display:flex;gap:.1rem;flex:0 0 auto;}
+.pl-actions button{background:none;border:0;cursor:pointer;font-size:.95rem;opacity:.5;padding:.25rem;min-height:34px;min-width:30px;}
+.pl-actions button:hover{opacity:1;}
+.pl-addbtn{margin-top:.6rem;background:none;border:1px dashed #c5c5c5;border-radius:10px;padding:.55rem;width:100%;cursor:pointer;font-size:.85rem;color:#555;min-height:44px;}
+.pl-addbtn:hover{border-color:#888;color:#222;}
+.pl-legend{font-size:.8rem;opacity:.7;margin-bottom:1.2rem;}
+#pl-modal{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;z-index:10000;align-items:flex-end;justify-content:center;}
+#pl-modal.open{display:flex;}
+#pl-modal .pl-sheet{background:#fff;width:100%;max-width:520px;border-radius:18px 18px 0 0;padding:1.2rem 1.2rem 1.6rem;max-height:90vh;overflow-y:auto;}
+#pl-modal h4{margin:.2rem 0 .4rem;font-size:1.1rem;}
+#pl-modal label{display:block;font-size:.76rem;font-weight:700;margin:.65rem 0 .2rem;text-transform:uppercase;letter-spacing:.03em;opacity:.7;}
+#pl-modal input,#pl-modal select,#pl-modal textarea{width:100%;padding:.65rem;border:1px solid #ccc;border-radius:10px;font-size:16px;font-family:inherit;box-sizing:border-box;}
+#pl-modal .pl-row{display:flex;gap:.6rem;}
+#pl-modal .pl-row>div{flex:1;}
+.pl-save{background:#11190C;color:#E6FF00;border:0;border-radius:12px;padding:.85rem;width:100%;font-weight:700;margin-top:1.1rem;cursor:pointer;min-height:48px;font-size:1rem;}
+.pl-cancel{background:none;border:0;color:#999;width:100%;padding:.6rem;margin-top:.2rem;cursor:pointer;font-size:.9rem;}
+@media (min-width:560px){#pl-modal{align-items:center;}#pl-modal .pl-sheet{border-radius:18px;}}
 </style>
 </head>
 <body>
@@ -861,20 +916,20 @@ ul.warning li::before { content: "⚠"; position: absolute; left: 0; color: var(
       <span class="bolt">⚡</span>
       Eurotrip 2026
     </div>
-    <nav class="primary">
+    <button class="nav-toggle" aria-label="Menú" onclick="document.getElementById('primary-nav').classList.toggle('open')">☰</button>
+    <nav class="primary" id="primary-nav">
       <a href="#inicio">Inicio</a>
+      <a href="#planner">🗓️ Planner</a>
       <a href="#vivo">📌 Vivo</a>
       <a href="#gastos">💰 Gastos</a>
+      <a href="#paris">París</a>
+      <a href="#bordeaux">Bordeaux</a>
+      <a href="#san-sebastian">San Sebastián</a>
+      <a href="#bilbao">Bilbao</a>
+      <a href="#madrid">Madrid</a>
       <a href="#alternativas">Otras Rutas</a>
       <a href="#antes">Antes</a>
-      <a href="#paris">Paris</a>
-      <a href="#bordeaux">Bordeaux</a>
-      <a href="#toulouse">Toulouse</a>
-      <a href="#barcelona">Barcelona</a>
-      <a href="#valencia">Valencia</a>
-      <a href="#madrid">Madrid</a>
-      <a href="#presupuesto">Presupuesto</a>
-      <a href="#apendice">Apéndice</a>
+      <a href="#presupuesto">$</a>
     </nav>
   </div>
 </header>
@@ -882,17 +937,27 @@ ul.warning li::before { content: "⚠"; position: absolute; left: 0; color: var(
 <!-- ============ HERO ============ -->
 <section class="hero" id="inicio">
   <div class="container">
-    <span class="section-tag">Propuesta · Arkamia Lab · v6</span>
+    <span class="section-tag">Plan de viaje · v7 · Francia + País Vasco</span>
     <h1>De <span class="display">París</span> <em>a</em> <span class="display">Madrid</span>.<br/>
-    <span class="yellow">15 noches</span>, <em>seis ciudades</em>,<br/>dos viñedos.</h1>
-    <p class="tagline">Una propuesta para <strong>David + Paty</strong>. <em>Slow mornings</em>, cafés con tiempo, caminatas largas, cassoulet en Toulouse, Saint-Émilion al amanecer, paella en Valencia, tapas en Madrid, atardeceres en el Sena. <strong>Sin tours acelerados. Sin maletas cada 48 horas.</strong></p>
+    <span class="yellow">15 noches</span>, <em>cinco ciudades</em>,<br/>Francia + País Vasco.</h1>
+    <p class="tagline">El viaje de <strong>David + Paty</strong>. <em>Slow mornings</em>, cafés con tiempo, Saint-Émilion entre viñedos, pintxos en San Sebastián, el Guggenheim en Bilbao, tapas en Madrid, atardeceres en el Sena. <strong>Sin tours acelerados. Sin maletas cada 48 horas.</strong></p>
     <div class="hero-meta">
       <div><div class="label">Fechas</div><div class="value">15 → 31 Oct 2026</div></div>
       <div><div class="label">Noches hotel</div><div class="value">15</div></div>
-      <div><div class="label">Ciudades</div><div class="value">6 (Paris+Bordeaux+Toulouse+BCN+Valencia+Madrid)</div></div>
+      <div><div class="label">Ciudades</div><div class="value">5 (París · Bordeaux · San Sebastián · Bilbao · Madrid)</div></div>
       <div><div class="label">Day trips</div><div class="value">Versalles · St-Émilion · Toledo</div></div>
       <div><div class="label">Budget Europa</div><div class="value">$120-150K MXN</div></div>
     </div>
+  </div>
+</section>
+
+<!-- ============ PLANNER (editable) ============ -->
+<section id="planner" style="border-top:3px solid var(--yellow,#E6FF00);">
+  <div class="container">
+    <span class="section-tag">🗓️ Planner · editable · tú y Paty</span>
+    <h2><em>Su plan</em> <span class="display">día por día</span></h2>
+    <p class="pl-legend">Cada actividad la pueden <strong>marcar como hecha ✓</strong>, <strong>editar ✏️</strong> o <strong>borrar ×</strong>. Agreguen las suyas con <strong>+ actividad</strong>. Las marcadas <span class="pl-sug">sugerida</span> son ideas que pueden quitar. También se lo pueden pedir a Claudia (ej: "agrega cena en Arzak el 23").</p>
+    <div id="planner-root"><p style="opacity:.6;font-family:var(--mono,monospace);">Cargando plan…</p></div>
   </div>
 </section>
 
@@ -1280,9 +1345,9 @@ ul.warning li::before { content: "⚠"; position: absolute; left: 0; color: var(
 <!-- ============ RESUMEN RUTA + MAPA ============ -->
 <section id="ruta">
   <div class="container">
-    <span class="section-tag">Ruta Recomendada · v3</span>
-    <h2>París → Bordeaux → <span style="color:var(--accent-blue);">Toulouse</span> → Barcelona → <span style="color:var(--accent-red);">Valencia</span> → Madrid</h2>
-    <p><strong>6 ciudades hospedadas</strong>, 5 movimientos con maletas, <strong>todo por tren de alta velocidad</strong>, máximo 3h15min por tramo. Toulouse 1N (cassoulet de cena) + Valencia 1N (paella auténtica) + day trips Versalles desde París y Toledo desde Madrid.</p>
+    <span class="section-tag">Ruta · v7 · Francia + País Vasco</span>
+    <h2>París → Bordeaux → <span style="color:var(--accent-blue);">San Sebastián</span> → <span style="color:var(--accent-red);">Bilbao</span> → Madrid</h2>
+    <p><strong>5 ciudades hospedadas</strong>, 4 movimientos con maletas, <strong>Francia + País Vasco + Madrid</strong>. Pintxos en San Sebastián, el Guggenheim en Bilbao + day trips Versalles (París), Saint-Émilion (Bordeaux) y Toledo (Madrid).</p>
 
     <div id="route-map" class="map"></div>
 
@@ -1345,29 +1410,29 @@ ul.warning li::before { content: "⚠"; position: absolute; left: 0; color: var(
       <div class="route-step">
         <div class="step-icon">2</div>
         <div class="step-content">
-          <h4>🚄 Bordeaux → Toulouse · 22 Oct (mié)</h4>
-          <div class="step-meta">TGV inOui · 2h 00min · ~€100-140 pareja</div>
-          <div class="step-desc">Sales de Bordeaux Saint-Jean ~11am, llegas Toulouse Matabiau ~1pm. Te da tarde + noche completa en Toulouse — cassoulet de cena, mañana siguiente caminata centro rosa antes del próximo tren.</div>
+          <h4>🚄 Bordeaux → San Sebastián · 22 Oct (jue)</h4>
+          <div class="step-meta">Tren a Hendaya + Euskotren, o bus directo (Flixbus/ALSA) · ~3-4h · ~€40-70 pareja</div>
+          <div class="step-desc">Sales de Bordeaux por la tarde tras medio día en la ciudad. Cruzas la frontera a España. Llegas a Donostia de noche — primeros pintxos en la Parte Vieja.</div>
         </div>
       </div>
       <div class="route-step">
         <div class="step-icon">3</div>
         <div class="step-content">
-          <h4>🚄 Toulouse → Barcelona · 23 Oct (jue)</h4>
-          <div class="step-meta">Renfe-SNCF directo · 3h 15min · ~€90-130 pareja</div>
-          <div class="step-desc">Sales de Toulouse Matabiau ~12pm tras mañana libre, llegas Barcelona Sants ~3:15pm. Cena tapas en Born/Gótico.</div>
+          <h4>🚄 San Sebastián → Bilbao · 24 Oct (sáb)</h4>
+          <div class="step-meta">Bus (PESA/ALSA) o Euskotren · ~1h15 · ~€20 pareja</div>
+          <div class="step-desc">Sales de San Sebastián al mediodía tras la mañana de playa, llegas a Bilbao en ~1h15. Tarde para el Casco Viejo y pintxos en Plaza Nueva.</div>
         </div>
       </div>
       <div class="route-step">
         <div class="step-icon">4</div>
         <div class="step-content">
-          <h4>🚄 Barcelona → Madrid · 26 Oct (lun)</h4>
-          <div class="step-meta">Renfe AVE · 2h 30min · ~€60-100 pareja (Promo desde €28)</div>
-          <div class="step-desc">El tramo más cómodo. Sales de Barcelona Sants ~9am, llegas Madrid Atocha ~11:30am. Almuerzo en Letras, tarde de exploración centro.</div>
+          <h4>🚄 Bilbao → Madrid · 26 Oct (lun)</h4>
+          <div class="step-meta">Tren Renfe ~4h 30min o vuelo ~1h · ~€60-120 pareja</div>
+          <div class="step-desc">Último tramo: tren Renfe Bilbao → Madrid (~4.5h) o vuelo corto (~1h). Llegas a Madrid para 5 noches finales + day trip a Toledo.</div>
         </div>
       </div>
     </div>
-    <p class="mono" style="font-size:0.85rem;background:var(--off-white-2);padding:0.7rem;border-radius:6px;">💰 Total trenes pareja (todos anticipados): <strong>~€430-580 ($9,250-12,500 MXN)</strong></p>
+    <p class="mono" style="font-size:0.85rem;background:var(--off-white-2);padding:0.7rem;border-radius:6px;">💰 Total traslados pareja (tren/bus anticipado): <strong>~€300-450 ($6,450-9,700 MXN)</strong></p>
 
     <!-- Calendar visual -->
     <h3 class="mt-2">Calendario 15-31 Octubre 2026</h3>
@@ -1379,21 +1444,21 @@ ul.warning li::before { content: "⚠"; position: absolute; left: 0; color: var(
       <div class="card" style="background:#FFE082;text-align:center;padding:0.7rem 0.3rem;"><div class="mono" style="font-size:0.72rem;opacity:0.7;">LUN</div><strong>19</strong><div style="font-size:0.7rem;">🏰 Versalles</div></div>
       <div class="card" style="background:#C8E6C9;text-align:center;padding:0.7rem 0.3rem;"><div class="mono" style="font-size:0.72rem;opacity:0.7;">MAR</div><strong>20</strong><div style="font-size:0.7rem;">🚄 Bordeaux</div></div>
       <div class="card" style="background:#C8E6C9;text-align:center;padding:0.7rem 0.3rem;"><div class="mono" style="font-size:0.72rem;opacity:0.7;">MIE</div><strong>21</strong><div style="font-size:0.7rem;">🍷 St-Émilion</div></div>
-      <div class="card" style="background:#E1BEE7;text-align:center;padding:0.7rem 0.3rem;"><div class="mono" style="font-size:0.72rem;opacity:0.7;">JUE</div><strong>22</strong><div style="font-size:0.7rem;">🚄 Toulouse</div></div>
-      <div class="card" style="background:#FFCCBC;text-align:center;padding:0.7rem 0.3rem;"><div class="mono" style="font-size:0.72rem;opacity:0.7;">VIE</div><strong>23</strong><div style="font-size:0.7rem;">🚄 BCN</div></div>
-      <div class="card" style="background:#FFCCBC;text-align:center;padding:0.7rem 0.3rem;"><div class="mono" style="font-size:0.72rem;opacity:0.7;">SAB</div><strong>24</strong><div style="font-size:0.7rem;">BCN · Gaudí</div></div>
-      <div class="card" style="background:#FFCCBC;text-align:center;padding:0.7rem 0.3rem;"><div class="mono" style="font-size:0.72rem;opacity:0.7;">DOM</div><strong>25</strong><div style="font-size:0.7rem;">BCN relax</div></div>
-      <div class="card" style="background:#FFE0E0;text-align:center;padding:0.7rem 0.3rem;"><div class="mono" style="font-size:0.72rem;opacity:0.7;">LUN</div><strong>26</strong><div style="font-size:0.7rem;">🚄 Valencia</div></div>
-      <div class="card" style="background:#B3E5FC;text-align:center;padding:0.7rem 0.3rem;"><div class="mono" style="font-size:0.72rem;opacity:0.7;">MAR</div><strong>27</strong><div style="font-size:0.7rem;">🚄 Madrid</div></div>
-      <div class="card" style="background:#B3E5FC;text-align:center;padding:0.7rem 0.3rem;"><div class="mono" style="font-size:0.72rem;opacity:0.7;">MIE</div><strong>28</strong><div style="font-size:0.7rem;">🏰 Toledo</div></div>
-      <div class="card" style="background:#B3E5FC;text-align:center;padding:0.7rem 0.3rem;"><div class="mono" style="font-size:0.72rem;opacity:0.7;">JUE</div><strong>29</strong><div style="font-size:0.7rem;">🍷 Viñedo*</div></div>
+      <div class="card" style="background:#E1BEE7;text-align:center;padding:0.7rem 0.3rem;"><div class="mono" style="font-size:0.72rem;opacity:0.7;">JUE</div><strong>22</strong><div style="font-size:0.7rem;">🚄 San Sebastián</div></div>
+      <div class="card" style="background:#FFCCBC;text-align:center;padding:0.7rem 0.3rem;"><div class="mono" style="font-size:0.72rem;opacity:0.7;">VIE</div><strong>23</strong><div style="font-size:0.7rem;">Donostia · pintxos</div></div>
+      <div class="card" style="background:#FFCCBC;text-align:center;padding:0.7rem 0.3rem;"><div class="mono" style="font-size:0.72rem;opacity:0.7;">SAB</div><strong>24</strong><div style="font-size:0.7rem;">🚄 Bilbao</div></div>
+      <div class="card" style="background:#FFCCBC;text-align:center;padding:0.7rem 0.3rem;"><div class="mono" style="font-size:0.72rem;opacity:0.7;">DOM</div><strong>25</strong><div style="font-size:0.7rem;">Guggenheim</div></div>
+      <div class="card" style="background:#FFE0E0;text-align:center;padding:0.7rem 0.3rem;"><div class="mono" style="font-size:0.72rem;opacity:0.7;">LUN</div><strong>26</strong><div style="font-size:0.7rem;">🚄 Madrid</div></div>
+      <div class="card" style="background:#B3E5FC;text-align:center;padding:0.7rem 0.3rem;"><div class="mono" style="font-size:0.72rem;opacity:0.7;">MAR</div><strong>27</strong><div style="font-size:0.7rem;">Madrid · Prado</div></div>
+      <div class="card" style="background:#B3E5FC;text-align:center;padding:0.7rem 0.3rem;"><div class="mono" style="font-size:0.72rem;opacity:0.7;">MIE</div><strong>28</strong><div style="font-size:0.7rem;">Madrid · Palacio</div></div>
+      <div class="card" style="background:#B3E5FC;text-align:center;padding:0.7rem 0.3rem;"><div class="mono" style="font-size:0.72rem;opacity:0.7;">JUE</div><strong>29</strong><div style="font-size:0.7rem;">🏰 Toledo/FLEX</div></div>
       <div class="card" style="background:#B3E5FC;text-align:center;padding:0.7rem 0.3rem;"><div class="mono" style="font-size:0.72rem;opacity:0.7;">VIE</div><strong>30</strong><div style="font-size:0.7rem;">Madrid relax</div></div>
       <div class="card" style="background:var(--bolt-black);color:var(--lightning);text-align:center;padding:0.7rem 0.3rem;"><div class="mono" style="font-size:0.72rem;opacity:0.7;">SAB</div><strong>31</strong><div style="font-size:0.7rem;">✈ MAD→MTY</div></div>
     </div>
     <p style="font-size:0.82rem;color:var(--grey);margin-top:0.6rem;">
-    <strong>Leyenda:</strong> <span style="background:#FFE082;padding:0.1rem 0.4rem;border-radius:3px;">Paris</span> · <span style="background:#C8E6C9;padding:0.1rem 0.4rem;border-radius:3px;">Bordeaux</span> · <span style="background:#E1BEE7;padding:0.1rem 0.4rem;border-radius:3px;">Toulouse</span> · <span style="background:#FFCCBC;padding:0.1rem 0.4rem;border-radius:3px;">Barcelona</span> · <span style="background:#FFE0E0;padding:0.1rem 0.4rem;border-radius:3px;">Valencia</span> · <span style="background:#B3E5FC;padding:0.1rem 0.4rem;border-radius:3px;">Madrid</span> · <span style="background:var(--bolt-black);color:var(--lightning);padding:0.1rem 0.4rem;border-radius:3px;">Vuelo</span>
-    <br/><strong>* Día 29 (viñedo) tiene opciones</strong> — Ribera del Duero full-day premium o Vinos de Madrid DO barato (ver sección Madrid).
-    <br/><strong>Días-relax</strong> sin agenda fija: día 17 (sáb Paris), día 25 (dom BCN), día 30 (vie Madrid).</p>
+    <strong>Leyenda:</strong> <span style="background:#FFE082;padding:0.1rem 0.4rem;border-radius:3px;">Paris</span> · <span style="background:#C8E6C9;padding:0.1rem 0.4rem;border-radius:3px;">Bordeaux</span> · <span style="background:#E1BEE7;padding:0.1rem 0.4rem;border-radius:3px;">San Sebastián</span> · <span style="background:#FFCCBC;padding:0.1rem 0.4rem;border-radius:3px;">Bilbao</span> · <span style="background:#B3E5FC;padding:0.1rem 0.4rem;border-radius:3px;">Madrid</span> · <span style="background:var(--bolt-black);color:var(--lightning);padding:0.1rem 0.4rem;border-radius:3px;">Vuelo</span>
+    <br/><strong>* Día 29 es FLEX</strong> — Toledo, Segovia, Chinchón o Vinos de Madrid DO (ver sección Madrid).
+    <br/><strong>Días-relax</strong> sin agenda fija: día 17 (sáb París), día 25 (dom Bilbao), día 30 (vie Madrid).</p>
   </div>
 </section>
 
@@ -2033,9 +2098,9 @@ ul.warning li::before { content: "⚠"; position: absolute; left: 0; color: var(
           <ul class="checklist">
             <li><strong>Día 5 (mar 20 oct):</strong> llegada TGV mediodía + tarde Place de la Bourse + Miroir d'Eau + Cité du Vin (museo)</li>
             <li><strong>Día 6 (mié 21 oct):</strong> <strong>tour viñedo Saint-Émilion</strong> day trip full day (9:30am-6pm)</li>
-            <li><strong>Día 7 (jue 22 oct):</strong> mañana mercado Capucins + ostras Arcachon + TGV a Toulouse 11am</li>
+            <li><strong>Día 7 (jue 22 oct):</strong> mañana mercado Capucins + ostras Arcachon + tarde traslado a San Sebastián</li>
           </ul>
-          <p style="font-size:0.88rem;color:var(--grey);"><em>v2: Bordeaux 2N (antes 3) — el día 3 de Bordeaux era "día relax", ahora ese relax queda en Toulouse para vivir la "ciudad rosa" + cassoulet auténtico.</em></p>
+          <p style="font-size:0.88rem;color:var(--grey);"><em>Tras Bordeaux cruzas a España: el 22 por la tarde sales rumbo a San Sebastián (País Vasco).</em></p>
         </div>
         <div>
           <div id="bdx-map" class="map map-small"></div>
@@ -2131,14 +2196,13 @@ ul.warning li::before { content: "⚠"; position: absolute; left: 0; color: var(
       </div>
       <div class="day-card">
         <div class="day-num">DÍA 7 · JUE 22 OCT</div>
-        <div class="day-title">Mercado + ostras + 🚄 TGV a Toulouse</div>
+        <div class="day-title">Mañana en Bordeaux + tarde a San Sebastián 🇪🇸</div>
         <ul>
           <li><strong>Slow morning</strong> en café de Chartrons</li>
           <li><strong>9:30 AM:</strong> Mercado <strong>Marché des Capucins</strong> (mié-dom) — <strong>desayuno ostras frescas Arcachon + vino blanco</strong> (sí, ostras en la mañana, es lo más bordelés que vas a hacer)</li>
-          <li><strong>10:30 AM:</strong> check-out hotel, taxi a Gare Saint-Jean</li>
-          <li><strong>11:00 AM:</strong> TGV inOui Bordeaux → Toulouse Matabiau (2h 00min)</li>
-          <li><strong>1:00 PM:</strong> llegada Toulouse, taxi/metro al hotel</li>
-          <li><strong>Tarde Toulouse:</strong> ver sección de Toulouse abajo</li>
+          <li><strong>Mediodía:</strong> check-out + comida ligera</li>
+          <li><strong>Tarde:</strong> traslado a San Sebastián — tren a Hendaya + Euskotren, o bus directo (Flixbus/ALSA, ~3-4h)</li>
+          <li><strong>Noche:</strong> llegada a Donostia + primeros pintxos en la Parte Vieja</li>
         </ul>
       </div>
     </div>
@@ -2263,582 +2327,221 @@ ul.warning li::before { content: "⚠"; position: absolute; left: 0; color: var(
       <p>La estación TGV está a 3 km del centro. <strong>Tram C</strong> directo €1.80 pp (15 min hasta Place de la Bourse). Taxi/Uber €12-18 con maletas.</p>
       <h3 class="mt-2">🚶 Moverte dentro de Bordeaux</h3>
       <p>Centro y Chartrons son <strong>100% caminables</strong>. Tram TBM (3 líneas A, B, C, D) cubre todo. Single ticket €1.80 · pase 24h €4.80. Bicicletas <strong>Vcub</strong> €1.60 30min, todo el centro tiene ciclovía.</p>
-      <h3 class="mt-2">🚄 Bordeaux → Toulouse (día 7, jue 22 oct)</h3>
-      <p>TGV inOui directo, 2h 00min · €100-140 pareja anticipado. Salida sugerida 11am desde Gare Saint-Jean, llegada Toulouse Matabiau 1pm. <strong>Hospedaje 1 noche en Toulouse</strong> — ver sección dedicada.</p>
-      <p class="mono" style="font-size:0.85rem;background:var(--off-white-2);padding:0.7rem;border-radius:6px;">💡 v2: ya no hay "stopover de día con maletas" como en v1. Ahora tienes hotel en Toulouse para descansar y comer cassoulet con calma. Mañana siguiente sales tranquilo a Barcelona.</p>
+      <h3 class="mt-2">🚄 Bordeaux → San Sebastián (día 7, jue 22 oct)</h3>
+      <p>Dos opciones: <strong>tren</strong> Bordeaux → Hendaya (TER, ~2h) + Euskotren Hendaya → Donostia (~35 min); o <strong>bus directo</strong> Flixbus/ALSA Bordeaux → San Sebastián (~3-4h, sin transbordo). Salida sugerida por la tarde. <strong>Cruzas la frontera a España.</strong></p>
+      <p class="mono" style="font-size:0.85rem;background:var(--off-white-2);padding:0.7rem;border-radius:6px;">💡 Ruta nueva: tras Bordeaux entras al País Vasco — San Sebastián (2N) y Bilbao (2N) antes de cerrar en Madrid.</p>
     </div>
   </div>
 </section>
 
-<!-- ============ TOULOUSE (NUEVA) ============ -->
-<section id="toulouse">
+<!-- ============ SAN SEBASTIÁN ============ -->
+<section id="san-sebastian">
   <div class="container">
-    <span class="section-tag">Stop 03 · Día 7</span>
-    <div class="city-hero" style="background:url('images/toulouse/capitole.jpg') center/cover, linear-gradient(135deg,#be185d 0%,#9d174d 50%,#500724 100%);">
-      <span class="badge">22-23 OCT · 1 NOCHE</span>
+    <span class="section-tag">Stop 03 · Días 7-8</span>
+    <div class="city-hero" style="background:url('images/san-sebastian/bahia.jpg') center/cover, linear-gradient(135deg,#0c4a6e 0%,#0369a1 50%,#082f49 100%);">
+      <span class="badge">22-24 OCT · 2 NOCHES</span>
       <div class="name">
-        <h2>Toulouse · La Ville Rose</h2>
-        <p>Cassoulet auténtico, ladrillo rosa, Capitole, Canal du Midi · parada gastronómica entre Bordeaux y BCN</p>
-      </div>
-    </div>
-
-    <div class="tabs">
-      <button class="tab-btn active" data-tab="tlse-overview">Overview</button>
-      <button class="tab-btn" data-tab="tlse-itinerario">Día por día (1.5 días)</button>
-      <button class="tab-btn" data-tab="tlse-hoteles">Hoteles</button>
-      <button class="tab-btn" data-tab="tlse-comer">Dónde comer</button>
-      <button class="tab-btn" data-tab="tlse-moverte">Cómo moverte</button>
-    </div>
-
-    <div class="tab-pane active" data-pane="tlse-overview">
-      <div class="grid grid-2">
-        <div>
-          <h3>Por qué 1 noche en Toulouse (no stopover)</h3>
-          <p>En la v1 te puse Toulouse como "stopover de día con maletas". Tu retroalimentación fue clara: <strong>preferible noche de hotel</strong> para no batallar. Pinta sentido por 3 razones:</p>
-          <ul class="checklist">
-            <li><strong>Tren Bordeaux → Toulouse 2h</strong>, tarde libre para ver el centro sin presión</li>
-            <li><strong>Cassoulet auténtico de cena</strong> — el plato más típico francés del Sud-Ouest, con tu copa de vino, sin reloj corriendo</li>
-            <li><strong>Mañana siguiente:</strong> café en Place du Capitole, paseo por Canal du Midi, almuerzo ligero, y sales relajado a las 12pm en tren a BCN</li>
-          </ul>
-          <h3 class="mt-2">Qué ver en 1.5 días</h3>
-          <ul class="checklist">
-            <li><strong>Place du Capitole</strong> — plaza central con el ayuntamiento</li>
-            <li><strong>Basilique Saint-Sernin</strong> — UNESCO, románica más grande Europa</li>
-            <li><strong>Couvent des Jacobins</strong> — arquitectura gótica única (palmera de columnas)</li>
-            <li><strong>Pont Neuf y rivière Garonne</strong> — atardecer rosa por arquitectura ladrillo</li>
-            <li><strong>Canal du Midi</strong> (UNESCO) — caminata por el canal histórico</li>
-            <li><strong>Marché Victor Hugo</strong> — mercado cubierto, foie y charcutería local</li>
-          </ul>
-        </div>
-        <div>
-          <div id="tlse-map" class="map map-small"></div>
-          <div class="map-legend">
-            <div class="legend-item"><span class="dot" style="background:#15803D"></span>Hoteles</div>
-            <div class="legend-item"><span class="dot" style="background:#F59E0B"></span>Cassoulet (Le Colombier, Émile)</div>
-            <div class="legend-item"><span class="dot" style="background:#9333EA"></span>Museos / Iglesias</div>
-            <div class="legend-item"><span class="dot" style="background:#525252"></span>Landmarks</div>
-            <div class="legend-item"><span class="dot" style="background:#FFEE00"></span>Tren</div>
-          </div>
-        </div>
-      </div>
-
-      <!-- WEATHER WIDGET TOULOUSE -->
-      <div class="weather-card">
-        <div class="w-icon">🌤️</div>
-        <div class="w-info">
-          <h4>Clima esperado en Toulouse · 22-23 Octubre</h4>
-          <p>Sur de Francia · clima más seco que Bordeaux · ideal para callejear + cassoulet de cena con clima fresco</p>
-        </div>
-        <div class="w-stats">
-          <div><span class="temp-high">🔼 18-20°C</span> máx</div>
-          <div><span class="temp-low">🔽 10-12°C</span> mín</div>
-          <div>☔ 20% lluvia</div>
-        </div>
-      </div>
-
-      <!-- GASTRONOMÍA TOULOUSE -->
-      <h3 class="mt-2">🥘 Imperdibles gastronómicos de Toulouse</h3>
-      <div class="grid grid-3">
-        <div class="card"><h4>🥘 Cassoulet</h4><p style="font-size:0.88rem;">EL plato · judiones + pato + salchicha + corteza, horneado · cazuela barro · €30-45 pp · <strong>cena obligada</strong></p></div>
-        <div class="card"><h4>🌭 Saucisse de Toulouse</h4><p style="font-size:0.88rem;">Salchicha de cerdo gruesa · base del cassoulet · también a la parrilla con puré · €15-22</p></div>
-        <div class="card"><h4>🦆 Magret de canard du Gers</h4><p style="font-size:0.88rem;">Pechuga de pato del Gers · costras crujientes · salsa miel/balsámico · €22-32</p></div>
-        <div class="card"><h4>🟣 Violettes de Toulouse</h4><p style="font-size:0.88rem;">Bombones de violeta cristalizada · típico postre/regalo · cualquier chocolatería · €8-15 caja</p></div>
-        <div class="card"><h4>🧀 Roquefort + Tomme</h4><p style="font-size:0.88rem;">Quesos del Aveyron cercano · plateau wine bar · €12-18</p></div>
-        <div class="card"><h4>🥧 Fenetra (tarta limón-almendra)</h4><p style="font-size:0.88rem;">Postre antiguo del s.XV · panadería tradicional · €4-6</p></div>
-      </div>
-      <div class="callout">
-        <h4>💡 Tip Toulouse</h4>
-        <p>Tu noche aquí es <strong>100% para cassoulet</strong>. Reserva con anticipación en Le Colombier o Émile. <strong>NO pidas cassoulet en lugar barato</strong> — un cassoulet real toma 6-8h de cocción, los tourist traps lo hacen al microondas. <a href="https://www.getyourguide.com/es-mx/explorer/toulouse-ttd288/food-in-toulouse/" target="_blank">GetYourGuide Toulouse food</a></p>
-      </div>
-
-      <h3 class="mt-2">📸 Galería visual de Toulouse (10 fotos · locales)</h3>
-      <div class="photo-gallery">
-        <div class="photo" style="background:url('images/toulouse/capitole.jpg') center/cover;"><div class="caption">Place du Capitole</div></div>
-        <div class="photo" style="background:url('images/toulouse/ladrillo-rosa.jpg') center/cover;"><div class="caption">Ciudad rosa</div></div>
-        <div class="photo" style="background:url('images/toulouse/cassoulet.jpg') center/cover;"><div class="caption">Cassoulet auténtico</div></div>
-        <div class="photo" style="background:url('images/toulouse/saint-sernin.jpg') center/cover;"><div class="caption">Basilique Saint-Sernin</div></div>
-        <div class="photo" style="background:url('images/toulouse/canal-midi.jpg') center/cover;"><div class="caption">Canal du Midi (UNESCO)</div></div>
-        <div class="photo" style="background:url('images/toulouse/foie.jpg') center/cover;"><div class="caption">Foie + magret Sud-Ouest</div></div>
-        <div class="photo" style="background:url('images/toulouse/pont-neuf.jpg') center/cover;"><div class="caption">Pont Neuf · Garonne</div></div>
-        <div class="photo" style="background:url('images/toulouse/marche.jpg') center/cover;"><div class="caption">Marché Victor Hugo</div></div>
-        <div class="photo" style="background:url('images/toulouse/quesos.jpg') center/cover;"><div class="caption">Plateau de fromages</div></div>
-        <div class="photo" style="background:url('images/toulouse/cafe-toulouse.jpg') center/cover;"><div class="caption">Café terraza Capitole</div></div>
-      </div>
-
-
-      <div class="callout">
-        <h4>🥘 El plato del que viviste 30 años para ver</h4>
-        <p>El <strong>cassoulet de Toulouse</strong> es el plato más icónico del Sud-Ouest francés: guiso de judiones blancos + confit de pato + salchicha toulousana + corteza de cerdo, horneado en cazuela de barro durante horas hasta que la corteza queda quebradiza. <strong>Es la cena perfecta antes de empacar para España.</strong> Octubre = temporada ideal (plato pesado, clima fresco).</p>
-      </div>
-    </div>
-
-    <div class="tab-pane" data-pane="tlse-itinerario">
-      <div class="day-card">
-        <div class="day-num">DÍA 7 · JUE 22 OCT · TARDE</div>
-        <div class="day-title">Llegada Toulouse + caminata centro + cassoulet de cena</div>
-        <ul>
-          <li><strong>11:00 AM:</strong> TGV Bordeaux → Toulouse (2h)</li>
-          <li><strong>1:00 PM:</strong> llegada Matabiau · taxi €12-15 al hotel (centro)</li>
-          <li><strong>2:00 PM:</strong> almuerzo ligero cerca del hotel (no cassoulet — guarda hambre para cena)</li>
-          <li><strong>3:30 PM:</strong> caminata <strong>Place du Capitole</strong> (corazón de la ciudad) → <strong>Basilique Saint-Sernin</strong> (UNESCO románica)</li>
-          <li><strong>5:30 PM:</strong> <strong>Couvent des Jacobins</strong> (€5 pp, claustro hermoso, palmera de columnas)</li>
-          <li><strong>6:30 PM:</strong> atardecer caminando <strong>Pont Neuf</strong> (vista Garonne) — el ladrillo rosa se pone naranja-dorado</li>
-          <li><strong>8:30 PM:</strong> <strong>CASSOULET DE CENA</strong> · reserva en <strong>Le Colombier</strong> (clásico desde 1874) o <strong>Émile</strong> (famoso, en Place Saint-Georges). ~€35-50 pp con vino tinto local.</li>
-          <li><strong>10:30 PM:</strong> Café Aux Arcades en Capitole para digestif · dormir</li>
-        </ul>
-      </div>
-      <div class="day-card">
-        <div class="day-num">DÍA 8 · VIE 23 OCT · MAÑANA</div>
-        <div class="day-title">Slow morning + Canal du Midi + 🚄 Renfe-SNCF a Barcelona</div>
-        <ul>
-          <li><strong>Slow morning:</strong> café en <strong>Place du Capitole</strong> en La Maison du Café o terraza Au Père Louis</li>
-          <li><strong>10:00 AM:</strong> caminata <strong>Canal du Midi</strong> 30 min (entra UNESCO también, canal histórico s.XVII conectando Atlántico-Mediterráneo)</li>
-          <li><strong>11:00 AM:</strong> opcional <strong>Marché Victor Hugo</strong> (cubierto, comprar foie y queso para llevar a BCN)</li>
-          <li><strong>11:30 AM:</strong> check-out, taxi a Matabiau</li>
-          <li><strong>12:00 PM:</strong> Renfe-SNCF directo Toulouse → Barcelona Sants (3h 15min)</li>
-          <li><strong>3:15 PM:</strong> llegada Barcelona, comienza Stop 04</li>
-        </ul>
-      </div>
-    </div>
-
-    <div class="tab-pane" data-pane="tlse-hoteles">
-      <p>Rango <strong>€110-160/noche</strong> ($2,360-3,440 MXN). Toulouse es más económica que las otras 4 ciudades — vas a estar 1 sola noche, no necesitas algo elaborado.</p>
-
-      <div class="hotels-zone">
-        <h3><span class="zone-tag">ZONA ÚNICA</span> Centro Histórico (a 5 min walk del Capitole)</h3>
-        <p class="zone-justify">Toulouse es pequeña, todo en el centro histórico está caminable. No necesitas 2 zonas — pick uno en Capitole/Saint-Sernin y resuelves tren + cena + paseo a pie.</p>
-        <div class="hotel-row">
-          <div>
-            <div class="name">Hôtel Le Grand Balcon ⭐⭐⭐⭐</div>
-            <div class="desc">Histórico (Saint-Exupéry hospedaba aquí), Place du Capitole, vista plaza desde habitación · 4 min walk Matabiau con tram</div>
-          </div>
-          <div class="price">~€160/noche</div>
-        </div>
-        <div class="hotel-row">
-          <div>
-            <div class="name">La Cour des Consuls Hôtel & Spa ⭐⭐⭐⭐⭐ (MGallery)</div>
-            <div class="desc">5⭐ boutique, palacete restaurado, patio interior, spa · si quieres lujo en 1 noche</div>
-          </div>
-          <div class="price">~€220/noche</div>
-        </div>
-        <div class="hotel-row">
-          <div>
-            <div class="name">Mama Shelter Toulouse ⭐⭐⭐⭐</div>
-            <div class="desc">Diseño Philippe Starck, vibrante, rooftop con vista, restaurante propio bueno · cool y económico</div>
-          </div>
-          <div class="price">~€125/noche</div>
-        </div>
-        <div class="hotel-row">
-          <div>
-            <div class="name">Hôtel Albert 1er ⭐⭐⭐</div>
-            <div class="desc">Boutique familiar, 3 min walk Capitole, breakfast incluido, vibe local genuino</div>
-          </div>
-          <div class="price">~€115/noche</div>
-        </div>
-      </div>
-
-      <div class="callout">
-        <h4>🎯 Mi pick</h4>
-        <p><strong>Mama Shelter Toulouse</strong> — diseño moderno cool, rooftop ideal para drink antes de la cena cassoulet, ubicación perfecta. €125 una noche = ~$2,700 MXN. Si quieres mejor categoría: <strong>Le Grand Balcon</strong> €160 con vista del Capitole.</p>
-      </div>
-    </div>
-
-    <div class="tab-pane" data-pane="tlse-comer">
-      <h3>🥘 Cassoulet (para CENA del día 22)</h3>
-      <div class="grid grid-3">
-        <div class="card"><h4>Le Colombier</h4><p style="font-size:0.88rem;">Desde 1874 · el más clásico · cazuela individual · reserva 1 semana antes · €40-55 pp</p></div>
-        <div class="card"><h4>Émile</h4><p style="font-size:0.88rem;">Place Saint-Georges · cassoulet + vinos del Languedoc · vibe local · €35-50 pp</p></div>
-        <div class="card"><h4>Restaurant Au Pois Gourmand</h4><p style="font-size:0.88rem;">Mansión s.XVIII a orillas del Garonne · gastronomía contemporánea + cassoulet · €60-80 pp</p></div>
-      </div>
-      <h3 class="mt-2">Bistros gastronómicos (si cassoulet no te late, alternativa)</h3>
-      <div class="grid grid-3">
-        <div class="card"><h4>Michel Sarran</h4><p style="font-size:0.88rem;">2 Michelin · gastro chef famoso (jueces MasterChef France) · reserva 1 mes · €80+ pp</p></div>
-        <div class="card"><h4>Une Table à Deux</h4><p style="font-size:0.88rem;">Bistro creativo · platos del día · ambiente íntimo · €30-45 pp</p></div>
-        <div class="card"><h4>Genty Magre</h4><p style="font-size:0.88rem;">Cocina del Sud-Ouest moderna · porciones generosas · €40-55 pp</p></div>
-      </div>
-      <h3 class="mt-2">Cafés y breakfast (mañana día 23)</h3>
-      <div class="grid grid-3">
-        <div class="card"><h4>La Maison du Café</h4><p style="font-size:0.88rem;">Capitole · café especialidad · ambiente moderno · €5 café</p></div>
-        <div class="card"><h4>Au Père Louis</h4><p style="font-size:0.88rem;">Histórico s.XIX · vermut o digestif post-cena · vibe parisina</p></div>
-        <div class="card"><h4>Le Floréal Brasserie</h4><p style="font-size:0.88rem;">Brunch tradicional francés · domingo especial</p></div>
-      </div>
-    </div>
-
-    <div class="tab-pane" data-pane="tlse-moverte">
-      <h3>🚄 Bordeaux → Toulouse (día 22 oct)</h3>
-      <p>TGV inOui directo · Bordeaux Saint-Jean → Toulouse Matabiau · 2h 00min · ~€100-140 pareja anticipado · ~€180-220 sin anticipación. Salida sugerida 11am.</p>
-
-      <h3 class="mt-2">🚉 Estación Matabiau → hotel</h3>
-      <p>Centro a 800m (caminable 12 min sin maletas) o tram T1 (línea verde) 4 min al Capitole · €1.70 pp. Con maletas: <strong>taxi €12-15</strong>, más fácil.</p>
-
-      <h3 class="mt-2">🚶 Moverte dentro de Toulouse</h3>
-      <p>Centro histórico 100% caminable. Distancias máximas 15 min a pie entre puntos turísticos. Si necesitas, metro/tram TISSEO €1.70 single.</p>
-
-      <h3 class="mt-2">🚄 Toulouse → Barcelona (día 23 oct)</h3>
-      <p><strong>Renfe-SNCF</strong> directo (cooperación franco-española), 3h 15min · ~€90-130 pareja anticipado. <strong>3 trenes por día</strong>: usualmente salidas 7:30am, 12pm, 5:30pm. Mejor el de las <strong>12pm</strong>: te da mañana libre en Toulouse, llegas BCN 3:15pm con tarde para tapas.</p>
-      <div class="callout">
-        <h4>🎫 Compra anticipada</h4>
-        <p>Reserva 2-3 meses antes en <a href="https://www.sncf-connect.com" target="_blank">SNCF Connect</a> o <a href="https://www.thetrainline.com" target="_blank">Trainline</a>. Boleto cuesta €45-65 c/u si anticipas, vs €100+ último minuto. Asientos asignados, maletas a bordo gratis.</p>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- ============ BARCELONA ============ -->
-<section id="barcelona">
-  <div class="container">
-    <span class="section-tag">Stop 04 · Días 8-10</span>
-    <div class="city-hero" style="background:url('images/barcelona/sagrada-familia.jpg') center/cover, linear-gradient(135deg,#a16207 0%,#854d0e 50%,#422006 100%);">
-      <span class="badge">23-26 OCT · 3 NOCHES</span>
-      <div class="name">
-        <h2>Barcelona</h2>
-        <p>Gaudí, tapas, Born, Eixample, atardecer en Bunkers del Carmel</p>
-      </div>
-    </div>
-
-    <div class="tabs">
-      <button class="tab-btn active" data-tab="bcn-overview">Overview</button>
-      <button class="tab-btn" data-tab="bcn-itinerario">Día por día</button>
-      <button class="tab-btn" data-tab="bcn-hoteles">Hoteles (2 zonas)</button>
-      <button class="tab-btn" data-tab="bcn-comer">Dónde comer</button>
-      <button class="tab-btn" data-tab="bcn-moverte">Cómo moverte</button>
-    </div>
-
-    <div class="tab-pane active" data-pane="bcn-overview">
-      <div class="grid grid-2">
-        <div>
-          <h3>Por qué Barcelona en 3 días bien</h3>
-          <p>3 noches BCN te alcanzan para los imprescindibles sin saturarte. Caminable + metro eficiente. La estrategia: <strong>1 día Gaudí + Modernisme, 1 día Gótico + Born + Barceloneta, 1 día Montjuïc o Sitges</strong>.</p>
-          <h3 class="mt-2">Tus no-negociables</h3>
-          <ul class="checklist">
-            <li><strong>Sagrada Familia</strong> (entrada reservada online 1 mes antes, €26 pp básico, €40 con acceso torres)</li>
-            <li><strong>Park Güell</strong> (€10 pp zona monumental, reserva online)</li>
-            <li><strong>Barrio Gótico</strong> caminata sin tour — Plaza Reial, Catedral, Pont del Bisbe</li>
-            <li><strong>El Born</strong> con tapeo nocturno</li>
-            <li><strong>Bunkers del Carmel</strong> al atardecer (gratis, vista 360° de la ciudad)</li>
-            <li><strong>Casa Batlló o La Pedrera</strong> (escoge una, ambas son Gaudí pero diferentes)</li>
-          </ul>
-        </div>
-        <div>
-          <div id="bcn-map" class="map map-small"></div>
-          <div class="map-legend">
-            <div class="legend-item"><span class="dot" style="background:#15803D"></span>Hoteles Z1 (Eixample)</div>
-            <div class="legend-item"><span class="dot" style="background:#1E40AF"></span>Hoteles Z2 (Born/Gótico)</div>
-            <div class="legend-item"><span class="dot" style="background:#F59E0B"></span>Restaurantes</div>
-            <div class="legend-item"><span class="dot" style="background:#9333EA"></span>Museos (Sagrada, Park Güell)</div>
-            <div class="legend-item"><span class="dot" style="background:#525252"></span>Landmarks</div>
-            <div class="legend-item"><span class="dot" style="background:#FFEE00"></span>Tren Sants</div>
-          </div>
-        </div>
-      </div>
-
-      <!-- WEATHER WIDGET BARCELONA -->
-      <div class="weather-card">
-        <div class="w-icon">☀️</div>
-        <div class="w-info">
-          <h4>Clima esperado en Barcelona · 23-26 Octubre</h4>
-          <p>Mediterráneo · días soleados · noches frescas pero agradables · ropa ligera de día, chamarra ligera de noche</p>
-        </div>
-        <div class="w-stats">
-          <div><span class="temp-high">🔼 20-22°C</span> máx</div>
-          <div><span class="temp-low">🔽 13-15°C</span> mín</div>
-          <div>☔ 15% lluvia</div>
-        </div>
-      </div>
-
-      <!-- GASTRONOMÍA BARCELONA -->
-      <h3 class="mt-2">🥘 Imperdibles gastronómicos catalanes</h3>
-      <div class="grid grid-3">
-        <div class="card"><h4>🍅 Pa amb tomàquet</h4><p style="font-size:0.88rem;">Pan tostado + tomate restregado + aceite oliva + sal · pídelo en TODA comida · €3-5</p></div>
-        <div class="card"><h4>🥟 Croquetas de jamón</h4><p style="font-size:0.88rem;">El termómetro del bar · si están buenas, el resto sí · €6-12 ración</p></div>
-        <div class="card"><h4>🐙 Pulpo a la gallega</h4><p style="font-size:0.88rem;">Pulpo + papas + paprika + aceite oliva · €14-22</p></div>
-        <div class="card"><h4>🫒 Pimientos del padrón</h4><p style="font-size:0.88rem;">"Unos pican otros no" · fritos con sal gorda · €5-9</p></div>
-        <div class="card"><h4>🥘 Bomba (Barceloneta)</h4><p style="font-size:0.88rem;">Croqueta papas con allioli + salsa picante · La Cova Fumada original · €3 c/u</p></div>
-        <div class="card"><h4>🥃 Vermut de grifo</h4><p style="font-size:0.88rem;">"Fer el vermut" 12-2pm · ritual sagrado · €3-5 copa</p></div>
-        <div class="card"><h4>🥘 Paella + arroz negre</h4><p style="font-size:0.88rem;">¡NO en La Rambla! · ve a 7 Portes o Can Solé Barceloneta · €25-35 pp</p></div>
-        <div class="card"><h4>🍮 Crema catalana</h4><p style="font-size:0.88rem;">Versión catalana crème brûlée con limón + canela · €5-8</p></div>
-        <div class="card"><h4>🍞 Coca de recapte</h4><p style="font-size:0.88rem;">"Pizza catalana" con escalivada + jamón + sardinas · €8-12</p></div>
-      </div>
-      <div class="callout">
-        <h4>💡 Tip Barcelona (anti-trampa turística)</h4>
-        <p><strong>NUNCA comas paella en La Rambla</strong> — pierdes €40 por arroz precocido con marisco congelado. Para paella buena ve a <strong>7 Portes</strong> (desde 1836) o <strong>Can Solé</strong> en Barceloneta · reserva 1 semana antes. <strong>Para tapas auténticas</strong>: Cal Pep en Born (llega 7:30pm sin reserva), Cervecería Catalana en Eixample, Quimet & Quimet en Poble Sec. <a href="https://es.wikipedia.org/wiki/Gastronom%C3%ADa_de_la_provincia_de_Barcelona" target="_blank">Wiki gastro BCN</a> · <a href="https://www.getyourguide.com/es-mx/explorer/madrid-ttd46/food-in-madrid/" target="_blank">GetYourGuide food</a></p>
-      </div>
-
-      <h3 class="mt-2">📸 Galería visual de Barcelona (12 fotos · locales)</h3>
-      <div class="photo-gallery">
-        <div class="photo" style="background:url('images/barcelona/sagrada-familia.jpg') center/cover;"><div class="caption">Sagrada Família</div></div>
-        <div class="photo" style="background:url('images/barcelona/park-guell.jpg') center/cover;"><div class="caption">Park Güell</div></div>
-        <div class="photo" style="background:url('images/barcelona/casa-batllo.jpg') center/cover;"><div class="caption">Casa Batlló</div></div>
-        <div class="photo" style="background:url('images/barcelona/pedrera.jpg') center/cover;"><div class="caption">La Pedrera</div></div>
-        <div class="photo" style="background:url('images/barcelona/gotic.jpg') center/cover;"><div class="caption">Barri Gòtic</div></div>
-        <div class="photo" style="background:url('images/barcelona/born.jpg') center/cover;"><div class="caption">El Born</div></div>
-        <div class="photo" style="background:url('images/barcelona/tapas.jpg') center/cover;"><div class="caption">Tapas en barra</div></div>
-        <div class="photo" style="background:url('images/barcelona/paella-catalana.jpg') center/cover;"><div class="caption">Paella catalana</div></div>
-        <div class="photo" style="background:url('images/barcelona/barceloneta.jpg') center/cover;"><div class="caption">Barceloneta playa</div></div>
-        <div class="photo" style="background:url('images/barcelona/rambla.jpg') center/cover;"><div class="caption">La Rambla</div></div>
-        <div class="photo" style="background:url('images/barcelona/bunkers.jpg') center/cover;"><div class="caption">Bunkers atardecer</div></div>
-        <div class="photo" style="background:url('images/barcelona/vermut.jpg') center/cover;"><div class="caption">Vermut de grifo</div></div>
-      </div>
-
-    </div>
-
-    <div class="tab-pane" data-pane="bcn-itinerario">
-      <div class="day-card">
-        <div class="day-num">DÍA 8 · VIE 23 OCT</div>
-        <div class="day-title">Tren Renfe-SNCF Toulouse → BCN + tarde Born</div>
-        <ul>
-          <li><strong>Slow morning Toulouse</strong> (ver tab "Día por día" en Toulouse)</li>
-          <li><strong>12:00 PM:</strong> Renfe-SNCF Toulouse Matabiau → Barcelona Sants (3h 15min)</li>
-          <li><strong>3:15 PM:</strong> llegada Barcelona Sants, taxi €15 al hotel (Eixample/Born)</li>
-          <li><strong>4:30 PM:</strong> check-in + descanso 1 hora</li>
-          <li><strong>6:00 PM:</strong> caminata El Born — Mercat Santa Caterina + Picasso Museum exterior</li>
-          <li><strong>8:30 PM:</strong> cena tapas Born — Bar del Pla o Cal Pep (llegar 7:30pm sin reserva en Cal Pep)</li>
-        </ul>
-      </div>
-      <div class="day-card">
-        <div class="day-num">DÍA 9 · VIE 24 OCT</div>
-        <div class="day-title">Gaudí day — Sagrada + Park Güell + Casa Batlló</div>
-        <ul>
-          <li><strong>Slow morning</strong> en café Eixample</li>
-          <li><strong>9:30 AM:</strong> <strong>Sagrada Familia</strong> con reservación (boleto online 1 mes antes, llega 15 min antes) · 1.5 hrs</li>
-          <li><strong>11:30 AM:</strong> caminata Eixample → Casa Batlló (exterior solo OK, interior €29 pp si te late)</li>
-          <li><strong>1:00 PM:</strong> almuerzo Eixample (Cervecería Catalana sin reserva 12pm, llega temprano)</li>
-          <li><strong>3:30 PM:</strong> Metro a Park Güell (boleto online previo)</li>
-          <li><strong>5:30 PM:</strong> Taxi a <strong>Bunkers del Carmel</strong> para atardecer (gratis, llega 1hr antes sunset)</li>
-          <li><strong>Cena tarde:</strong> El Born — Cal Pep (sin reserva, llega 8pm)</li>
-        </ul>
-      </div>
-      <div class="day-card">
-        <div class="day-num">DÍA 10 · SAB 25 OCT</div>
-        <div class="day-title">Gótico + Born + Barceloneta + atardecer Montjuïc</div>
-        <ul>
-          <li><strong>10:00 AM:</strong> caminata Barri Gòtic — Plaça Reial, Catedral (entrada €9 pp con coro), Pont del Bisbe</li>
-          <li><strong>12:30 PM:</strong> El Born — Mercat de Santa Caterina, Picasso Museum exterior</li>
-          <li><strong>1:30 PM:</strong> almuerzo Bar del Pla (catalán contemporáneo) o Llamber</li>
-          <li><strong>3:30 PM:</strong> Barceloneta — caminata playa, vermut en La Cova Fumada</li>
-          <li><strong>5:30 PM:</strong> Funicular/teleférico a Montjuïc para atardecer (gratis área Castell, €13 teleférico opcional)</li>
-          <li><strong>8:00 PM:</strong> Show Fuente Mágica de Montjuïc (vier-sab solamente, gratis) · alternativa: cena temprano en hotel zone</li>
-        </ul>
-      </div>
-      <div class="callout">
-        <h4>🍷 Alternativa día 10: escapada Sitges o Cadaqués</h4>
-        <p>Si prefieres pueblito costero en vez de seguir BCN: <strong>Sitges</strong> 35 min tren €5 pp ida (playa bohemia, casco antiguo bonito) o <strong>Cadaqués</strong> (2.5 hrs bus, Dalí, pueblo más fotogénico Mediterráneo). Cadaqués mejor pero más viaje.</p>
-      </div>
-    </div>
-
-    <div class="tab-pane" data-pane="bcn-hoteles">
-      <p style="margin-bottom:1.2rem;">Rango <strong>€150-220/noche</strong> ($3,225-4,725 MXN).</p>
-
-      <div class="hotels-zone">
-        <h3><span class="zone-tag">ZONA 1</span> Eixample (modernista, elegante)</h3>
-        <p class="zone-justify">El Manhattan de Barcelona: edificios modernistas, Passeig de Gràcia, Casa Batlló y La Pedrera ahí mismo. Más amplio que el centro histórico, menos turistas-en-bloque, restaurantes top. Mejor zona para pareja con primer viaje.</p>
-        <div class="hotel-row">
-          <div>
-            <div class="name">Ohla Eixample ⭐⭐⭐⭐</div>
-            <div class="desc">Boutique stylish, piscina exterior cubierta caliente, 10 min walk La Pedrera/Casa Batlló</div>
-          </div>
-          <div class="price">~€195/noche</div>
-        </div>
-        <div class="hotel-row">
-          <div>
-            <div class="name">Alma Barcelona ⭐⭐⭐⭐⭐</div>
-            <div class="desc">72 habs lujo silencioso, terraza rooftop vista Sagrada Familia, atrio minimalista</div>
-          </div>
-          <div class="price">~€220/noche</div>
-        </div>
-        <div class="hotel-row">
-          <div>
-            <div class="name">Room Mate Anna ⭐⭐⭐⭐</div>
-            <div class="desc">81 habs diseño compact, rooftop con piscina estacional, 2 min Casa Batlló</div>
-          </div>
-          <div class="price">~€175/noche</div>
-        </div>
-      </div>
-
-      <div class="hotels-zone">
-        <h3><span class="zone-tag">ZONA 2</span> Born / Gótico (medieval, vibrante)</h3>
-        <p class="zone-justify">Centro histórico medieval, El Born es la zona "cool" con boutique galleries, bares de vino, restaurantes catalanes top. Calles peatonales estrechas, ambiente nocturno. Más auténtico, menos limpio que Eixample.</p>
-        <div class="hotel-row">
-          <div>
-            <div class="name">Yurbban Trafalgar Hotel ⭐⭐⭐⭐</div>
-            <div class="desc">Moderno boutique en Born, rooftop pool con vista ciudad, recepción vino-y-queso nightly</div>
-          </div>
-          <div class="price">~€185/noche</div>
-        </div>
-        <div class="hotel-row">
-          <div>
-            <div class="name">H10 Madison ⭐⭐⭐⭐</div>
-            <div class="desc">Atmósfera boutique stylish, rooftop con plunge pool, vistas espectaculares</div>
-          </div>
-          <div class="price">~€160/noche</div>
-        </div>
-        <div class="hotel-row">
-          <div>
-            <div class="name">Wittmore Hotel ⭐⭐⭐⭐⭐ (adults only)</div>
-            <div class="desc">22 habs solo adultos, vibe speakeasy, log fire, rooftop terraza, ultra-íntimo</div>
-          </div>
-          <div class="price">~€215/noche</div>
-        </div>
-      </div>
-
-      <div class="callout">
-        <h4>🎯 Mi pick</h4>
-        <p><strong>Ohla Eixample.</strong> Mejor balance precio-ubicación-amenidades. Walking distance a Sagrada Familia + Casa Batlló + La Pedrera. Piscina rooftop = relax post-tren. €195 × 3 = €585 (~$12,600 MXN).</p>
-      </div>
-    </div>
-
-    <div class="tab-pane" data-pane="bcn-comer">
-      <h3>Tapas + Catalán (sin saturarte de turistas)</h3>
-      <div class="grid grid-3">
-        <div class="card"><h4>Cal Pep</h4><p style="font-size:0.88rem;">Born · Mariscos calientes en barra (NO reserva, llega 7:30pm o 1:30pm) · €40-60 pp</p></div>
-        <div class="card"><h4>Cervecería Catalana</h4><p style="font-size:0.88rem;">Eixample · Tapas grandes-y-frescas, ambiente bullicioso · €30-45 pp · llega 12pm o 7pm</p></div>
-        <div class="card"><h4>Bar del Pla</h4><p style="font-size:0.88rem;">Born · Catalán moderno, lista de vinos curada · €40 pp · reserva TheFork</p></div>
-        <div class="card"><h4>Llamber</h4><p style="font-size:0.88rem;">Born · Tapas creativas, ambiente moderno · €35-50 pp</p></div>
-        <div class="card"><h4>Quimet & Quimet</h4><p style="font-size:0.88rem;">Poble Sec · Montaditos (mini sandwich gourmet) · €20-30 pp · standing only, llega 12pm</p></div>
-        <div class="card"><h4>La Cova Fumada</h4><p style="font-size:0.88rem;">Barceloneta · Bomba (croquetas papas con allioli) · €20-25 pp · cash only, mañanas</p></div>
-      </div>
-      <div class="callout">
-        <h4>🥘 Tip catalán</h4>
-        <p>Pide siempre <strong>"pa amb tomàquet"</strong> (pan con tomate), <strong>croquetas de jamón</strong>, <strong>pulpo a la gallega</strong>, <strong>pimientos del padrón</strong>, y un <strong>vermut de grifo</strong> antes de comer. La paella en La Rambla = trampa turística. Si quieres paella buena, ve a <strong>Can Solé</strong> o <strong>7 Portes</strong> en Barceloneta (reserva).</p>
-      </div>
-    </div>
-
-    <div class="tab-pane" data-pane="bcn-moverte">
-      <h3>🚄 Estación Sants → tu hotel</h3>
-      <p>Metro L3/L5 desde Sants Estació, taxi €12-18 a Eixample o Born.</p>
-      <h3 class="mt-2">🚇 Moverte dentro de BCN</h3>
-      <p>Compra <strong>T-Casual</strong> €12.55 (10 viajes metro/bus/tram) en máquina de la estación. Metro corre 5am-12am (sáb hasta 2am). Caminable entre Eixample → Gótico (15 min), Sagrada → Park Güell mejor con metro/taxi.</p>
-      <h3 class="mt-2">🚄 Barcelona → Madrid AVE (día 11, dom 26 oct)</h3>
-      <p><strong>Estación:</strong> Barcelona Sants. Tren <strong>Renfe AVE</strong> directo 2h30 min. Salida sugerida: <strong>9:00 AM</strong> → llegada Madrid Atocha 11:30 AM. Boleto anticipado <strong>€30-50 pp con Promo</strong> (compra 60 días antes vía renfe.com).</p>
-      <div class="callout">
-        <h4>🎫 Alternativa baratos: iryo & OUIGO</h4>
-        <p><strong>iryo</strong> opera la misma ruta BCN-Madrid con servicio premium calidad (¡desde €19!) y <strong>OUIGO</strong> low-cost (desde €9). Pero verifica que paren en Atocha (Madrid central) no Chamartín. Con tus 3 maletas iryo es mejor opción de bajo costo (incluye maletas).</p>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- ============ VALENCIA (NUEVA) ============ -->
-<section id="valencia">
-  <div class="container">
-    <span class="section-tag">Stop 05 · Día 11</span>
-    <div class="city-hero" style="background:url('images/valencia/ciudad-artes.jpg') center/cover, linear-gradient(135deg,#DC2626 0%,#7F1D1D 100%);">
-      <span class="badge">26-27 OCT · 1 NOCHE</span>
-      <div class="name">
-        <h2>Valencia · Paella + Albufera</h2>
-        <p>Paella auténtica de cuna · Albufera laguna · Ciudad Artes y Ciencias · Mediterráneo costero</p>
+        <h2>San Sebastián</h2>
+        <p>Donostia · capital mundial del pintxo, la Concha y el Cantábrico</p>
       </div>
     </div>
 
     <div class="grid grid-2">
       <div>
-        <h3>Por qué 1 noche en Valencia</h3>
-        <p>Valencia es la <strong>cuna de la paella valenciana</strong>. La que comes en BCN o Madrid es buena pero la AUTÉNTICA es aquí — con arroz bomba, pollo, conejo, judía verde y garrofó (frijol blanco grande), cocida con leña de naranjo. En Albufera (15 min al sur) hay restaurantes donde el arroz se cuece con el agua del propio lago.</p>
-        <h3 class="mt-2">Plan compacto (tarde + noche + mañana)</h3>
+        <h3>Por qué San Sebastián</h3>
+        <p>Donostia es la joya del País Vasco: la <strong>bahía de la Concha</strong> (de las playas urbanas más bonitas de Europa), la mayor densidad de <strong>estrellas Michelin per cápita</strong> del mundo y la cultura del <strong>pintxo</strong> que se come de barra en barra por la Parte Vieja. Llegas desde Bordeaux por la tarde-noche del 22.</p>
+        <h3 class="mt-2">Lo que vas a hacer (2 noches)</h3>
         <ul class="checklist">
-          <li><strong>Tarde día 26 (lun):</strong> AVE Barcelona → Valencia ~3h · llegada 12pm</li>
-          <li>Almuerzo paella en <strong>Casa Carmela</strong> o <strong>Restaurante Levante</strong> (legend)</li>
-          <li>Tarde: caminata <strong>Ciudad de las Artes y las Ciencias</strong> (Calatrava) + Catedral</li>
-          <li>Atardecer: <strong>Albufera lake</strong> en barca tradicional · €5-10</li>
-          <li><strong>Mañana día 27 (mar):</strong> Mercado Central + horchata con fartón · AVE 12pm → Madrid (1h45)</li>
+          <li><strong>Día 7 (jue 22 oct):</strong> llegada tarde desde Bordeaux + primera ronda de pintxos en la Parte Vieja</li>
+          <li><strong>Día 8 (vie 23 oct):</strong> playa de la Concha + funicular Monte Igueldo + Parte Vieja + ruta de pintxos + Monte Urgull al atardecer</li>
+          <li><strong>Día 9 (sáb 24 oct):</strong> mañana playa Zurriola / Peine del Viento + mediodía traslado a Bilbao</li>
         </ul>
       </div>
       <div>
-        <div id="val-map" class="map map-small"></div>
+        <div id="ss-map" class="map map-small"></div>
         <div class="map-legend">
-          <div class="legend-item"><span class="dot" style="background:#15803D"></span>Hoteles</div>
-          <div class="legend-item"><span class="dot" style="background:#F59E0B"></span>Paella restaurants</div>
+          <div class="legend-item"><span class="dot" style="background:#0369a1"></span>Hotel (Parte Vieja / Gros)</div>
+          <div class="legend-item"><span class="dot" style="background:#F59E0B"></span>Pintxos / restaurantes</div>
           <div class="legend-item"><span class="dot" style="background:#525252"></span>Landmarks</div>
-          <div class="legend-item"><span class="dot" style="background:#FFEE00"></span>Tren</div>
+          <div class="legend-item"><span class="dot" style="background:#FFEE00"></span>Estación</div>
         </div>
       </div>
     </div>
 
-    <!-- WEATHER VALENCIA -->
     <div class="weather-card">
-      <div class="w-icon">☀️</div>
+      <div class="w-icon">🌤️</div>
       <div class="w-info">
-        <h4>Clima esperado en Valencia · 26-27 Octubre</h4>
-        <p>Mediterráneo costero · más cálido que el resto del viaje · puede llevar manga corta de día</p>
+        <h4>Clima esperado en San Sebastián · 22-24 Octubre</h4>
+        <p>Otoño cantábrico suave · puede caer algún chubasco · ideal para caminar la bahía con chamarra ligera</p>
       </div>
       <div class="w-stats">
-        <div><span class="temp-high">🔼 22-24°C</span> máx</div>
-        <div><span class="temp-low">🔽 14-16°C</span> mín</div>
-        <div>☔ 15% lluvia</div>
+        <div><span class="temp-high">🔼 18-20°C</span> máx</div>
+        <div><span class="temp-low">🔽 12-14°C</span> mín</div>
+        <div>☔ 45% lluvia</div>
       </div>
     </div>
 
-    <h3 class="mt-2">📸 Galería visual de Valencia (8 fotos · click para Google Images)</h3>
-    <div class="photo-gallery">
-      <div class="photo" style="background:url('images/valencia/paella.jpg') center/cover;"><div class="caption">Paella valenciana</div></div>
-      <div class="photo" style="background:url('images/valencia/ciudad-artes.jpg') center/cover;"><div class="caption">Ciudad Artes y Ciencias</div></div>
-      <div class="photo" style="background:url('images/valencia/albufera.jpg') center/cover;"><div class="caption">Albufera lake</div></div>
-      <div class="photo" style="background:url('images/valencia/mercado-central.jpg') center/cover;"><div class="caption">Mercado Central</div></div>
-      <div class="photo" style="background:url('images/valencia/oceanografic.jpg') center/cover;"><div class="caption">Oceanogràfic acuario</div></div>
-      <div class="photo" style="background:url('images/valencia/torres-serranos.jpg') center/cover;"><div class="caption">Torres de Serranos</div></div>
-      <div class="photo" style="background:url('images/valencia/horchata.jpg') center/cover;"><div class="caption">Horchata + fartón</div></div>
-      <div class="photo" style="background:url('images/valencia/malvarrosa.jpg') center/cover;"><div class="caption">Playa Malvarrosa</div></div>
-    </div>
-
-    <!-- GASTRONOMÍA VALENCIA -->
-    <h3 class="mt-2">🥘 Imperdibles gastronómicos valencianos</h3>
+    <h3 class="mt-2">🥘 Imperdibles gastronómicos donostiarras</h3>
     <div class="grid grid-3">
-      <div class="card"><h4>🥘 Paella valenciana</h4><p style="font-size:0.88rem;">EL plato · arroz bomba + pollo + conejo + judía + garrofó + leña naranjo · NO marisco · €18-30 pp</p></div>
-      <div class="card"><h4>🥘 Arroz al horno + arroz negro</h4><p style="font-size:0.88rem;">Variantes: arroz al horno con costillas + arroz negro con tinta calamar · €20-30</p></div>
-      <div class="card"><h4>🥛 Horchata + fartons</h4><p style="font-size:0.88rem;">Horchata DE CHUFA (tubérculo, no semilla) · acompañada con fartón largo · Horchatería Santa Catalina · €4-6</p></div>
-      <div class="card"><h4>🌭 Esgarraet</h4><p style="font-size:0.88rem;">Bacalao + pimiento rojo asado + ajo + aceite oliva · entrada tradicional · €8-12</p></div>
-      <div class="card"><h4>🐟 All i pebre de anguila</h4><p style="font-size:0.88rem;">Anguila Albufera + ajo + paprika · plato pueblo lacustre · €18-25</p></div>
-      <div class="card"><h4>🍮 Buñuelos de calabaza</h4><p style="font-size:0.88rem;">Donas de calabaza con azúcar · típico postre · €3-5 pp</p></div>
+      <div class="card"><h4>🍢 Pintxos de barra</h4><p style="font-size:0.88rem;">Gilda, txangurro, foie, bacalao... vas de barra en barra. La Cuchara de San Telmo, Borda Berri, Bar Néstor · €2-4 c/u</p></div>
+      <div class="card"><h4>🥩 Txuleta vasca</h4><p style="font-size:0.88rem;">Chuletón de vaca vieja a la brasa · Bar Néstor (solo 2 turnos al día) o Casa Urola · €50-60/kg para compartir</p></div>
+      <div class="card"><h4>🦀 Txangurro</h4><p style="font-size:0.88rem;">Centollo (cangrejo) relleno gratinado · clásico del Cantábrico · imperdible</p></div>
+      <div class="card"><h4>🍰 Tarta de queso</h4><p style="font-size:0.88rem;">La famosa cheesecake quemada de <strong>La Viña</strong> nació aquí · cremosa por dentro · €5</p></div>
+      <div class="card"><h4>⭐ Alta cocina</h4><p style="font-size:0.88rem;">Arzak (3*), Mugaritz, Akelarre (3*) · si quieren una cena de lujo, reservar con semanas de anticipación</p></div>
+      <div class="card"><h4>🍶 Txakoli + sidra</h4><p style="font-size:0.88rem;">Vino blanco vasco escanciado desde lo alto · o sidrerías con txotx · acompaña todo</p></div>
     </div>
     <div class="callout">
-      <h4>🥘 Tip Valencia (paella auténtica)</h4>
-      <p>Para paella REAL ve a <strong>Casa Carmela</strong> (playa Malvarrosa) o <strong>Restaurante Levante</strong> en Benisanó (45 min auto pero es la mejor de España según muchos). En centro: <strong>La Pepica</strong> (favorita de Hemingway). <strong>EVITA La Lonja y Plaza de la Reina</strong> — tourist traps. <strong>Paella se come al MEDIODÍA, no en cena</strong> (tradición). Refs: <a href="https://winetourismspain.com/" target="_blank">winetourismspain.com</a> · <a href="https://www.getyourguide.com/es-mx/" target="_blank">GetYourGuide Valencia food</a></p>
+      <h4>💡 Tip pintxos</h4>
+      <p>No te sientes: en Donostia el pintxo se come <strong>de pie, en la barra, y cambiando de bar</strong>. Pides 1-2 pintxos + un txakoli o zurito en cada sitio y sigues. Empieza en la <strong>Parte Vieja</strong> (31 de Agosto, Fermín Calbetón). Bar Néstor: llega 30 min antes para apuntarte a la txuleta y la tortilla (se acaban). Ronda top: <a href="https://www.sansebastianturismo.com/es/comer/pintxos" target="_blank">guía oficial de pintxos</a>.</p>
     </div>
 
-    <h3 class="mt-2">🏨 Hoteles Valencia (3 opciones · centro histórico)</h3>
-    <div class="hotels-zone">
-      <h3><span class="zone-tag">CENTRO HISTÓRICO</span> El Carmen / Ciutat Vella</h3>
-      <p class="zone-justify">Centro histórico medieval · caminable a Catedral, Mercado, Lonja · vibrante de noche.</p>
-      <div class="hotel-row">
-        <div>
-          <div class="name">Caro Hotel ⭐⭐⭐⭐⭐</div>
-          <div class="desc">Palacete s.XIX boutique · 26 habitaciones · breakfast · 5 min Catedral</div>
-        </div>
-        <div class="price">~€180/noche</div>
-      </div>
-      <div class="hotel-row">
-        <div>
-          <div class="name">Hotel Sorolla Centro ⭐⭐⭐⭐</div>
-          <div class="desc">3 min de Plaza Ayuntamiento · clásico boutique · ubicación insuperable</div>
-        </div>
-        <div class="price">~€140/noche</div>
-      </div>
-      <div class="hotel-row">
-        <div>
-          <div class="name">Vincci Lys ⭐⭐⭐⭐</div>
-          <div class="desc">Junto al Mercado Central · moderno · breakfast incluido</div>
-        </div>
-        <div class="price">~€130/noche</div>
+    <h3 class="mt-2">📸 Galería de San Sebastián (7 fotos)</h3>
+    <div class="photo-gallery">
+      <div class="photo" style="background:url('images/san-sebastian/concha.jpg') center/cover;"><div class="caption">Playa de la Concha</div></div>
+      <div class="photo" style="background:url('images/san-sebastian/bahia.jpg') center/cover;"><div class="caption">Bahía de la Concha</div></div>
+      <div class="photo" style="background:url('images/san-sebastian/igueldo.jpg') center/cover;"><div class="caption">Monte Igueldo</div></div>
+      <div class="photo" style="background:url('images/san-sebastian/parte-vieja.jpg') center/cover;"><div class="caption">Parte Vieja</div></div>
+      <div class="photo" style="background:url('images/san-sebastian/pintxos.jpg') center/cover;"><div class="caption">Pintxos vascos</div></div>
+      <div class="photo" style="background:url('images/san-sebastian/zurriola.jpg') center/cover;"><div class="caption">Zurriola + Kursaal</div></div>
+      <div class="photo" style="background:url('images/san-sebastian/peine-viento.jpg') center/cover;"><div class="caption">Peine del Viento</div></div>
+    </div>
+
+    <h3 class="mt-2">🗓️ Día por día</h3>
+    <div class="day-card">
+      <div class="day-num">DÍA 7 · JUE 22 OCT</div>
+      <div class="day-title">Tarde: traslado Bordeaux → San Sebastián + primeros pintxos</div>
+      <ul>
+        <li><strong>Mediodía:</strong> medio día en Bordeaux (mercado / casco) antes de salir</li>
+        <li><strong>Tarde:</strong> tren a Hendaya + Euskotren, o bus directo (Flixbus/ALSA ~3-4h)</li>
+        <li><strong>Noche:</strong> check-in + primera ronda de pintxos por la Parte Vieja (31 de Agosto)</li>
+      </ul>
+    </div>
+    <div class="day-card">
+      <div class="day-num">DÍA 8 · VIE 23 OCT</div>
+      <div class="day-title">La Concha + Monte Igueldo + ruta de pintxos</div>
+      <ul>
+        <li><strong>Mañana:</strong> paseo completo de la bahía de la Concha hasta el Peine del Viento</li>
+        <li><strong>Mediodía:</strong> funicular del Monte Igueldo (vistas de la bahía)</li>
+        <li><strong>Tarde:</strong> Parte Vieja + mercado de la Bretxa + ruta de pintxos</li>
+        <li><strong>Atardecer:</strong> subida al Monte Urgull (Cristo) para la mejor vista</li>
+        <li><strong>Opcional:</strong> cena de alta cocina (Arzak / Akelarre) si reservaron</li>
+      </ul>
+    </div>
+
+    <div class="callout green">
+      <h4>🏨 Hotel — por definir</h4>
+      <p>Pendiente reservar (22-24 oct, 2 noches). Mejores zonas: <strong>Parte Vieja</strong> (en pleno corazón de los pintxos) o <strong>Gros</strong> (junto a la playa Zurriola, más tranquilo y moderno). Cuando reserves, márcalo en <strong>Vivo</strong> o dile a Claudia.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ BILBAO ============ -->
+<section id="bilbao">
+  <div class="container">
+    <span class="section-tag">Stop 04 · Días 9-10</span>
+    <div class="city-hero" style="background:url('images/bilbao/panoramica.jpg') center/cover, linear-gradient(135deg,#1e293b 0%,#334155 50%,#0f172a 100%);">
+      <span class="badge">24-26 OCT · 2 NOCHES</span>
+      <div class="name">
+        <h2>Bilbao</h2>
+        <p>El Guggenheim, el Casco Viejo y la ría que transformó la ciudad</p>
       </div>
     </div>
 
+    <div class="grid grid-2">
+      <div>
+        <h3>Por qué Bilbao</h3>
+        <p>Bilbao es la historia de reinvención más famosa de Europa: de ciudad industrial gris al <strong>Museo Guggenheim de Frank Gehry</strong> que la puso en el mapa mundial. Casco Viejo medieval (las <strong>Siete Calles</strong>), pintxos más baratos que en Donostia, y la ría con puentes de Calatrava. A ~1h15 de San Sebastián.</p>
+        <h3 class="mt-2">Lo que vas a hacer (2 noches)</h3>
+        <ul class="checklist">
+          <li><strong>Día 9 (sáb 24 oct):</strong> llegada desde San Sebastián + Casco Viejo + pintxos</li>
+          <li><strong>Día 10 (dom 25 oct):</strong> Museo Guggenheim + Puppy + ría + Mercado de la Ribera + funicular de Artxanda</li>
+          <li><strong>Día 11 (lun 26 oct):</strong> mañana libre + traslado a Madrid (tren Renfe ~4.5h o vuelo ~1h)</li>
+        </ul>
+      </div>
+      <div>
+        <div id="bilbao-map" class="map map-small"></div>
+        <div class="map-legend">
+          <div class="legend-item"><span class="dot" style="background:#334155"></span>Hotel (Casco Viejo / Abando)</div>
+          <div class="legend-item"><span class="dot" style="background:#9333EA"></span>Guggenheim / museos</div>
+          <div class="legend-item"><span class="dot" style="background:#F59E0B"></span>Pintxos / mercado</div>
+          <div class="legend-item"><span class="dot" style="background:#FFEE00"></span>Estación</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="weather-card">
+      <div class="w-icon">🌧️</div>
+      <div class="w-info">
+        <h4>Clima esperado en Bilbao · 24-26 Octubre</h4>
+        <p>Bilbao es lluvioso (el "txirimiri" vasco) · lleva paraguas pequeño · temperaturas suaves</p>
+      </div>
+      <div class="w-stats">
+        <div><span class="temp-high">🔼 17-19°C</span> máx</div>
+        <div><span class="temp-low">🔽 11-13°C</span> mín</div>
+        <div>☔ 55% lluvia</div>
+      </div>
+    </div>
+
+    <h3 class="mt-2">🥘 Imperdibles gastronómicos de Bilbao</h3>
+    <div class="grid grid-3">
+      <div class="card"><h4>🍢 Pintxos del Casco Viejo</h4><p style="font-size:0.88rem;">Gure Toki, Plaza Nueva, La Viña del Ensanche · más generosos y baratos que en Donostia</p></div>
+      <div class="card"><h4>🐟 Bacalao al pil-pil</h4><p style="font-size:0.88rem;">Plato estrella vizcaíno · bacalao en emulsión de su propia gelatina · o "a la vizcaína" con salsa roja</p></div>
+      <div class="card"><h4>🥩 Txuleta + Mercado Ribera</h4><p style="font-size:0.88rem;">El mercado cubierto más grande de Europa · pintxos y producto fresco a la ría</p></div>
+      <div class="card"><h4>🌽 Talo + Idiazábal</h4><p style="font-size:0.88rem;">Torta de maíz vasca + queso ahumado de oveja D.O. · sabor de caserío</p></div>
+      <div class="card"><h4>☕ Café Iruña</h4><p style="font-size:0.88rem;">Café histórico de 1903, azulejos moriscos · pintxo moruno legendario</p></div>
+      <div class="card"><h4>⭐ Alta cocina</h4><p style="font-size:0.88rem;">Azurmendi (3*, en Larrabetzu) y Nerua (en el Guggenheim) si quieren lujo</p></div>
+    </div>
     <div class="callout">
-      <h4>🎯 Mi pick</h4>
-      <p><strong>Hotel Sorolla Centro</strong> €140/noche = ~$3,000 MXN. Una sola noche cómoda, ubicación óptima para verlo todo a pie + buen tren a Madrid mañana siguiente.</p>
+      <h4>💡 Tip Guggenheim</h4>
+      <p>Compra la entrada <strong>online con horario</strong> (€16 pp) para saltarte fila. No te pierdas las instalaciones permanentes de Richard Serra ("La materia del tiempo") y, fuera, el <strong>Puppy de Jeff Koons</strong> y la araña "Maman" de Louise Bourgeois. La mejor foto del edificio es desde el <strong>puente de La Salve</strong> al atardecer. <a href="https://www.guggenheim-bilbao.eus/es" target="_blank">Web oficial</a>.</p>
     </div>
 
-    <h3 class="mt-2">🚄 Cómo moverte</h3>
-    <p><strong>Barcelona Sants → Valencia Joaquín Sorolla:</strong> AVE Renfe directo 3h 00min · ~€80-120 pareja anticipado (Promo desde €40 pareja). <strong>Valencia → Madrid Atocha:</strong> AVE 1h 45min · ~€60-90 pareja anticipado.</p>
-    <p style="font-size:0.85rem;color:var(--grey);">Estación Joaquín Sorolla está caminable al centro (15 min) o metro €2 (5 min).</p>
+    <h3 class="mt-2">📸 Galería de Bilbao (7 fotos)</h3>
+    <div class="photo-gallery">
+      <div class="photo" style="background:url('images/bilbao/guggenheim.jpg') center/cover;"><div class="caption">Museo Guggenheim</div></div>
+      <div class="photo" style="background:url('images/bilbao/puppy.jpg') center/cover;"><div class="caption">Puppy de Jeff Koons</div></div>
+      <div class="photo" style="background:url('images/bilbao/panoramica.jpg') center/cover;"><div class="caption">Skyline de Bilbao</div></div>
+      <div class="photo" style="background:url('images/bilbao/casco-viejo.jpg') center/cover;"><div class="caption">Casco Viejo · 7 Calles</div></div>
+      <div class="photo" style="background:url('images/bilbao/ria.jpg') center/cover;"><div class="caption">Ría de Bilbao</div></div>
+      <div class="photo" style="background:url('images/bilbao/mercado-ribera.jpg') center/cover;"><div class="caption">Mercado de la Ribera</div></div>
+      <div class="photo" style="background:url('images/bilbao/zubizuri.jpg') center/cover;"><div class="caption">Puente Zubizuri</div></div>
+    </div>
+
+    <h3 class="mt-2">🗓️ Día por día</h3>
+    <div class="day-card">
+      <div class="day-num">DÍA 9 · SÁB 24 OCT</div>
+      <div class="day-title">San Sebastián → Bilbao + Casco Viejo</div>
+      <ul>
+        <li><strong>Mañana:</strong> última playa en Donostia (Zurriola / Peine del Viento)</li>
+        <li><strong>Mediodía:</strong> bus o tren a Bilbao (~1h15)</li>
+        <li><strong>Tarde:</strong> check-in + paseo por el Casco Viejo (Siete Calles, Plaza Nueva)</li>
+        <li><strong>Noche:</strong> pintxos en Gure Toki / Plaza Nueva</li>
+      </ul>
+    </div>
+    <div class="day-card">
+      <div class="day-num">DÍA 10 · DOM 25 OCT</div>
+      <div class="day-title">Guggenheim + ría + Artxanda</div>
+      <ul>
+        <li><strong>Mañana:</strong> Museo Guggenheim (reservar entrada con horario)</li>
+        <li><strong>Mediodía:</strong> Puppy + paseo por la ría + puente Zubizuri</li>
+        <li><strong>Tarde:</strong> Mercado de la Ribera + pintxos</li>
+        <li><strong>Atardecer:</strong> funicular de Artxanda (vista panorámica de la ciudad)</li>
+      </ul>
+    </div>
+
+    <div class="callout green">
+      <h4>🏨 Hotel — por definir</h4>
+      <p>Pendiente reservar (24-26 oct, 2 noches). Mejores zonas: <strong>Casco Viejo</strong> (ambiente, pintxos a la puerta) o <strong>Abando / Ensanche</strong> (céntrico, cerca del Guggenheim y la estación). Cuando reserves, márcalo en <strong>Vivo</strong> o dile a Claudia.</p>
+    </div>
   </div>
 </section>
 
 <!-- ============ MADRID ============ -->
 <section id="madrid">
   <div class="container">
-    <span class="section-tag">Stop 06 · Días 12-15</span>
+    <span class="section-tag">Stop 05 · Días 11-15</span>
     <div class="city-hero" style="background:url('images/madrid/palacio-real.jpg') center/cover, linear-gradient(135deg,#991b1b 0%,#7f1d1d 50%,#450a0a 100%);">
-      <span class="badge">27-31 OCT · 4 NOCHES</span>
+      <span class="badge">26-31 OCT · 5 NOCHES</span>
       <div class="name">
         <h2>Madrid</h2>
         <p>Tapas Letras, Salamanca elegante, day trips Toledo/Segovia/Ribera del Duero</p>
@@ -3191,7 +2894,7 @@ ul.warning li::before { content: "⚠"; position: absolute; left: 0; color: var(
         <tr><td><strong>Versalles day trip</strong></td><td>Entrada €27 c/u + RER €9 pareja · día 19 oct</td><td class="amount">€63</td><td class="amount">$1,355</td></tr>
         <tr><td><strong>Tour Saint-Émilion (viñedo 1)</strong></td><td>Full-day small group pareja · día 21 oct</td><td class="amount">€340</td><td class="amount">$7,310</td></tr>
         <tr><td><strong>Día 29 viñedo o pueblito</strong> <span class="pill yellow">flex</span></td><td>Chinchón €50 / Madrid DO €150 / Ribera €560 — escoges</td><td class="amount">€50-560</td><td class="amount">$1K-12K</td></tr>
-        <tr><td><strong>Comidas</strong></td><td>~€110/día pareja × 15 días + cassoulet Toulouse + paella Valencia premium</td><td class="amount">€1,800</td><td class="amount">$38,700</td></tr>
+        <tr><td><strong>Comidas</strong></td><td>~€110/día pareja × 15 días + pintxos en el País Vasco + cena especial</td><td class="amount">€1,800</td><td class="amount">$38,700</td></tr>
         <tr><td><strong>Transporte ciudad</strong></td><td>Metro/taxis · 6 ciudades</td><td class="amount">€170</td><td class="amount">$3,655</td></tr>
         <tr><td><strong>Entradas museos/landmarks</strong></td><td>Louvre + Sagrada + Park Güell + opcionales</td><td class="amount">€225</td><td class="amount">$4,840</td></tr>
         <tr><td><strong>Aeropuerto-centro (Paris + Madrid)</strong></td><td>Taxi CDG + bus express Barajas</td><td class="amount">€75</td><td class="amount">$1,610</td></tr>
@@ -4322,19 +4025,18 @@ document.querySelectorAll('.tabs').forEach(tabGroup => {
 // ============ LEAFLET MAPS ============
 function initMaps() {
   // ----- ROUTE OVERVIEW MAP -----
-  const routeMap = L.map('route-map').setView([45, 0.5], 5);
+  const routeMap = L.map('route-map').setView([44, -1.8], 5);
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution: '© OpenStreetMap',
     maxZoom: 18
   }).addTo(routeMap);
 
   const cities = [
-    { name: 'París', coords: [48.8566, 2.3522], note: 'Stop 1 · 4N · 16-20 Oct · Llegada CDG · Versalles day' },
-    { name: 'Bordeaux', coords: [44.8378, -0.5792], note: 'Stop 2 · 2N · 20-22 Oct · Saint-Émilion day' },
-    { name: 'Toulouse', coords: [43.6047, 1.4442], note: 'Stop 3 · 1N · 22-23 Oct · Cassoulet' },
-    { name: 'Barcelona', coords: [41.3851, 2.1734], note: 'Stop 4 · 3N · 23-26 Oct · Gaudí' },
-    { name: 'Valencia', coords: [39.4699, -0.3763], note: 'Stop 5 · 1N · 26-27 Oct · Paella + Albufera' },
-    { name: 'Madrid', coords: [40.4168, -3.7038], note: 'Stop 6 · 4N · 27-31 Oct · Toledo day · vuelo MTY' }
+    { name: 'París', coords: [48.8566, 2.3522], note: 'Stop 1 · 4N · 16-20 Oct · Llegada CDG · Versalles' },
+    { name: 'Bordeaux', coords: [44.8378, -0.5792], note: 'Stop 2 · 2N · 20-22 Oct · Saint-Émilion' },
+    { name: 'San Sebastián', coords: [43.3183, -1.9812], note: 'Stop 3 · 2N · 22-24 Oct · Pintxos + la Concha' },
+    { name: 'Bilbao', coords: [43.2630, -2.9350], note: 'Stop 4 · 2N · 24-26 Oct · Guggenheim' },
+    { name: 'Madrid', coords: [40.4168, -3.7038], note: 'Stop 5 · 5N · 26-31 Oct · Toledo · vuelo MTY' }
   ];
 
   const yellowIcon = L.divIcon({
@@ -4499,147 +4201,31 @@ function initMaps() {
       .bindPopup(makePopup('🍷', 'Saint-Émilion', 'Viñedo UNESCO · 45 min auto · €170 pp tour', 'France', 'Saint Emilion wine tour vineyard'));
   }, 200);
 
-  // ----- TOULOUSE MAP -----
-  setTimeout(() => {
-    const tlseMapEl = document.getElementById('tlse-map');
-    if (!tlseMapEl) return;
-    const tlseMap = L.map('tlse-map').setView([43.6047, 1.4442], 14);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OSM' }).addTo(tlseMap);
 
-    L.circle([43.6045, 1.4437], { radius: 300, color: '#15803D', fillOpacity: 0.08, weight: 2 }).addTo(tlseMap)
-      .bindPopup('<strong>🟢 ZONA ÚNICA · Centro Histórico</strong><br/>Todo a 5 min del Capitole · caminable a estación');
+  // ----- SAN SEBASTIÁN MAP -----
+  (function(){
+    const el = document.getElementById('ss-map'); if(!el) return;
+    const m = L.map('ss-map').setView([43.3210, -1.9850], 14);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OSM' }).addTo(m);
+    L.marker([43.3245,-1.9860],{icon:hotelZ1Icon}).addTo(m).bindPopup('<strong>Parte Vieja</strong> · zona hotel (pintxos)');
+    L.marker([43.3220,-1.9785],{icon:hotelZ1Icon}).addTo(m).bindPopup('<strong>Gros</strong> · zona hotel (playa Zurriola)');
+    [{n:'La Cuchara de San Telmo',c:[43.3253,-1.9852]},{n:'Bar Néstor',c:[43.3249,-1.9858]},{n:'Borda Berri',c:[43.3251,-1.9849]},{n:'Gandarias',c:[43.3250,-1.9855]}].forEach(x=>L.marker(x.c,{icon:restoIcon}).addTo(m).bindPopup('🍢 '+x.n));
+    [{n:'Playa de la Concha',c:[43.3180,-1.9890]},{n:'Monte Igueldo',c:[43.3097,-2.0095]},{n:'Peine del Viento',c:[43.3133,-2.0080]},{n:'Monte Urgull',c:[43.3247,-1.9905]},{n:'Kursaal / Zurriola',c:[43.3232,-1.9790]}].forEach(x=>L.marker(x.c,{icon:landmarkIcon}).addTo(m).bindPopup(x.n));
+    L.marker([43.3170,-1.9750],{icon:trainIcon}).addTo(m).bindPopup('Estación');
+  })();
 
-    L.marker([43.6045, 1.4438], { icon: hotelZ1Icon }).addTo(tlseMap)
-      .bindPopup(makePopup('🏨', 'Hôtel Le Grand Balcon', '~€160/noche · histórico Saint-Exupéry · vista plaza', 'Toulouse', 'Hotel Grand Balcon Toulouse review'));
-    L.marker([43.6025, 1.4419], { icon: hotelZ1Icon }).addTo(tlseMap)
-      .bindPopup(makePopup('🏨', 'Mama Shelter Toulouse', '~€125/noche · Philippe Starck design (mi pick)', 'Toulouse', 'Mama Shelter Toulouse'));
-    L.marker([43.6066, 1.4426], { icon: hotelZ1Icon }).addTo(tlseMap)
-      .bindPopup(makePopup('🏨', 'La Cour des Consuls (MGallery)', '~€220/noche · 5⭐ boutique palacete', 'Toulouse', 'Cour des Consuls Toulouse MGallery'));
-    L.marker([43.6082, 1.4515], { icon: hotelZ1Icon }).addTo(tlseMap)
-      .bindPopup(makePopup('🏨', 'Hôtel Albert 1er', '~€115/noche · familiar 3 min Capitole', 'Toulouse', 'Hotel Albert 1er Toulouse'));
-
-    const tlseResto = [
-      { name: 'Le Colombier', c: [43.6024, 1.4476], desc: 'Cassoulet desde 1874 · €40-55 pp (RESERVA)' },
-      { name: 'Émile', c: [43.6005, 1.4456], desc: 'Place Saint-Georges · vinos Languedoc · €35-50 pp' },
-      { name: 'Au Pois Gourmand', c: [43.6094, 1.4180], desc: 'Mansión XVIII orillas Garonne · €60-80 pp' },
-      { name: 'Michel Sarran', c: [43.6135, 1.4427], desc: '2 Michelin · reserva 1 mes · €80+ pp' }
-    ];
-    tlseResto.forEach(r => L.marker(r.c, { icon: restoIcon }).addTo(tlseMap)
-      .bindPopup(makePopup('🥘', r.name, r.desc, 'Toulouse', r.name + ' Toulouse restaurant')));
-
-    L.marker([43.6055, 1.4407], { icon: museumIcon }).addTo(tlseMap)
-      .bindPopup(makePopup('🎨', 'Couvent des Jacobins', '€5 pp · claustro palmera de columnas', 'Toulouse', 'Couvent Jacobins Toulouse'));
-    L.marker([43.6086, 1.4419], { icon: museumIcon }).addTo(tlseMap)
-      .bindPopup(makePopup('⛪', 'Basilique Saint-Sernin', 'UNESCO · románica más grande Europa', 'Toulouse', 'Basilique Saint Sernin Toulouse'));
-
-    const tlseLand = [
-      { name: 'Place du Capitole', c: [43.6043, 1.4437], desc: 'Plaza central · café terraza' },
-      { name: 'Pont Neuf · Garonne', c: [43.5993, 1.4416], desc: 'Atardecer rosa' },
-      { name: 'Canal du Midi', c: [43.6092, 1.4544], desc: 'UNESCO · caminata histórica' },
-      { name: 'Marché Victor Hugo', c: [43.6056, 1.4477], desc: 'Mercado cubierto · foie & quesos' }
-    ];
-    tlseLand.forEach(l => L.marker(l.c, { icon: landmarkIcon }).addTo(tlseMap)
-      .bindPopup(makePopup('📸', l.name, l.desc, 'Toulouse', l.name + ' Toulouse')));
-
-    L.marker([43.6113, 1.4540], { icon: trainIcon }).addTo(tlseMap)
-      .bindPopup(makePopup('🚄', 'Gare Matabiau', 'TGV → Bordeaux 2h · Renfe-SNCF → Barcelona 3h15', 'Toulouse', 'Toulouse Matabiau station'));
-  }, 250);
-
-  // ----- BARCELONA MAP -----
-  setTimeout(() => {
-    const bcnMap = L.map('bcn-map').setView([41.3925, 2.1700], 13);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OSM' }).addTo(bcnMap);
-
-    L.circle([41.3935, 2.1620], { radius: 450, color: '#15803D', fillOpacity: 0.08, weight: 2 }).addTo(bcnMap)
-      .bindPopup('<strong>🟢 ZONA 1 · Eixample</strong><br/>Modernista · Passeig de Gràcia · Casa Batlló + La Pedrera al lado');
-    L.circle([41.3840, 2.1810], { radius: 400, color: '#1E40AF', fillOpacity: 0.08, weight: 2 }).addTo(bcnMap)
-      .bindPopup('<strong>🔵 ZONA 2 · Born/Gótico</strong><br/>Medieval · calles peatonales · vibe nocturno');
-
-    L.marker([41.3937, 2.1660], { icon: hotelZ1Icon }).addTo(bcnMap)
-      .bindPopup(makePopup('🏨', 'Ohla Eixample', 'Z1 · ~€195/noche · pool rooftop (mi pick)', 'Barcelona', 'Ohla Eixample Barcelona'));
-    L.marker([41.3960, 2.1611], { icon: hotelZ1Icon }).addTo(bcnMap)
-      .bindPopup(makePopup('🏨', 'Alma Barcelona', 'Z1 · ~€220/noche · 5⭐ rooftop vista Sagrada', 'Barcelona', 'Alma Barcelona hotel'));
-    L.marker([41.3917, 2.1650], { icon: hotelZ1Icon }).addTo(bcnMap)
-      .bindPopup(makePopup('🏨', 'Room Mate Anna', 'Z1 · ~€175/noche · 2 min Casa Batlló', 'Barcelona', 'Room Mate Anna Barcelona'));
-
-    L.marker([41.3850, 2.1815], { icon: hotelZ2Icon }).addTo(bcnMap)
-      .bindPopup(makePopup('🏨', 'Yurbban Trafalgar', 'Z2 · ~€185/noche · rooftop pool', 'Barcelona', 'Yurbban Trafalgar Barcelona'));
-    L.marker([41.3870, 2.1810], { icon: hotelZ2Icon }).addTo(bcnMap)
-      .bindPopup(makePopup('🏨', 'H10 Madison', 'Z2 · ~€160/noche · rooftop plunge pool', 'Barcelona', 'H10 Madison Barcelona'));
-    L.marker([41.3853, 2.1832], { icon: hotelZ2Icon }).addTo(bcnMap)
-      .bindPopup(makePopup('🏨', 'Wittmore Hotel', 'Z2 · ~€215/noche · 5⭐ adults only speakeasy', 'Barcelona', 'Wittmore Hotel Barcelona'));
-
-    const bcnResto = [
-      { name: 'Cal Pep', c: [41.3849, 2.1822], desc: 'Born · mariscos en barra (NO reserva, llega 7:30pm)' },
-      { name: 'Cervecería Catalana', c: [41.3938, 2.1597], desc: 'Eixample · tapas top · llega 12pm o 7pm' },
-      { name: 'Bar del Pla', c: [41.3849, 2.1813], desc: 'Born · catalán moderno · reserva TheFork' },
-      { name: 'Llamber', c: [41.3858, 2.1815], desc: 'Born · tapas creativas €35-50 pp' },
-      { name: 'Quimet & Quimet', c: [41.3744, 2.1672], desc: 'Poble Sec · montaditos · standing only' },
-      { name: 'La Cova Fumada', c: [41.3784, 2.1908], desc: 'Barceloneta · bomba mítica · cash only mañanas' },
-      { name: '7 Portes (paella)', c: [41.3823, 2.1840], desc: 'Paella desde 1836 · reserva' }
-    ];
-    bcnResto.forEach(r => L.marker(r.c, { icon: restoIcon }).addTo(bcnMap)
-      .bindPopup(makePopup('🍽️', r.name, r.desc, 'Barcelona', r.name + ' Barcelona')));
-
-    const bcnMus = [
-      { name: 'Sagrada Familia', c: [41.4036, 2.1744], desc: '€26 pp · reserva online 1 mes antes' },
-      { name: 'Park Güell', c: [41.4145, 2.1527], desc: '€10 pp · reserva slot online' },
-      { name: 'Casa Batlló', c: [41.3917, 2.1649], desc: '€29 pp · exterior gratis' },
-      { name: 'La Pedrera', c: [41.3954, 2.1619], desc: '€28 pp · diseño Gaudí' },
-      { name: 'Museu Picasso', c: [41.3853, 2.1808], desc: '€12 pp · Born · gratis jueves 17-20h' }
-    ];
-    bcnMus.forEach(m => L.marker(m.c, { icon: museumIcon }).addTo(bcnMap)
-      .bindPopup(makePopup('🎨', m.name, m.desc, 'Barcelona', m.name + ' Barcelona tour')));
-
-    const bcnLand = [
-      { name: 'Barceloneta playa', c: [41.3795, 2.1923], desc: 'Caminata + vermut' },
-      { name: 'Bunkers del Carmel', c: [41.4180, 2.1582], desc: 'Atardecer 360° · GRATIS' },
-      { name: 'La Rambla', c: [41.3814, 2.1734], desc: 'Caminata pero cuidado carteristas' },
-      { name: 'Catedral Barcelona', c: [41.3839, 2.1762], desc: '€9 pp con coro' }
-    ];
-    bcnLand.forEach(l => L.marker(l.c, { icon: landmarkIcon }).addTo(bcnMap)
-      .bindPopup(makePopup('📸', l.name, l.desc, 'Barcelona', l.name + ' Barcelona')));
-
-    L.marker([41.3792, 2.1395], { icon: trainIcon }).addTo(bcnMap)
-      .bindPopup(makePopup('🚄', 'Estación Sants', 'AVE → Madrid 2h30 · Renfe-SNCF → Toulouse 3h15', 'Barcelona', 'Barcelona Sants station'));
-  }, 300);
-
-  // ----- VALENCIA MAP -----
-  setTimeout(() => {
-    const valMapEl = document.getElementById('val-map');
-    if (!valMapEl) return;
-    const valMap = L.map('val-map').setView([39.4699, -0.3763], 13);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OSM' }).addTo(valMap);
-
-    L.marker([39.4737, -0.3771], { icon: hotelZ1Icon }).addTo(valMap)
-      .bindPopup(makePopup('🏨', 'Caro Hotel', '~€180/noche · palacete s.XIX', 'Valencia', 'Caro Hotel Valencia'));
-    L.marker([39.4716, -0.3759], { icon: hotelZ1Icon }).addTo(valMap)
-      .bindPopup(makePopup('🏨', 'Hotel Sorolla Centro', '~€140/noche · ubicación insuperable (mi pick)', 'Valencia', 'Hotel Sorolla Centro Valencia'));
-    L.marker([39.4706, -0.3777], { icon: hotelZ1Icon }).addTo(valMap)
-      .bindPopup(makePopup('🏨', 'Vincci Lys', '~€130/noche · junto al Mercado Central', 'Valencia', 'Vincci Lys Valencia'));
-
-    const valResto = [
-      { name: 'Casa Carmela', c: [39.4779, -0.3270], desc: 'Paella valenciana ICÓNICA · playa Malvarrosa · €30-45 pp · RESERVA' },
-      { name: 'La Pepica', c: [39.4757, -0.3247], desc: 'Paella favorita Hemingway · €25-35 pp' },
-      { name: 'Casa Roberto', c: [39.4683, -0.3779], desc: 'Paella centro tradicional · €18-28 pp' },
-      { name: 'Horchatería Santa Catalina', c: [39.4744, -0.3768], desc: 'Horchata + fartón · desde 1836 · €4-6' }
-    ];
-    valResto.forEach(r => L.marker(r.c, { icon: restoIcon }).addTo(valMap)
-      .bindPopup(makePopup('🥘', r.name, r.desc, 'Valencia', r.name + ' Valencia restaurant')));
-
-    const valLand = [
-      { name: 'Ciudad de las Artes y las Ciencias', c: [39.4546, -0.3527], desc: 'Calatrava architecture · museo + planetario' },
-      { name: 'Catedral de Valencia', c: [39.4756, -0.3754], desc: 'Santo Grial · Miguelete torre · €9 entry' },
-      { name: 'Mercado Central', c: [39.4736, -0.3786], desc: 'Modernista · jamón + horchata + tapas' },
-      { name: 'Albufera (lake)', c: [39.3370, -0.3489], desc: 'Laguna paella original · barca tradicional · 15 min al sur' },
-      { name: 'Lonja de la Seda', c: [39.4731, -0.3785], desc: 'UNESCO gótico civil · GRATIS sábados' }
-    ];
-    valLand.forEach(l => L.marker(l.c, { icon: landmarkIcon }).addTo(valMap)
-      .bindPopup(makePopup('📸', l.name, l.desc, 'Valencia', l.name + ' Valencia')));
-
-    L.marker([39.4595, -0.3771], { icon: trainIcon }).addTo(valMap)
-      .bindPopup(makePopup('🚄', 'Estación Joaquín Sorolla', 'AVE → Madrid 1h45 · ← Barcelona 3h', 'Valencia', 'Valencia Joaquin Sorolla station'));
-  }, 350);
+  // ----- BILBAO MAP -----
+  (function(){
+    const el = document.getElementById('bilbao-map'); if(!el) return;
+    const m = L.map('bilbao-map').setView([43.2635, -2.9340], 14);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OSM' }).addTo(m);
+    L.marker([43.2569,-2.9234],{icon:hotelZ1Icon}).addTo(m).bindPopup('<strong>Casco Viejo</strong> · zona hotel');
+    L.marker([43.2610,-2.9300],{icon:hotelZ1Icon}).addTo(m).bindPopup('<strong>Abando / Ensanche</strong> · zona hotel');
+    L.marker([43.2687,-2.9340],{icon:makeIcon('#9333EA',18)}).addTo(m).bindPopup('🎨 Museo Guggenheim');
+    [{n:'Gure Toki (Plaza Nueva)',c:[43.2570,-2.9229]},{n:'La Viña del Ensanche',c:[43.2614,-2.9352]},{n:'Mercado de la Ribera',c:[43.2555,-2.9243]},{n:'Café Iruña',c:[43.2620,-2.9270]}].forEach(x=>L.marker(x.c,{icon:restoIcon}).addTo(m).bindPopup('🍢 '+x.n));
+    [{n:'Zubizuri (Calatrava)',c:[43.2680,-2.9265]},{n:'Funicular Artxanda',c:[43.2730,-2.9290]},{n:'Plaza Nueva',c:[43.2569,-2.9232]}].forEach(x=>L.marker(x.c,{icon:landmarkIcon}).addTo(m).bindPopup(x.n));
+    L.marker([43.2700,-2.9490],{icon:trainIcon}).addTo(m).bindPopup('Estación Abando');
+  })();
 
   // ----- MADRID MAP -----
   setTimeout(() => {
@@ -5011,7 +4597,7 @@ document.addEventListener('DOMContentLoaded', () => {
       <div class="modal-body">
         <div class="form-group">
           <label>Título *</label>
-          <input id="bm-title" type="text" placeholder="Ej: Mejor paella en Valencia (Reddit)"/>
+          <input id="bm-title" type="text" placeholder="Ej: Mejores pintxos en Donostia (Reddit)"/>
         </div>
         <div class="form-group">
           <label>URL *</label>
@@ -5215,7 +4801,7 @@ document.addEventListener('DOMContentLoaded', () => {
         <button class="chat-suggestion">¿Cuánto cuesta el viaje en total?</button>
         <button class="chat-suggestion">¿Qué hotel recomiendas en Paris?</button>
         <button class="chat-suggestion">¿Vale la pena Ribera del Duero?</button>
-        <button class="chat-suggestion">¿Dónde comer mejor paella en Valencia?</button>
+        <button class="chat-suggestion">¿Dónde comer los mejores pintxos en San Sebastián?</button>
         <button class="chat-suggestion">Dame el itinerario día por día</button>
       </div>
     </div>
@@ -5228,6 +4814,121 @@ document.addEventListener('DOMContentLoaded', () => {
     Respuestas generadas por Claude · puede equivocarse · verifica datos críticos
   </div>
 </div>
+
+
+<!-- ============ PLANNER MODAL + JS ============ -->
+<div id="pl-modal" role="dialog" aria-modal="true">
+  <div class="pl-sheet">
+    <h4 id="pl-modal-title">Nueva actividad</h4>
+    <input type="hidden" id="pl-id">
+    <div class="pl-row">
+      <div><label>Día</label><input type="date" id="pl-date" min="2026-10-16" max="2026-10-31"></div>
+      <div><label>Hora</label><input type="time" id="pl-time"></div>
+    </div>
+    <label>Actividad</label>
+    <input type="text" id="pl-title" placeholder="Ej: Museo Guggenheim">
+    <div class="pl-row">
+      <div><label>Categoría</label>
+        <select id="pl-cat">
+          <option value="">—</option><option>comida</option><option>museo</option><option>paseo</option><option>actividad</option><option>viñedo</option><option>compras</option><option>traslado</option><option>logistica</option><option>flex</option>
+        </select>
+      </div>
+      <div><label>Ciudad</label>
+        <select id="pl-city">
+          <option value="">—</option><option>Paris</option><option>Bordeaux</option><option>San Sebastián</option><option>Bilbao</option><option>Madrid</option><option>Versalles</option><option>Saint-Émilion</option><option>Toledo</option>
+        </select>
+      </div>
+    </div>
+    <label>Notas</label>
+    <textarea id="pl-notes" rows="2"></textarea>
+    <button class="pl-save" onclick="plSave()">Guardar</button>
+    <button class="pl-cancel" onclick="plCloseModal()">Cancelar</button>
+  </div>
+</div>
+<script>
+(function(){
+  const CAT={comida:'🍽️',museo:'🏛️',paseo:'🚶','viñedo':'🍷',vinedo:'🍷',actividad:'🎟️',compras:'🛍️',traslado:'🚄',logistica:'🧳',flex:'✨'};
+  const DOW=['DOM','LUN','MAR','MIÉ','JUE','VIE','SÁB'];
+  const DAYS=[
+    {d:'2026-10-16',city:'París · llegada'},{d:'2026-10-17',city:'París'},{d:'2026-10-18',city:'París'},
+    {d:'2026-10-19',city:'París → Versalles'},{d:'2026-10-20',city:'París → Bordeaux'},
+    {d:'2026-10-21',city:'Bordeaux + Saint-Émilion'},{d:'2026-10-22',city:'Bordeaux → San Sebastián'},
+    {d:'2026-10-23',city:'San Sebastián'},{d:'2026-10-24',city:'San Sebastián → Bilbao'},
+    {d:'2026-10-25',city:'Bilbao'},{d:'2026-10-26',city:'Bilbao → Madrid'},
+    {d:'2026-10-27',city:'Madrid'},{d:'2026-10-28',city:'Madrid'},{d:'2026-10-29',city:'Madrid · FLEX'},
+    {d:'2026-10-30',city:'Madrid'},{d:'2026-10-31',city:'Madrid → MTY ✈️'}
+  ];
+  let ALL=[];
+  function wkey(){ let k=localStorage.getItem('eurotrip_write_key'); if(!k){ k=prompt('Clave de escritura (David/Paty):'); if(k) localStorage.setItem('eurotrip_write_key',k);} return k; }
+  function esc(t){ return (t==null?'':String(t)).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
+  function dnum(iso){ var p=iso.split('-'); var dt=new Date(Date.UTC(+p[0],+p[1]-1,+p[2])); return {dow:DOW[dt.getUTCDay()], dd:+p[2]}; }
+  window.plLoad=async function(){
+    var root=document.getElementById('planner-root'); if(!root) return;
+    try{
+      var r=await fetch('/api/data',{cache:'no-store'}); var j=await r.json();
+      ALL=(j.data&&j.data.activities)||[]; plRender();
+    }catch(e){ root.innerHTML='<p style="color:#b00">No se pudo cargar el plan. '+esc(e.message)+'</p>'; }
+  };
+  function plRender(){
+    var root=document.getElementById('planner-root'); if(!root) return;
+    var html='';
+    DAYS.forEach(function(day,i){
+      var acts=ALL.filter(function(a){return a.activity_date===day.d;}).sort(function(a,b){return (a.sort_order||0)-(b.sort_order||0)||((a.start_time||'')>(b.start_time||'')?1:-1);});
+      var n=dnum(day.d);
+      html+='<div class="planner-day"><div class="pl-city">Día '+(i+1)+' · '+n.dow+' '+n.dd+' OCT · '+esc(day.city)+'</div>';
+      acts.forEach(function(a){
+        var done=a.status==='hecho';
+        var emoji=CAT[a.category]||'•';
+        html+='<div class="pl-act'+(done?' done':'')+'">';
+        html+='<button class="pl-check" title="Marcar hecho" onclick="plToggle(\''+a.id+'\','+(done?'true':'false')+')">'+(done?'✓':'')+'</button>';
+        html+='<div class="pl-body"><div class="pl-title">'+(a.start_time?'<span class="pl-time">'+esc(a.start_time.slice(0,5))+'</span>':'')+esc(a.title)+(a.is_suggestion?'<span class="pl-sug">sugerida</span>':'')+'</div>';
+        var meta=[]; if(a.category) meta.push(emoji+' '+esc(a.category)); if(a.city) meta.push('📍 '+esc(a.city)); if(a.notes) meta.push(esc(a.notes));
+        if(meta.length) html+='<div class="pl-meta">'+meta.join(' · ')+'</div>';
+        html+='</div>';
+        html+='<div class="pl-actions"><button title="Editar" onclick="plEdit(\''+a.id+'\')">✏️</button><button title="Borrar" onclick="plDelete(\''+a.id+'\')">×</button></div>';
+        html+='</div>';
+      });
+      html+='<button class="pl-addbtn" onclick="plAdd(\''+day.d+'\')">+ actividad</button></div>';
+    });
+    root.innerHTML=html;
+  }
+  window.plToggle=async function(id,done){ await plWrite({action:'update',table:'activities',id:id,patch:{status:done?'pendiente':'hecho'}}); };
+  window.plDelete=async function(id){ if(!confirm('¿Borrar esta actividad?')) return; await plWrite({action:'delete',table:'activities',id:id}); };
+  window.plAdd=function(date){ openModal({activity_date:date}); };
+  window.plEdit=function(id){ var a=ALL.find(function(x){return x.id===id;}); if(a) openModal(a); };
+  function openModal(a){
+    document.getElementById('pl-modal-title').textContent=a.id?'Editar actividad':'Nueva actividad';
+    document.getElementById('pl-id').value=a.id||'';
+    document.getElementById('pl-date').value=a.activity_date||'2026-10-16';
+    document.getElementById('pl-time').value=a.start_time?a.start_time.slice(0,5):'';
+    document.getElementById('pl-title').value=a.title||'';
+    document.getElementById('pl-cat').value=a.category||'';
+    document.getElementById('pl-city').value=a.city||'';
+    document.getElementById('pl-notes').value=a.notes||'';
+    document.getElementById('pl-modal').classList.add('open');
+  }
+  window.plCloseModal=function(){ document.getElementById('pl-modal').classList.remove('open'); };
+  window.plSave=async function(){
+    var id=document.getElementById('pl-id').value;
+    var title=document.getElementById('pl-title').value.trim();
+    if(!title){ alert('Escribe la actividad'); return; }
+    var row={ activity_date:document.getElementById('pl-date').value, start_time:document.getElementById('pl-time').value||null, title:title, category:document.getElementById('pl-cat').value||null, city:document.getElementById('pl-city').value||null, notes:document.getElementById('pl-notes').value||null };
+    if(id){ await plWrite({action:'update',table:'activities',id:id,patch:row}); }
+    else { row.created_by='manual'; row.is_suggestion=false; row.status='pendiente'; await plWrite({action:'insert',table:'activities',row:row}); }
+    plCloseModal();
+  };
+  async function plWrite(body){
+    var k=wkey(); if(!k) return;
+    try{
+      var r=await fetch('/api/write',{method:'POST',headers:{'Content-Type':'application/json','X-Write-Key':k},body:JSON.stringify(body)});
+      var j=await r.json();
+      if(!j.ok){ alert('Error: '+(j.error||'desconocido')); if(/clave/i.test(j.error||'')) localStorage.removeItem('eurotrip_write_key'); return; }
+      plLoad();
+    }catch(e){ alert('Error de red: '+e.message); }
+  }
+  if(document.readyState!=='loading') plLoad(); else document.addEventListener('DOMContentLoaded',plLoad);
+})();
+</script>
 
 </body>
 </html>

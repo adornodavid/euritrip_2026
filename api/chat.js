@@ -12,13 +12,18 @@ Responder preguntas sobre el viaje Y ayudarles a guardar información mientras c
 
 DATOS CLAVE DEL VIAJE:
 
-**Ruta (15 noches, todo en tren):**
-- Paris 4N (16-20 oct, llega de MTY)
-- Bordeaux 2N (20-22 oct)
-- Toulouse 1N (22-23 oct, cassoulet de cena)
-- Barcelona 3N (23-26 oct)
-- Valencia 1N (26-27 oct, paella auténtica)
-- Madrid 4N (27-31 oct, vuela a MTY 31 oct 10:30am)
+**Ruta NUEVA (15 noches) — Francia + País Vasco + Madrid:**
+- Paris 4N (16-20 oct, llega de MTY) — Hôtel Filigrane & Spa (CONFIRMADO, 2º arr / Bourse)
+- Bordeaux 2N (20-22 oct) — Grand Hôtel Français (CONFIRMADO, Triángulo de Oro)
+- San Sebastián 2N (22-24 oct) — hotel POR DEFINIR (Parte Vieja / Gros)
+- Bilbao 2N (24-26 oct) — hotel POR DEFINIR (Casco Viejo / Abando)
+- Madrid 5N (26-31 oct, vuela a MTY 31 oct 10:30am) — Catalonia Atocha (CONFIRMADO)
+
+OJO: La ruta CAMBIÓ. Ya NO se va a Toulouse, Barcelona ni Valencia. Ahora es San Sebastián y Bilbao (País Vasco). No menciones las ciudades viejas.
+
+**Ritmo:** 16 oct llegada SLOW (cerca del hotel, vienen cansados) · 17-18 oct Paris fuerte · 19 oct Versalles · 20 oct mañana Paris + tren 4-5pm a Bordeaux · 21 oct Bordeaux + Saint-Émilion viñedos medio día · 22 oct medio día Bordeaux + tarde a San Sebastián · 29 oct Madrid FLEX (Toledo/Segovia/Chinchón).
+
+**El PLANNER (tabla activities):** El plan de cada día vive en actividades editables. David y Paty arman su día agregando, quitando, editando y marcando actividades como hechas. Las que ya existen son SUGERENCIAS editables. Usa add_activity cuando mencionen algo que quieran hacer un día concreto; update_record/delete_record (tabla 'activities') para mover, editar o quitar.
 
 **Vuelos (ya pagados):**
 - AM44 Aeroméxico 787-9 · MTY 15 oct 3:25 PM → CDG 16 oct 9:40 AM · Asientos 29A+29B
@@ -26,25 +31,23 @@ DATOS CLAVE DEL VIAJE:
 
 **Day trips:** Versalles (Paris), Saint-Émilion (Bordeaux), Toledo (Madrid), día 29 FLEX (Chinchón/Vinos Madrid DO/Ribera del Duero/Aranjuez/Madrid completo)
 
-**Hoteles recomendados:**
-PARIS: Marais (Hôtel Emile €210, Jeanne d'Arc €180, La Chambre €220) · Saint-Germain (St Paul Rive Gauche €195, Villa Madame €215, Villa Saint-Germain €230)
-BORDEAUX: Chartrons (Hotel Indigo €175, Villas Foch €200, Une Chambre Chez Dupont €165) · Triangle d'Or (Hôtel de Sèze €210, Grand Hôtel Français €155, La Maison du Lierre €145)
-TOULOUSE: Mama Shelter €125, Le Grand Balcon €160, Cour des Consuls €220, Albert 1er €115
-BARCELONA: Eixample (Ohla €195, Alma €220, Room Mate Anna €175) · Born (Yurbban €185, H10 Madison €160, Wittmore €215)
-VALENCIA: Caro €180, Sorolla Centro €140, Vincci Lys €130
-MADRID: Letras/Sol (Catalonia €180, NH Tepa €210, Room Mate Alba €155) · Salamanca/Chamberí (Orfila €220, Único €215, Tótem €185)
+**Hoteles:**
+PARIS: Hôtel Filigrane & Spa (confirmado, 2º arr / Bourse)
+BORDEAUX: Grand Hôtel Français (confirmado, Triángulo de Oro)
+SAN SEBASTIÁN: por definir — zonas top: Parte Vieja (centro pintxos) o Gros (playa Zurriola)
+BILBAO: por definir — zonas top: Casco Viejo (Siete Calles) o Abando (cerca Guggenheim)
+MADRID: Catalonia Atocha (confirmado, cerca Atocha/Letras)
 
 **Presupuesto pareja Europa:** Económico $145K MXN · Premium $156K MXN
 
-**Trenes anticipados pareja:** Paris-Bordeaux €140-180 · Bordeaux-Toulouse €100-140 · Toulouse-BCN €90-130 · BCN-Valencia €80-120 · Valencia-Madrid €60-90
+**Traslados entre ciudades:** Paris→Bordeaux TGV ~2h · Bordeaux→San Sebastián tren a Hendaya + Euskotren o bus directo (Flixbus/ALSA ~3-4h) · San Sebastián→Bilbao bus/tren ~1h15 · Bilbao→Madrid tren Renfe ~4.5h o vuelo ~1h
 
-**Restaurantes top:**
+**Restaurantes / comida top:**
 - Paris: Bistrot Paul Bert, Bouillon Chartier, Café de Flore, L'As du Fallafel
 - Bordeaux: La Tupina, Le Petit Commerce, Garopapilles, Le 7 (Cité du Vin)
-- Toulouse: Le Colombier (cassoulet), Émile
-- Barcelona: Cal Pep, Cervecería Catalana, Quimet & Quimet, 7 Portes
-- Valencia: Casa Carmela, La Pepica, Horchatería Santa Catalina
-- Madrid: Casa Botín, Casa Lucio, La Bola, Lhardy
+- San Sebastián (pintxos): La Cuchara de San Telmo, Gandarias, Bar Néstor, Borda Berri, Atari · alta cocina: Arzak, Mugaritz, Akelarre
+- Bilbao: Mercado de la Ribera, Café Iruña, La Viña del Ensanche, Gure Toki · alta cocina: Azurmendi, Nerua
+- Madrid: Casa Botín, Casa Lucio, La Bola, Lhardy, Mercado de San Miguel
 
 **Logística:** 3 maletas total, NO visa Schengen, ETIAS posible Q4 2026, eSIM Holafly €80, tax-free DIVA Barajas, pasaporte 6 meses vigencia.
 
@@ -54,7 +57,7 @@ Cuando David o Paty mencionen información que valga la pena guardar, usa las he
 
 1. **add_note**: cualquier idea, pendiente, observación, recordatorio
    - Ej: "Recuerda llevar adaptador EU" → add_note(text="...", category="todo")
-   - Ej: "Idea: ir a Sitges si sobra tiempo" → add_note(text="...", category="idea", city="Barcelona")
+   - Ej: "Idea: ir a Getaria si sobra tiempo" → add_note(text="...", category="idea", city="San Sebastián")
 
 2. **add_bookmark**: cualquier link/URL útil
    - Ej: "Mira este restaurante https://x.com/..." → add_bookmark(title, url, city)
@@ -75,15 +78,19 @@ Cuando David o Paty mencionen información que valga la pena guardar, usa las he
    - Ej: "Pagué $9,500 MXN del hotel de Paris" → add_expense(category="hotels", description="Hotel Emile Paris", amount_mxn=9500, currency="MXN", city="Paris")
    - Defaults: payer="Joint" si no especifican quién, expense_date=hoy si no dan fecha
 
-7. **list_saved**: ver qué tienen guardado (notes, reservations, bookmarks, hotel_choices, day_overrides, expenses, budget)
+7. **add_activity**: agregar una actividad al planner de un día (museo, comida, paseo, traslado...). El planner es editable: estas actividades se ven en el sitio y David/Paty las marcan como hechas, las editan o las borran.
+   - Ej: "El 25 quiero ir al Guggenheim" → add_activity(activity_date="2026-10-25", title="Museo Guggenheim", category="museo", city="Bilbao")
+   - Para editar o quitar una actividad usa update_record / delete_record con table="activities".
 
-8. **update_record**: editar un registro existente. SIEMPRE PIDE CONFIRMACIÓN antes de ejecutar.
+8. **list_saved**: ver qué tienen guardado (notes, reservations, bookmarks, hotel_choices, day_overrides, expenses, budget)
+
+9. **update_record**: editar un registro existente. SIEMPRE PIDE CONFIRMACIÓN antes de ejecutar.
    - Para 'budget' el id es la category text ('flights', 'hotels', 'trains', 'food', 'attractions', 'transport', 'shopping', 'misc').
    - Para todo lo demás el id es el UUID completo (lo obtienes con list_saved).
    - patch es un objeto con SOLO los campos a cambiar.
    - Ej: "Cambia el gasto de Bistrot a 90 EUR" → list_saved expenses → "Voy a actualizar el gasto 'Cena Bistrot Paul Bert' (id 3f8a…) de $1,870 → $1,980 MXN. ¿Confirmas?" → esperar "sí" → update_record(table="expenses", id="3f8a-…", patch={amount_mxn:1980, amount_original:90})
 
-9. **delete_record**: borrar un registro. SIEMPRE PIDE CONFIRMACIÓN antes de ejecutar.
+10. **delete_record**: borrar un registro. SIEMPRE PIDE CONFIRMACIÓN antes de ejecutar.
    - Mismo esquema de id que update_record.
    - Ej: "Borra la nota del adaptador" → list_saved notes → "Voy a borrar la nota 'comprar adaptador EU' (id 3f8a…). ¿Confirmas?" → esperar "sí" → delete_record(table="notes", id="3f8a-…")
 
@@ -126,7 +133,7 @@ const TOOLS = [
       properties: {
         text: { type: 'string', description: 'Texto de la nota' },
         category: { type: 'string', enum: ['general', 'todo', 'idea', 'reminder', 'warning'], description: 'Categoría' },
-        city: { type: 'string', description: 'Ciudad asociada (opcional): Paris, Bordeaux, Toulouse, Barcelona, Valencia, Madrid' }
+        city: { type: 'string', description: 'Ciudad asociada (opcional): Paris, Bordeaux, San Sebastián, Bilbao, Madrid' }
       },
       required: ['text']
     }
@@ -171,7 +178,7 @@ const TOOLS = [
     input_schema: {
       type: 'object',
       properties: {
-        city: { type: 'string', description: 'Paris, Bordeaux, Toulouse, Barcelona, Valencia, o Madrid' },
+        city: { type: 'string', description: 'Paris, Bordeaux, San Sebastián, Bilbao, o Madrid' },
         hotel_name: { type: 'string' },
         zone: { type: 'string', description: 'Zona/barrio del hotel' },
         price_per_night: { type: 'string', description: 'Ej: "€180"' },
@@ -213,6 +220,23 @@ const TOOLS = [
         notes: { type: 'string', description: 'Notas adicionales' }
       },
       required: ['category', 'description', 'amount_mxn']
+    }
+  },
+  {
+    name: 'add_activity',
+    description: 'Agregar una actividad al planner de un dia especifico (museo, comida, paseo, traslado, etc.). Usa cuando David o Paty digan que quieren hacer algo un dia concreto del viaje.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        activity_date: { type: 'string', description: 'Fecha YYYY-MM-DD (ej: 2026-10-23)' },
+        title: { type: 'string', description: 'Que van a hacer (ej: Museo Guggenheim, Ruta de pintxos)' },
+        start_time: { type: 'string', description: 'Hora HH:MM (opcional, ej: 09:30)' },
+        category: { type: 'string', description: 'Tipo: comida, museo, paseo, actividad, vinedo, compras, traslado, logistica, flex' },
+        city: { type: 'string', description: 'Ciudad: Paris, Bordeaux, San Sebastian, Bilbao, Madrid, Versalles, Saint-Emilion, Toledo' },
+        notes: { type: 'string', description: 'Notas (opcional)' },
+        sort_order: { type: 'number', description: 'Orden dentro del dia (opcional)' }
+      },
+      required: ['activity_date', 'title']
     }
   },
   {
@@ -297,6 +321,15 @@ async function executeTool(sb, name, input) {
       const { data, error } = await sb.from(tableName('expenses')).insert(row).select().single();
       if (error) throw error;
       return { ok: true, message: `Gasto registrado: ${data.description} · $${Number(data.amount_mxn).toLocaleString('es-MX')} MXN`, data };
+    }
+    if (name === 'add_activity') {
+      const row = { ...tagged };
+      if (!row.status) row.status = 'pendiente';
+      if (row.is_suggestion === undefined) row.is_suggestion = false;
+      if (row.sort_order === undefined || row.sort_order === null) row.sort_order = 999;
+      const { data, error } = await sb.from(tableName('activities')).insert(row).select().single();
+      if (error) throw error;
+      return { ok: true, message: `Actividad agregada al ${data.activity_date}: ${data.title}`, data };
     }
     if (name === 'list_saved') {
       const ord = input.table === 'budget' ? { col: 'sort_order', asc: true }

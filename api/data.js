@@ -19,9 +19,17 @@ export default async function handler(req, res) {
       expenses: { col: 'expense_date', asc: false }
     };
     for (const logical of TABLES) {
-      const ord = ORDER[logical] || { col: 'created_at', asc: false };
-      const { data: rows, error } = await sb.from(tableName(logical))
-        .select('*').order(ord.col, { ascending: ord.asc, nullsFirst: false });
+      let q = sb.from(tableName(logical)).select('*');
+      if (logical === 'activities') {
+        // Planner: por día, luego orden manual dentro del día, luego hora
+        q = q.order('activity_date', { ascending: true, nullsFirst: false })
+             .order('sort_order', { ascending: true, nullsFirst: false })
+             .order('start_time', { ascending: true, nullsFirst: true });
+      } else {
+        const ord = ORDER[logical] || { col: 'created_at', asc: false };
+        q = q.order(ord.col, { ascending: ord.asc, nullsFirst: false });
+      }
+      const { data: rows, error } = await q;
       if (error) throw new Error(`${logical}: ${error.message}`);
       data[logical] = rows || [];
     }
