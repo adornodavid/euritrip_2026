@@ -2,7 +2,7 @@
   "name": "Eurotrip 2026 · David & Paty",
   "short_name": "Eurotrip 26",
   "description": "Planner de viaje, gastos, presupuesto y tips — Francia + País Vasco + Madrid",
-  "start_url": "/app.html",
+  "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait",
