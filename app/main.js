@@ -15,7 +15,7 @@ const SUGG={
   'Bilbao':[{t:'Entrada Museo Guggenheim',img:'images/bilbao/guggenheim.jpg',r:'9.0',rev:'5421',p:'$16',cat:'museo'},{t:'Txikiteo de pintxos',img:'images/bilbao/mercado-ribera.jpg',r:'8.9',rev:'1106',p:'$55',cat:'comida'},{t:'Bilbao esencial a pie',img:'images/bilbao/casco-viejo.jpg',r:'8.5',rev:'842',p:'$25',cat:'paseo'}],
   'Madrid':[{t:'Museo del Prado sin filas',img:'images/madrid/plaza-mayor.jpg',r:'8.6',rev:'12044',p:'$28',cat:'museo'},{t:'Show de flamenco',img:'images/madrid/tapas-madrid.jpg',r:'8.8',rev:'6530',p:'$35',cat:'actividad'},{t:'Toledo día completo',img:'images/madrid/toledo.jpg',r:'8.7',rev:'9012',p:'$55',cat:'museo'},{t:'Palacio Real',img:'images/madrid/palacio-real.jpg',r:'8.5',rev:'4310',p:'$18',cat:'museo'}]
 };
-let DATA={}, gCity='', gPayer='', chatStarted=false;
+let DATA={}, gCity='', gPayer='', chatStarted=false, pendingReceipt=null;
 const $=id=>document.getElementById(id);
 function esc(t){return (t==null?'':String(t)).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
 function dn(iso){const p=iso.split('-');const d=new Date(Date.UTC(+p[0],+p[1]-1,+p[2]));return DOW[d.getUTCDay()]+' '+(+p[2]);}
@@ -134,7 +134,7 @@ function renderGastos(){
   html+='<div class="bcard"><div class="lbl" style="margin-bottom:.3rem">Gastos'+(list.length?' ('+list.length+')':'')+'</div>';
   if(!list.length)html+='<div class="empty">Sin gastos'+(gCity||gPayer?' con ese filtro':' aún')+'. Toca + para agregar.</div>';
   list.slice(0,60).forEach(e=>{const orig=(e.currency&&e.currency!=='MXN'&&e.amount_original)?' ('+(e.currency==='EUR'?'€':'$')+e.amount_original+')':'';
-    html+='<div class="exp"><div><div class="d">'+esc(e.description)+'</div><div class="m">'+(e.expense_date||'')+(e.city?' · '+esc(e.city):'')+(e.payer?' · '+esc(e.payer):'')+'</div></div><div style="display:flex;align-items:center;gap:.3rem"><span class="amt">'+money(e.amount_mxn)+orig+'</span><button class="x" onclick="editExpById(\''+e.id+'\')">✏️</button><button class="x" onclick="delExp(\''+e.id+'\')">🗑️</button></div></div>';});
+    html+='<div class="exp"><div><div class="d">'+esc(e.description)+'</div><div class="m">'+(e.expense_date||'')+(e.city?' · '+esc(e.city):'')+(e.payer?' · '+esc(e.payer):'')+'</div></div><div style="display:flex;align-items:center;gap:.3rem">'+(e.receipt_url?'<a href="'+esc(e.receipt_url)+'" target="_blank" class="x">📎</a>':'')+'<span class="amt">'+money(e.amount_mxn)+orig+'</span><button class="x" onclick="editExpById(\''+e.id+'\')">✏️</button><button class="x" onclick="delExp(\''+e.id+'\')">🗑️</button></div></div>';});
   html+='</div>';
   $('gastos-root').innerHTML=html;
   $('me-cat').innerHTML=budget.map(b=>'<option value="'+b.category+'">'+(b.emoji||'')+' '+esc(b.label)+'</option>').join('');
@@ -144,12 +144,13 @@ function fxCalc(){const cur=$('me-cur').value,orig=parseFloat($('me-orig').value
   if(cur==='MXN'){$('me-fxrow').style.display='none';$('me-mxn').value=orig||'';$('me-fxhint').textContent='';return;}
   $('me-fxrow').style.display='flex';let fx=parseFloat($('me-fx').value);if(!fx){fx=cur==='EUR'?22:18;$('me-fx').value=fx;}
   const mxn=Math.round(orig*fx);$('me-mxn').value=mxn||'';$('me-fxhint').textContent=orig?(cur==='EUR'?'€':'$')+orig+' × '+fx+' = '+money(mxn)+' MXN':'';}
-function openExp(e){$('me-title').textContent=e.id?'Editar gasto':'Nuevo gasto';$('me-id').value=e.id||'';$('me-desc').value=e.description||'';$('me-cur').value=e.currency||'MXN';$('me-orig').value=(e.currency&&e.currency!=='MXN')?(e.amount_original||''):(e.amount_mxn||'');$('me-fx').value=e.fx_rate||'';$('me-mxn').value=e.amount_mxn||'';$('me-cat').value=e.category||(DATA.budget&&DATA.budget[0]&&DATA.budget[0].category)||'';$('me-payer').value=e.payer||'Joint';$('me-city').value=e.city||'';$('me-notes').value=e.notes||'';fxCalc();$('m-exp').classList.add('open');}
+function openExp(e){$('me-title').textContent=e.id?'Editar gasto':'Nuevo gasto';$('me-id').value=e.id||'';$('me-desc').value=e.description||'';$('me-cur').value=e.currency||'MXN';$('me-orig').value=(e.currency&&e.currency!=='MXN')?(e.amount_original||''):(e.amount_mxn||'');$('me-fx').value=e.fx_rate||'';$('me-mxn').value=e.amount_mxn||'';$('me-cat').value=e.category||(DATA.budget&&DATA.budget[0]&&DATA.budget[0].category)||'';$('me-payer').value=e.payer||'Joint';$('me-city').value=e.city||'';$('me-notes').value=e.notes||'';pendingReceipt=null;$('me-photo').value='';$('me-preview').innerHTML=e.receipt_url?'<a href="'+e.receipt_url+'" target="_blank"><img src="'+e.receipt_url+'" style="max-height:90px;border-radius:8px"/></a>':'';fxCalc();$('m-exp').classList.add('open');}
 async function delExp(id){if(confirm('¿Borrar este gasto?'))await write({action:'delete',table:'expenses',id:id},'Borrado');}
 async function saveExp(){const id=$('me-id').value,desc=$('me-desc').value.trim(),cur=$('me-cur').value,mxn=parseFloat($('me-mxn').value);
   if(!desc){alert('Escribe la descripción');return;}if(isNaN(mxn)){alert('Monto inválido');return;}
   const row={description:desc,amount_mxn:mxn,currency:cur,category:$('me-cat').value,payer:$('me-payer').value,city:$('me-city').value||null,notes:$('me-notes').value||null};
   if(cur!=='MXN'){row.amount_original=parseFloat($('me-orig').value)||null;row.fx_rate=parseFloat($('me-fx').value)||null;}
+  if(pendingReceipt){showToast('Subiendo foto…');const u=await uploadReceipt(pendingReceipt);if(u)row.receipt_url=u;}
   if(id)await write({action:'update',table:'expenses',id:id,patch:row},'Guardado ✓');else{row.created_by='manual';await write({action:'insert',table:'expenses',row:row},'Gasto agregado ✓');}
   closeM('m-exp');}
 
@@ -165,6 +166,7 @@ function renderPerfil(){const hotels=DATA.hotel_choices||[];
   h+='<div class="bcard"><div class="lbl" style="margin-bottom:.2rem">Hoteles</div>';
   CITIES.forEach(c=>{const ho=hotels.find(x=>x.city===c.key);h+='<div class="pf-row"><span>'+c.flag+' '+esc(c.name)+'</span><span style="color:var(--muted)">'+(ho?(ho.confirmed?'✅ '+esc(ho.hotel_name):'⏳ por definir'):'—')+'</span></div>';});
   h+='</div>';
+  const _pq=queueGet().length;if(_pq)h+='<div class="bcard" style="background:#FFF3B0;color:#7a6a00;font-weight:700">⏳ '+_pq+' cambios pendientes <button class="chip" onclick="flushQueue()">Sincronizar</button></div>';
   h+='<button class="pf-btn" onclick="changeKey()">🔑 Cambiar clave de escritura</button><a class="pf-btn" href="/guia">📖 Guía editorial completa</a><button class="pf-btn" onclick="alert(\'Para instalar: Safari → Compartir → Agregar a inicio. Chrome: ⋮ → Instalar app.\')">📲 Cómo instalar la app</button><button class="pf-btn" onclick="load();showToast(\'Actualizado ✓\')">🔄 Recargar datos</button>';
   h+='<div style="text-align:center;color:var(--muted);font-size:.74rem;margin-top:1rem">Eurotrip PWA v8.4 · Arkamia Lab</div>';$('perfil-root').innerHTML=h;}
 function changeKey(){localStorage.removeItem('eurotrip_write_key');const k=prompt('Nueva clave de escritura:');if(k){localStorage.setItem('eurotrip_write_key',k);showToast('Clave guardada ✓');}}
@@ -227,9 +229,18 @@ function closeM(id){$(id).classList.remove('open');}
 async function write(body,okMsg){const k=wkey();if(!k)return;
   try{const r=await fetch('/api/write',{method:'POST',headers:{'Content-Type':'application/json','X-Write-Key':k},body:JSON.stringify(body)});const j=await r.json();
     if(!j.ok){showToast(j.error||'Error',true);if(/clave/i.test(j.error||''))localStorage.removeItem('eurotrip_write_key');return;}
-    await load();showToast(okMsg||'Listo ✓');}catch(e){showToast('Sin conexión',true);}}
+    await load();showToast(okMsg||'Listo ✓');}catch(e){queuePush(body);showToast('Sin red: guardado, sincroniza al reconectar ⏳');}}
 async function writeMany(items,okMsg){const k=wkey();if(!k)return;
-  try{for(const it of items){await fetch('/api/write',{method:'POST',headers:{'Content-Type':'application/json','X-Write-Key':k},body:JSON.stringify({action:'update',table:'activities',id:it.id,patch:it.patch})});}await load();showToast(okMsg||'Listo ✓');}catch(e){showToast('Sin conexión',true);}}
+  try{for(const it of items){await fetch('/api/write',{method:'POST',headers:{'Content-Type':'application/json','X-Write-Key':k},body:JSON.stringify({action:'update',table:'activities',id:it.id,patch:it.patch})});}await load();showToast(okMsg||'Listo ✓');}catch(e){items.forEach(it=>queuePush({action:'update',table:'activities',id:it.id,patch:it.patch}));showToast('Sin red ⏳');}}
+
+/* offline queue + recibos (Push D) */
+function queueGet(){try{return JSON.parse(localStorage.getItem('eurotrip_queue')||'[]');}catch(e){return [];}}
+function queuePush(b){const q=queueGet();q.push(b);localStorage.setItem('eurotrip_queue',JSON.stringify(q));}
+async function flushQueue(){let q=queueGet();if(!q.length)return;const k=localStorage.getItem('eurotrip_write_key');if(!k)return;const left=[];for(const b of q){try{const r=await fetch('/api/write',{method:'POST',headers:{'Content-Type':'application/json','X-Write-Key':k},body:JSON.stringify(b)});const j=await r.json();if(!j.ok)left.push(b);}catch(e){left.push(b);}}localStorage.setItem('eurotrip_queue',JSON.stringify(left));if(left.length<q.length){await load();showToast('Sincronizado ✓');}}
+window.addEventListener('online',flushQueue);
+function fileToB64Resized(file,max,cb){const rd=new FileReader();rd.onload=e=>{const img=new Image();img.onload=()=>{let w=img.width,h=img.height;if(w>h&&w>max){h=Math.round(h*max/w);w=max;}else if(h>=w&&h>max){w=Math.round(w*max/h);h=max;}const c=document.createElement('canvas');c.width=w;c.height=h;c.getContext('2d').drawImage(img,0,0,w,h);cb(c.toDataURL('image/jpeg',0.82).split(',')[1]);};img.src=e.target.result;};rd.readAsDataURL(file);}
+function pickReceipt(input){const f=input.files&&input.files[0];if(!f)return;fileToB64Resized(f,1200,b64=>{pendingReceipt=b64;document.getElementById('me-preview').innerHTML='<img src="data:image/jpeg;base64,'+b64+'" style="max-height:90px;border-radius:8px"/>';showToast('Foto lista, guarda el gasto');});}
+async function uploadReceipt(b64){const k=wkey();if(!k)return null;try{const r=await fetch('/api/upload',{method:'POST',headers:{'Content-Type':'application/json','X-Write-Key':k},body:JSON.stringify({content_b64:b64,contentType:'image/jpeg',ext:'jpg'})});const j=await r.json();return j.ok?j.url:null;}catch(e){showToast('No se pudo subir la foto',true);return null;}}
 
 /* pull-to-refresh */
 let ptrY=0,ptrOn=false;
@@ -238,4 +249,5 @@ document.addEventListener('touchmove',e=>{if(!ptrOn)return;if(e.touches[0].clien
 document.addEventListener('touchend',()=>{if(ptrOn&&$('ptr').classList.contains('show')){load();showToast('Actualizando…');}$('ptr').classList.remove('show');ptrOn=false;},{passive:true});
 
 load();
+flushQueue();
 if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('/sw.js').catch(()=>{}));}

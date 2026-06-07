@@ -256,6 +256,9 @@ button:active,.pf-btn:active,.sugg:active,.chip:active,.city-photo:active{transf
   <div class="row2"><div><label>Categoría</label><select id="me-cat"></select></div><div><label>Pagó</label><select id="me-payer"><option>Joint</option><option>David</option><option>Paty</option></select></div></div>
   <label>Ciudad</label><select id="me-city"><option value="">—</option><option>Paris</option><option>Bordeaux</option><option>San Sebastián</option><option>Bilbao</option><option>Madrid</option></select>
   <label>Notas</label><input type="text" id="me-notes"/>
+  <label>📷 Recibo (opcional)</label>
+  <input type="file" id="me-photo" accept="image/*" onchange="pickReceipt(this)"/>
+  <div id="me-preview" style="margin-top:.5rem"></div>
   <button class="save" onclick="saveExp()">Guardar</button>
   <button class="cancel" onclick="closeM('m-exp')">Cancelar</button>
 </div></div>
