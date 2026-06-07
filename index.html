@@ -123,6 +123,29 @@ body{padding-bottom:calc(72px + env(safe-area-inset-bottom));min-height:100vh;}
 .sugg .sr{font-size:.68rem;color:var(--muted);margin-top:.25rem;}
 .sugg .sp{font-size:.74rem;font-weight:800;margin-top:.15rem;}
 .sugg .sadd{margin-top:.45rem;width:100%;background:var(--green);color:#fff;border:0;border-radius:8px;padding:.4rem;font-size:.72rem;font-weight:800;cursor:pointer;}
+
+/* chips / filtros / split / perfil / chat-chips */
+.chips{display:flex;gap:.4rem;overflow-x:auto;padding-bottom:.5rem;margin-bottom:.4rem;}
+.chips::-webkit-scrollbar{display:none;}
+.chip{flex:0 0 auto;background:#fff;border:1px solid var(--line);border-radius:20px;padding:.35rem .8rem;font-size:.78rem;font-weight:700;color:var(--muted);cursor:pointer;white-space:nowrap;}
+.chip.on{background:var(--ink);color:#fff;border-color:var(--ink);}
+.split{display:flex;gap:.6rem;margin-top:.2rem;}
+.split>div{flex:1;background:var(--bg);border-radius:10px;padding:.6rem;text-align:center;}
+.split .who{font-size:.7rem;color:var(--muted);font-weight:700;}
+.split .amt2{font-size:1.02rem;font-weight:800;margin-top:.15rem;}
+.pf-row{display:flex;justify-content:space-between;padding:.55rem 0;border-top:1px solid var(--line);font-size:.9rem;}
+.pf-row:first-child{border-top:0;}
+.pf-btn{display:block;width:100%;text-align:left;background:#fff;border:1px solid var(--line);border-radius:12px;padding:.85rem 1rem;margin-top:.6rem;font-size:.92rem;font-weight:600;cursor:pointer;box-shadow:var(--shadow);color:var(--ink);text-decoration:none;}
+.chat-chip{flex:0 0 auto;background:#fff;border:1px solid var(--line);border-radius:18px;padding:.4rem .7rem;font-size:.76rem;font-weight:600;cursor:pointer;white-space:nowrap;color:var(--ink);}
+.sec-h{font-size:.95rem;font-weight:800;margin:1.1rem 0 .5rem;}
+
+/* === FOTOS: nunca distorsionar (object-fit cover forzado) === */
+.screen img,.hero img,.city-photo>img,.sugg>img{object-fit:cover !important;display:block;}
+.hero{height:180px;}
+.hero img{width:100%;height:100%;object-position:center 38%;}
+.city-photo{height:112px;}
+.city-photo>img{object-position:center 42%;}
+.sugg>img{height:90px;width:100%;object-position:center;}
 </style>
 </head>
 <body>
@@ -147,14 +170,20 @@ body{padding-bottom:calc(72px + env(safe-area-inset-bottom));min-height:100vh;}
 </section>
 
 <!-- TIPS -->
-<section id="s-tips" class="screen">
-  <div class="app-bar"><div><h1>Tips</h1><div class="sub">Lo que hay que saber</div></div></div>
-  <div class="wrap" id="tips-root"></div>
+<section id="s-explore" class="screen">
+  <div class="app-bar"><div><h1>Explore</h1><div class="sub">Tips, ideas y guía</div></div></div>
+  <div class="wrap" id="explore-root"></div>
+</section>
+
+<section id="s-perfil" class="screen">
+  <div class="app-bar"><div><h1>Perfil</h1><div class="sub">Tu viaje y ajustes</div></div></div>
+  <div class="wrap" id="perfil-root"></div>
 </section>
 
 <!-- CLAUDIA -->
 <section id="s-claudia" class="screen">
   <div class="app-bar"><div><h1>Claudia</h1><div class="sub">Tu asistente de viaje</div></div></div>
+  <div id="chat-chips" class="chips" style="padding:0 1.1rem;"></div>
   <div id="chat-log"></div>
   <div class="chat-input"><input id="chat-in" type="text" placeholder="Pregúntale o pídele algo…" onkeydown="if(event.key==='Enter')sendChat()"/><button onclick="sendChat()">➤</button></div>
 </section>
@@ -163,8 +192,9 @@ body{padding-bottom:calc(72px + env(safe-area-inset-bottom));min-height:100vh;}
 <nav class="tabbar">
   <button data-tab="planner" class="on" onclick="go('planner')"><span class="ic">🗺️</span>Planner</button>
   <button data-tab="gastos" onclick="go('gastos')"><span class="ic">💰</span>Gastos</button>
-  <button data-tab="tips" onclick="go('tips')"><span class="ic">💡</span>Tips</button>
+  <button data-tab="explore" onclick="go('explore')"><span class="ic">🧭</span>Explore</button>
   <button data-tab="claudia" onclick="go('claudia')"><span class="ic">🤖</span>Claudia</button>
+  <button data-tab="perfil" onclick="go('perfil')"><span class="ic">👤</span>Perfil</button>
 </nav>
 
 <!-- MODAL actividad -->
@@ -185,8 +215,11 @@ body{padding-bottom:calc(72px + env(safe-area-inset-bottom));min-height:100vh;}
   <h3 id="me-title">Nuevo gasto</h3>
   <input type="hidden" id="me-id"/>
   <label>Descripción</label><input type="text" id="me-desc" placeholder="Ej: Cena en Arzak"/>
-  <div class="row2"><div><label>Monto MXN</label><input type="number" id="me-mxn" inputmode="decimal" placeholder="0"/></div><div><label>Categoría</label><select id="me-cat"></select></div></div>
-  <div class="row2"><div><label>Pagó</label><select id="me-payer"><option>Joint</option><option>David</option><option>Paty</option></select></div><div><label>Ciudad</label><select id="me-city"><option value="">—</option><option>Paris</option><option>Bordeaux</option><option>San Sebastián</option><option>Bilbao</option><option>Madrid</option></select></div></div>
+  <div class="row2"><div><label>Moneda</label><select id="me-cur" onchange="fxCalc()"><option value="MXN">MXN $</option><option value="EUR">EUR €</option><option value="USD">USD $</option></select></div><div><label>Monto</label><input type="number" id="me-orig" inputmode="decimal" placeholder="0" oninput="fxCalc()"/></div></div>
+  <div class="row2" id="me-fxrow"><div><label>Tasa →MXN</label><input type="number" id="me-fx" inputmode="decimal" oninput="fxCalc()"/></div><div><label>= MXN</label><input type="number" id="me-mxn" inputmode="decimal" placeholder="0"/></div></div>
+  <div id="me-fxhint" style="font-size:.74rem;color:var(--muted);margin-top:.35rem;font-weight:600;"></div>
+  <div class="row2"><div><label>Categoría</label><select id="me-cat"></select></div><div><label>Pagó</label><select id="me-payer"><option>Joint</option><option>David</option><option>Paty</option></select></div></div>
+  <label>Ciudad</label><select id="me-city"><option value="">—</option><option>Paris</option><option>Bordeaux</option><option>San Sebastián</option><option>Bilbao</option><option>Madrid</option></select>
   <label>Notas</label><input type="text" id="me-notes"/>
   <button class="save" onclick="saveExp()">Guardar</button>
   <button class="cancel" onclick="closeM('m-exp')">Cancelar</button>
