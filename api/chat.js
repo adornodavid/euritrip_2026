@@ -3,132 +3,70 @@
 // Claudia puede llamar tools para guardar notas, bookmarks, reservaciones, hoteles, etc.
 
 import Anthropic from '@anthropic-ai/sdk';
-import { getSupabase, TABLES, tableName } from './_supabase.js';
+import { getSupabase, TABLES, tableName, DEFAULT_TRIP_ID } from './_supabase.js';
 
-const SYSTEM_PROMPT = `Eres "Claudia", la asistente de viaje de David y Paty para su Eurotrip 2026 (15-31 octubre 2026).
+// Prompt GENÉRICO (aplica a cualquier viaje). El contexto del viaje activo se inyecta dinámico abajo.
+const ROLE_PROMPT = `Eres "Claudia", la asistente de viaje de David y Paty dentro de la app Bayu.
 
-TU ROL:
-Responder preguntas sobre el viaje Y ayudarles a guardar información mientras chatean: notas, links útiles, reservaciones (vuelos, hoteles, restaurantes, tours), hoteles elegidos por ciudad, cambios a días específicos.
+TU ROL: Responder preguntas sobre el VIAJE ACTIVO y ayudarles a guardar información mientras chatean: notas, links útiles, reservaciones (vuelos, hoteles, restaurantes, tours, trenes), hoteles elegidos por ciudad, gastos, actividades del planner, ciudades/paradas y presupuesto.
 
-DATOS CLAVE DEL VIAJE:
+MULTI-VIAJE (IMPORTANTE): La app maneja varios viajes. TODO lo que guardes o consultes aplica SOLO al viaje activo (ver "=== VIAJE ACTIVO ===" abajo). Nunca mezcles datos entre viajes. Si te piden algo de otro viaje, diles que lo cambien en la pestaña ✈️ Viajes. Las fechas de actividades/gastos/reservas deben caer dentro del rango del viaje activo.
 
-**Ruta NUEVA (15 noches) — Francia + País Vasco + Madrid:**
-- Paris 4N (16-20 oct, llega de MTY) — Hôtel Filigrane & Spa (CONFIRMADO, 2º arr / Bourse)
-- Bordeaux 2N (20-22 oct) — Grand Hôtel Français (CONFIRMADO, Triángulo de Oro)
-- San Sebastián 2N (22-24 oct) — hotel POR DEFINIR (Parte Vieja / Gros)
-- Bilbao 2N (24-26 oct) — hotel POR DEFINIR (Casco Viejo / Abando)
-- Madrid 5N (26-31 oct, vuela a MTY 31 oct 10:30am) — Catalonia Atocha (CONFIRMADO)
+EL PLANNER (tabla activities): el plan de cada día vive en actividades editables. David y Paty las agregan, quitan, editan y marcan como hechas. Usa add_activity cuando mencionen algo que quieran hacer un día concreto; update_record/delete_record (table="activities") para mover, editar o quitar.
 
-OJO: La ruta CAMBIÓ. Ya NO se va a Toulouse, Barcelona ni Valencia. Ahora es San Sebastián y Bilbao (País Vasco). No menciones las ciudades viejas.
+TUS PODERES (CRUD COMPLETO sobre el viaje activo): CREAR, EDITAR y BORRAR actividades, gastos, reservas, hoteles, notas, links, ciudades/paradas (add_trip_city) y editar presupuesto. Si te piden "investiga y llénale info a la actividad X", usa web_search para datos reales y guárdalos con update_record en los campos link (info), map_url (cómo llegar), tickets (boletos), notes, rating.
 
-**Ritmo:** 16 oct llegada SLOW (cerca del hotel, vienen cansados) · 17-18 oct Paris fuerte · 19 oct Versalles · 20 oct mañana Paris + tren 4-5pm a Bordeaux · 21 oct Bordeaux + Saint-Émilion viñedos medio día · 22 oct medio día Bordeaux + tarde a San Sebastián · 29 oct Madrid FLEX (Toledo/Segovia/Chinchón).
+LÍMITE HONESTO: Buscas y dejas el link listo, pero NO puedes iniciar sesión, pagar ni COMPRAR/RESERVAR por ellos en apps externas. Diles claro: "te dejo el link, tú completas la compra".
 
-**El PLANNER (tabla activities):** El plan de cada día vive en actividades editables. David y Paty arman su día agregando, quitando, editando y marcando actividades como hechas. Las que ya existen son SUGERENCIAS editables. Usa add_activity cuando mencionen algo que quieran hacer un día concreto; update_record/delete_record (tabla 'activities') para mover, editar o quitar.
-
-**TUS PODERES (CRUD COMPLETO):** Tienes control total de los datos del viaje — CREAR, EDITAR y BORRAR: actividades, gastos, reservas, hoteles, notas, links, ciudades/paradas (add_trip_city) y editar presupuesto. Si David dice "investiga y llénale info a la actividad X", usa web_search para datos reales y guárdalos con update_record en los campos: link (info), map_url (cómo llegar), tickets (boletos), notes, rating. Hazlo proactivamente cuando lo pida.
-
-**REPOSITORIO TURÍSTICO (Francia + España):** Para pases turísticos (Bordeaux Métropole City Pass, Paris Passlib'/Museum Pass, pases de Madrid/Bilbao/San Sebastián), tickets, museos, transporte o actividades por ciudad y tipo, usa web_search → da info actual + link oficial + precio + cita la fuente, y ofrece guardarlo en una actividad o nota.
-
-**LÍMITE HONESTO:** Buscas y dejas el link listo, pero NO puedes iniciar sesión, pagar ni COMPRAR/RESERVAR por ellos en apps externas. Diles claro: "te dejo el link, tú completas la compra".
-
-**Vuelos (ya pagados):**
-- AM44 Aeroméxico 787-9 · MTY 15 oct 3:25 PM → CDG 16 oct 9:40 AM · Asientos 29A+29B
-- AM35 Aeroméxico 787-9 · MAD 31 oct 10:30 AM → MTY 3:45 PM · Asientos 34H+34J
-
-**Day trips:** Versalles (Paris), Saint-Émilion (Bordeaux), Toledo (Madrid), día 29 FLEX (Chinchón/Vinos Madrid DO/Ribera del Duero/Aranjuez/Madrid completo)
-
-**Hoteles:**
-PARIS: Hôtel Filigrane & Spa (confirmado, 2º arr / Bourse)
-BORDEAUX: Grand Hôtel Français (confirmado, Triángulo de Oro)
-SAN SEBASTIÁN: por definir — zonas top: Parte Vieja (centro pintxos) o Gros (playa Zurriola)
-BILBAO: por definir — zonas top: Casco Viejo (Siete Calles) o Abando (cerca Guggenheim)
-MADRID: Catalonia Atocha (confirmado, cerca Atocha/Letras)
-
-**Presupuesto pareja Europa:** Económico $145K MXN · Premium $156K MXN
-
-**Traslados entre ciudades:** Paris→Bordeaux TGV ~2h · Bordeaux→San Sebastián tren a Hendaya + Euskotren o bus directo (Flixbus/ALSA ~3-4h) · San Sebastián→Bilbao bus/tren ~1h15 · Bilbao→Madrid tren Renfe ~4.5h o vuelo ~1h
-
-**Restaurantes / comida top:**
-- Paris: Bistrot Paul Bert, Bouillon Chartier, Café de Flore, L'As du Fallafel
-- Bordeaux: La Tupina, Le Petit Commerce, Garopapilles, Le 7 (Cité du Vin)
-- San Sebastián (pintxos): La Cuchara de San Telmo, Gandarias, Bar Néstor, Borda Berri, Atari · alta cocina: Arzak, Mugaritz, Akelarre
-- Bilbao: Mercado de la Ribera, Café Iruña, La Viña del Ensanche, Gure Toki · alta cocina: Azurmendi, Nerua
-- Madrid: Casa Botín, Casa Lucio, La Bola, Lhardy, Mercado de San Miguel
-
-**Logística:** 3 maletas total, NO visa Schengen, ETIAS posible Q4 2026, eSIM Holafly €80, tax-free DIVA Barajas, pasaporte 6 meses vigencia.
-
-CÓMO USAR TUS HERRAMIENTAS (tools):
-
-Cuando David o Paty mencionen información que valga la pena guardar, usa las herramientas SIN preguntar (a menos que falte info crítica):
-
-1. **add_note**: cualquier idea, pendiente, observación, recordatorio
-   - Ej: "Recuerda llevar adaptador EU" → add_note(text="...", category="todo")
-   - Ej: "Idea: ir a Getaria si sobra tiempo" → add_note(text="...", category="idea", city="San Sebastián")
-
-2. **add_bookmark**: cualquier link/URL útil
-   - Ej: "Mira este restaurante https://x.com/..." → add_bookmark(title, url, city)
-
-3. **add_reservation**: vuelos, hoteles, restaurantes, tours YA CONFIRMADOS con código/link
-   - Ej: "Reservé Bistrot Paul Bert para el 17 oct 8pm via TheFork" → add_reservation(type="restaurant", title, date, time, link, city)
-
-4. **set_hotel_choice**: cuando deciden EL hotel por ciudad
-   - Ej: "Nos quedamos con Hotel Emile para Paris" → set_hotel_choice(city="Paris", hotel_name="...", confirmed=true)
-
-5. **set_day_plan**: cambios a un día específico
-   - Ej: "El día 19 mejor cancelamos Versalles y vamos a Montmartre" → set_day_plan(date="2026-10-19", new_plan="...")
-
-6. **add_expense**: registrar un gasto REAL del viaje (ya pagado/gastado)
-   - Categorías: flights, hotels, trains, food, attractions, transport, shopping, misc
-   - Si dan monto en EUR, conviértelo a MXN con tasa ~22 MXN/EUR (a menos que digan otra)
-   - Ej: "Gasté €85 en cena en Bistrot Paul Bert" → add_expense(category="food", description="Cena Bistrot Paul Bert", amount_mxn=1870, amount_original=85, currency="EUR", fx_rate=22, city="Paris", payer="Joint")
-   - Ej: "Pagué $9,500 MXN del hotel de Paris" → add_expense(category="hotels", description="Hotel Emile Paris", amount_mxn=9500, currency="MXN", city="Paris")
-   - Defaults: payer="Joint" si no especifican quién, expense_date=hoy si no dan fecha
-
-7. **add_activity**: agregar una actividad al planner de un día (museo, comida, paseo, traslado...). El planner es editable: estas actividades se ven en el sitio y David/Paty las marcan como hechas, las editan o las borran.
-   - Ej: "El 25 quiero ir al Guggenheim" → add_activity(activity_date="2026-10-25", title="Museo Guggenheim", category="museo", city="Bilbao")
-   - Para editar o quitar una actividad usa update_record / delete_record con table="activities".
-   - Puedes ENRIQUECER una actividad (sobre todo day-trips como Saint-Émilion) con update_record table="activities": campos link (info), map_url (cómo llegar), tickets (boletos), notes. Ej: "ponle a Saint-Émilion el link del tour y cómo llegar".
-
-8. **list_saved**: ver qué tienen guardado (notes, reservations, bookmarks, hotel_choices, day_overrides, expenses, budget)
-
-9. **update_record**: editar un registro existente. SIEMPRE PIDE CONFIRMACIÓN antes de ejecutar.
-   - Para 'budget' el id es la category text ('flights', 'hotels', 'trains', 'food', 'attractions', 'transport', 'shopping', 'misc').
-   - Para todo lo demás el id es el UUID completo (lo obtienes con list_saved).
-   - patch es un objeto con SOLO los campos a cambiar.
-   - Ej: "Cambia el gasto de Bistrot a 90 EUR" → list_saved expenses → "Voy a actualizar el gasto 'Cena Bistrot Paul Bert' (id 3f8a…) de $1,870 → $1,980 MXN. ¿Confirmas?" → esperar "sí" → update_record(table="expenses", id="3f8a-…", patch={amount_mxn:1980, amount_original:90})
-
-10. **delete_record**: borrar un registro. SIEMPRE PIDE CONFIRMACIÓN antes de ejecutar.
-   - Mismo esquema de id que update_record.
-   - Ej: "Borra la nota del adaptador" → list_saved notes → "Voy a borrar la nota 'comprar adaptador EU' (id 3f8a…). ¿Confirmas?" → esperar "sí" → delete_record(table="notes", id="3f8a-…")
+CÓMO USAR TUS HERRAMIENTAS (sin preguntar, salvo que falte info crítica):
+1. add_note — idea, pendiente, observación, recordatorio.
+2. add_bookmark — link/URL útil.
+3. add_reservation — vuelos/hoteles/restaurantes/tours/trenes YA confirmados con código/link.
+4. set_hotel_choice — cuando deciden EL hotel de una ciudad.
+5. set_day_plan — cambios a un día específico.
+6. add_expense — gasto REAL ya pagado. Categorías: flights, hotels, trains, food, attractions, transport, shopping, misc. Si dan EUR/USD, convierte a MXN (tasa ~22 MXN/EUR salvo que digan otra). Defaults: payer="Joint", expense_date=hoy.
+7. add_activity — agregar actividad al planner de un día. Puedes ENRIQUECERLA con update_record (link, map_url, tickets, notes, rating).
+8. list_saved — ver qué hay guardado.
+9. update_record — editar un registro. SIEMPRE pide confirmación. Para 'budget' el id es la category; para lo demás el id es el UUID (obténlo con list_saved). patch = solo los campos a cambiar.
+10. delete_record — borrar un registro. SIEMPRE pide confirmación.
 
 REGLA CRÍTICA UPDATE/DELETE — OBLIGATORIA:
-Antes de ejecutar update_record o delete_record SIEMPRE:
-1. Si no sabes el id exacto, usa list_saved primero.
-2. Resume al usuario qué exacto vas a cambiar/borrar (descripción + monto/categoría + id corto).
-3. Termina con "¿Confirmas?" o "¿Adelante?" y ESPERA respuesta afirmativa.
-4. Solo entonces ejecuta la tool. Si el usuario duda o pide ajustar, NO ejecutes.
-INSERT (add_*, set_*) NO requiere confirmación — sigue ejecutando directo.
+1) Si no sabes el id exacto, usa list_saved primero. 2) Resume qué exacto vas a cambiar/borrar (descripción + id corto). 3) Termina con "¿Confirmas?" y ESPERA un sí. 4) Solo entonces ejecuta. INSERT (add_*, set_*) NO requiere confirmación.
 
 CÓMO RESPONDER:
-- Sé directa, español mexicano cordial.
-- Después de guardar algo, CONFIRMA brevemente: "✅ Anoté que..."
-- Si te preguntan precios, da MXN Y euros.
-- Markdown OK: **negritas**, listas, [links](url).
-- Si te piden ver lo guardado, usa list_saved y formatea bonito.
-- No inventes datos. Si no estás segura, dilo.
+- Directa, español mexicano cordial. Tras guardar algo, confirma breve: "✅ Anoté que...".
+- Precios en MXN y, si aplica, en su moneda original. Markdown OK.
+- No inventes datos; si no sabes, dilo o usa web_search.
 
-ACCESO A INTERNET (web_search):
-Tienes la herramienta web_search para buscar info actualizada en internet (horarios, precios actuales, reseñas recientes, links oficiales, eventos, clima). Úsala cuando:
-- Te pidan info que cambie con el tiempo (precios, horarios, disponibilidad)
-- Pidan links oficiales (Booking, TheFork, web del restaurante/museo)
-- Pidan reseñas o recomendaciones recientes
-- Pidan info que NO esté en tu contexto base del viaje
-- David o Paty pregunten algo que normalmente buscarían en Google
-Después de buscar, CITA las fuentes en tu respuesta con [link](url) y di "según [fuente]".
+ACCESO A INTERNET (web_search): úsalo para info que cambia (horarios, precios, links oficiales, reseñas, clima) o que no tengas en contexto. Cita las fuentes con [link](url). NO lo uses para info que ya tienes en este prompt. NO uses tool calls para preguntas simples informacionales.`;
 
-NO uses web_search para info que YA tienes en este prompt (hoteles que ya conoces, itinerario, vuelos, presupuesto). Solo cuando la info sea nueva o necesite estar fresca.
+// Conocimiento RICO del Eurotrip — SOLO se inyecta cuando el viaje activo es el Eurotrip semilla.
+const EUROTRIP_KNOWLEDGE = `
 
-NO uses tool calls para preguntas simples informacionales. SOLO úsalas cuando el usuario mencione algo concreto que valga la pena persistir.`;
+=== CONOCIMIENTO ESPECÍFICO DEL EUROTRIP (aplica porque es el viaje activo) ===
+Eurotrip 2026 · 15-31 octubre · Francia + País Vasco + Madrid. La ruta ya NO incluye Toulouse, Barcelona ni Valencia.
+Ruta (15 noches): Paris 4N (16-20, llega de MTY) · Bordeaux 2N (20-22) · San Sebastián 2N (22-24) · Bilbao 2N (24-26) · Madrid 5N (26-31, vuela a MTY 31 oct 10:30am).
+Ritmo: 16 llegada slow · 17-18 Paris fuerte · 19 Versalles · 20 mañana Paris + tren a Bordeaux · 21 Bordeaux + Saint-Émilion · 22 medio día Bordeaux + tarde San Sebastián · 29 Madrid FLEX (Toledo/Segovia/Chinchón).
+Vuelos (pagados): AM44 MTY 15 oct 3:25PM → CDG 16 oct 9:40AM (29A+29B) · AM35 MAD 31 oct 10:30AM → MTY 3:45PM (34H+34J).
+Day trips: Versalles (Paris), Saint-Émilion (Bordeaux), Toledo (Madrid), 29 oct FLEX.
+Hoteles: Paris Hôtel Filigrane & Spa (confirmado, 2º/Bourse) · Bordeaux Grand Hôtel Français (confirmado) · San Sebastián por definir (Parte Vieja/Gros) · Bilbao por definir (Casco Viejo/Abando) · Madrid Catalonia Atocha (confirmado).
+Presupuesto pareja: Económico $145K MXN · Premium $156K MXN.
+Traslados: Paris→Bordeaux TGV ~2h · Bordeaux→San Sebastián tren a Hendaya+Euskotren o bus ~3-4h · San Sebastián→Bilbao ~1h15 · Bilbao→Madrid Renfe ~4.5h o vuelo.
+Restaurantes: Paris (Bistrot Paul Bert, Bouillon Chartier, Café de Flore, L'As du Fallafel) · Bordeaux (La Tupina, Le Petit Commerce, Garopapilles) · San Sebastián pintxos (La Cuchara de San Telmo, Gandarias, Bar Néstor, Borda Berri) y alta cocina (Arzak, Mugaritz, Akelarre) · Bilbao (Mercado de la Ribera, Café Iruña, La Viña del Ensanche) y alta cocina (Azurmendi, Nerua) · Madrid (Casa Botín, Casa Lucio, La Bola, Mercado de San Miguel).
+Logística: 3 maletas total, NO visa Schengen, ETIAS posible Q4 2026, eSIM Holafly €80, tax-free DIVA Barajas, pasaporte 6 meses vigencia.`;
+
+// Contexto dinámico del viaje activo (cualquier viaje), armado desde la DB.
+function tripContextBlock(trip, cities, hotels) {
+  if (!trip) return '\n\n=== VIAJE ACTIVO ===\n(no se pudo cargar el viaje activo)';
+  let s = `\n\n=== VIAJE ACTIVO ===\nNombre: ${trip.name}${trip.subtitle ? ' · ' + trip.subtitle : ''}\n`;
+  if (trip.start_date) s += `Fechas: ${trip.start_date} a ${trip.end_date || trip.start_date}\n`;
+  else s += `Fechas: sin definir aún\n`;
+  s += `Estado: ${trip.status || 'planning'}\n`;
+  if (cities && cities.length) s += `Ciudades/paradas:\n` + cities.map(c => `- ${c.name} (${c.start_date || '?'} → ${c.end_date || c.start_date || '?'})`).join('\n') + '\n';
+  else s += `Aún no tiene ciudades cargadas — sugiere agregar la primera con add_trip_city.\n`;
+  if (hotels && hotels.length) s += `Hoteles: ` + hotels.map(h => `${h.city}: ${h.hotel_name}${h.confirmed ? ' (confirmado)' : ' (por definir)'}`).join(' · ') + '\n';
+  return s;
+}
 
 // Tool definitions para Claudia
 const TOOLS = [
@@ -312,8 +250,8 @@ const TOOLS = [
 ];
 
 // Ejecutor de tools
-async function executeTool(sb, name, input) {
-  const tagged = { ...input, created_by: 'claudia' };
+async function executeTool(sb, tripId, name, input) {
+  const tagged = { ...input, created_by: 'claudia', trip_id: tripId };
   try {
     if (name === 'add_note') {
       const { data, error } = await sb.from(tableName('notes')).insert(tagged).select().single();
@@ -331,12 +269,12 @@ async function executeTool(sb, name, input) {
       return { ok: true, message: `Reservación "${data.title}" guardada`, data };
     }
     if (name === 'set_hotel_choice') {
-      const { data, error } = await sb.from(tableName('hotel_choices')).upsert(tagged, { onConflict: 'city' }).select().single();
+      const { data, error } = await sb.from(tableName('hotel_choices')).upsert(tagged, { onConflict: 'trip_id,city' }).select().single();
       if (error) throw error;
       return { ok: true, message: `Hotel para ${data.city}: ${data.hotel_name}`, data };
     }
     if (name === 'set_day_plan') {
-      const { data, error } = await sb.from(tableName('day_overrides')).upsert(tagged, { onConflict: 'date' }).select().single();
+      const { data, error } = await sb.from(tableName('day_overrides')).upsert(tagged, { onConflict: 'trip_id,date' }).select().single();
       if (error) throw error;
       return { ok: true, message: `Plan del ${data.date} actualizado`, data };
     }
@@ -368,7 +306,7 @@ async function executeTool(sb, name, input) {
       const ord = input.table === 'budget' ? { col: 'sort_order', asc: true }
                 : input.table === 'expenses' ? { col: 'expense_date', asc: false }
                 : { col: 'created_at', asc: false };
-      let query = sb.from(tableName(input.table)).select('*').order(ord.col, { ascending: ord.asc, nullsFirst: false }).limit(50);
+      let query = sb.from(tableName(input.table)).select('*').eq('trip_id', tripId).order(ord.col, { ascending: ord.asc, nullsFirst: false }).limit(50);
       if (input.city) query = query.eq('city', input.city);
       const { data, error } = await query;
       if (error) throw error;
@@ -384,7 +322,8 @@ async function executeTool(sb, name, input) {
       delete cleanPatch.id;
       delete cleanPatch.created_at;
       if (table === 'budget') delete cleanPatch.category;
-      const { data, error } = await sb.from(tableName(table)).update(cleanPatch).eq(pkCol, id).select().single();
+      delete cleanPatch.trip_id; // no permitir mover registros entre viajes
+      const { data, error } = await sb.from(tableName(table)).update(cleanPatch).eq(pkCol, id).eq('trip_id', tripId).select().single();
       if (error) throw error;
       return { ok: true, message: `Actualizado registro de ${table} (${id.toString().slice(0, 8)})`, data };
     }
@@ -394,7 +333,7 @@ async function executeTool(sb, name, input) {
       if (!id) return { ok: false, error: 'Falta id' };
       if (table === 'budget') return { ok: false, error: 'No se permite borrar categorías de budget (solo editar montos)' };
       const pkCol = 'id';
-      const { error } = await sb.from(tableName(table)).delete().eq(pkCol, id);
+      const { error } = await sb.from(tableName(table)).delete().eq(pkCol, id).eq('trip_id', tripId);
       if (error) throw error;
       return { ok: true, message: `Borrado de ${table} (${id.toString().slice(0, 8)})` };
     }
@@ -415,14 +354,29 @@ export default async function handler(req, res) {
   if (!apiKey) return res.status(500).json({ error: 'ANTHROPIC_API_KEY no configurada' });
 
   try {
-    const { messages } = req.body || {};
+    const { messages, trip_id } = req.body || {};
     if (!Array.isArray(messages) || messages.length === 0) {
       return res.status(400).json({ error: 'messages[] requerido' });
     }
+    const tripId = trip_id || DEFAULT_TRIP_ID;
 
     const client = new Anthropic({ apiKey });
     let sb = null;
     try { sb = getSupabase(); } catch (e) { /* Supabase opcional, sin él Claudia chatea pero no escribe */ }
+
+    // Contexto dinámico del viaje activo (cualquier viaje)
+    let trip = null, cities = [], hotels = [];
+    if (sb) {
+      try {
+        const [tr, ci, ho] = await Promise.all([
+          sb.from('eurotrip_trips').select('*').eq('id', tripId).single(),
+          sb.from(tableName('trip_cities')).select('name,start_date,end_date').eq('trip_id', tripId).order('start_date', { ascending: true, nullsFirst: false }),
+          sb.from(tableName('hotel_choices')).select('city,hotel_name,confirmed').eq('trip_id', tripId)
+        ]);
+        trip = tr.data || null; cities = ci.data || []; hotels = ho.data || [];
+      } catch (e) { /* sin contexto, Claudia sigue con prompt base */ }
+    }
+    const system = ROLE_PROMPT + tripContextBlock(trip, cities, hotels) + (tripId === DEFAULT_TRIP_ID ? EUROTRIP_KNOWLEDGE : '');
 
     // Sliding window de 12 turnos (antes 20) — reduce input tokens ~40% en conversaciones largas
     let conversation = messages.slice(-12);
@@ -434,7 +388,7 @@ export default async function handler(req, res) {
       const response = await client.messages.create({
         model: 'claude-haiku-4-5-20251001',
         max_tokens: 1536,
-        system: SYSTEM_PROMPT,
+        system,
         tools: sb ? TOOLS : TOOLS.filter(t => t.type === 'web_search_20250305'),
         messages: conversation
       });
@@ -450,7 +404,7 @@ export default async function handler(req, res) {
       const toolResults = [];
       for (const block of response.content) {
         if (block.type !== 'tool_use') continue;
-        const result = await executeTool(sb, block.name, block.input);
+        const result = await executeTool(sb, tripId, block.name, block.input);
         toolEvents.push({ tool: block.name, input: block.input, result });
         toolResults.push({
           type: 'tool_result',

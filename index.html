@@ -296,6 +296,26 @@ h2,h3{letter-spacing:-.02em;}
 /* — Chips/tip refinamiento — */
 .tip h3{letter-spacing:-.01em;}
 .chip{transition:background .15s,color .15s,border-color .15s;}
+
+/* — tabbar de 6: un poco más compacta — */
+.tabbar button{font-size:.6rem;}
+.tabbar button .ic{font-size:1.18rem;}
+
+/* — Mis viajes (cards) — */
+.tcard{display:flex;align-items:center;gap:.8rem;background:var(--card);border-radius:16px;box-shadow:0 2px 12px rgba(17,25,12,.05),0 1px 3px rgba(17,25,12,.04);padding:.7rem;margin-bottom:.7rem;cursor:pointer;border:1.5px solid transparent;transition:border-color .15s,transform .1s;}
+.tcard:active{transform:scale(.99);}
+.tcard.on{border-color:var(--brand);}
+.tcover{position:relative;width:74px;height:74px;border-radius:12px;overflow:hidden;flex:0 0 auto;display:flex;align-items:flex-end;justify-content:flex-end;}
+.tcover img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;}
+.tflag{position:relative;font-size:1.1rem;margin:0 .25rem .2rem 0;text-shadow:0 1px 3px rgba(0,0,0,.6);}
+.tinfo{flex:1;min-width:0;}
+.tname{font-weight:800;font-size:1.04rem;letter-spacing:-.01em;}
+.tnow{font-size:.58rem;font-weight:800;color:#fff;background:var(--brand);padding:.05rem .4rem;border-radius:20px;vertical-align:middle;margin-left:.25rem;text-transform:uppercase;letter-spacing:.04em;}
+.tsub{font-size:.8rem;color:var(--muted);margin-top:.05rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.tmeta{font-size:.74rem;color:var(--muted);margin-top:.32rem;}
+.tstat{font-weight:700;}.tstat.ta{color:var(--green);}.tstat.tc{color:var(--muted);}.tstat.tp{color:#d97706;}
+.tedit{background:none;border:0;font-size:1rem;opacity:.5;cursor:pointer;padding:.4rem;flex:0 0 auto;align-self:flex-start;min-height:34px;}
+[data-theme="dark"] .tcard{background:var(--card);}
 </style>
 <script>(function(){try{var m=localStorage.getItem("bayu_theme")||"auto";var d=m==="dark"||(m==="auto"&&matchMedia("(prefers-color-scheme:dark)").matches);document.documentElement.setAttribute("data-theme",d?"dark":"light");}catch(e){}})();</script>
 </head>
@@ -335,6 +355,12 @@ h2,h3{letter-spacing:-.02em;}
   <div class="wrap" id="perfil-root"></div>
 </section>
 
+<!-- MIS VIAJES -->
+<section id="s-viajes" class="screen">
+  <div class="app-bar"><div><h1>Mis viajes</h1><div class="sub">Cambia, crea o edita viajes</div></div><button class="chip" onclick="openTrip({})">+ Nuevo</button></div>
+  <div class="wrap" id="viajes-root"></div>
+</section>
+
 <!-- CLAUDIA -->
 <section id="s-claudia" class="screen">
   <div class="app-bar"><div><h1>Claudia</h1><div class="sub">Tu asistente de viaje</div></div></div>
@@ -369,6 +395,7 @@ h2,h3{letter-spacing:-.02em;}
   <button data-tab="explore" onclick="go('explore')"><span class="ic">🧭</span>Explore</button>
   <button data-tab="claudia" onclick="go('claudia')"><span class="ic">🤖</span>Claudia</button>
   <button data-tab="perfil" onclick="go('perfil')"><span class="ic">👤</span>Perfil</button>
+  <button data-tab="viajes" onclick="go('viajes')"><span class="ic">✈️</span>Viajes</button>
 </nav>
 
 <!-- MODAL actividad -->
@@ -458,6 +485,18 @@ h2,h3{letter-spacing:-.02em;}
   <label>Notas</label><input type="text" id="mc-notes"/>
   <button class="save" onclick="saveCity()">Guardar</button>
   <button class="cancel" onclick="closeM('m-city')">Cancelar</button>
+</div></div>
+
+<div id="m-trip" class="modal"><div class="sheet">
+  <h3 id="mt-title">Nuevo viaje</h3>
+  <input type="hidden" id="mt-id"/>
+  <div class="row2"><div><label>Nombre</label><input type="text" id="mt-name" placeholder="Ej: Japón 2027"/></div><div style="flex:0 0 78px"><label>Emoji</label><input type="text" id="mt-flag" value="🌍" maxlength="4"/></div></div>
+  <label>Subtítulo (opcional)</label><input type="text" id="mt-sub" placeholder="Ej: Tokio + Kioto + Osaka"/>
+  <div class="row2"><div><label>Desde</label><input type="date" id="mt-start"/></div><div><label>Hasta</label><input type="date" id="mt-end"/></div></div>
+  <div class="row2"><div><label>Estado</label><select id="mt-status"><option value="planning">◷ Planeando</option><option value="active">● En curso</option><option value="completed">✓ Terminado</option></select></div><div><label>Foto portada (URL)</label><input type="url" id="mt-cover" placeholder="https://..."/></div></div>
+  <button class="save" onclick="saveTrip()">Guardar</button>
+  <button class="pf-btn" id="mt-del" onclick="delTrip()" style="display:none;color:var(--red);text-align:center;margin-top:.6rem;font-weight:700">🗑️ Borrar este viaje y todo su contenido</button>
+  <button class="cancel" onclick="closeM('m-trip')">Cancelar</button>
 </div></div>
 
 <div id="m-trans" class="modal"><div class="sheet">

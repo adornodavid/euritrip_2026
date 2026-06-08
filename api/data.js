@@ -12,6 +12,18 @@ export default async function handler(req, res) {
 
   try {
     const sb = getSupabase();
+
+    // --- resolver viaje activo ---
+    const { data: trips, error: tErr } = await sb.from('eurotrip_trips').select('*')
+      .order('is_default', { ascending: false })
+      .order('sort_order', { ascending: true })
+      .order('created_at', { ascending: true });
+    if (tErr) throw new Error(`trips: ${tErr.message}`);
+    const reqTrip = req.query?.trip;
+    let active = reqTrip ? (trips || []).find(t => t.id === reqTrip) : null;
+    if (!active) active = (trips || []).find(t => t.is_default) || (trips || [])[0] || null;
+    const tripId = active?.id;
+
     const data = {};
     // budget se ordena por sort_order ASC; expenses por expense_date DESC; demás por created_at DESC
     const ORDER = {
@@ -20,6 +32,7 @@ export default async function handler(req, res) {
     };
     for (const logical of TABLES) {
       let q = sb.from(tableName(logical)).select('*');
+      if (tripId) q = q.eq('trip_id', tripId);
       if (logical === 'trip_cities') {
         q = q.order('start_date', { ascending: true, nullsFirst: false }).order('sort_order', { ascending: true });
       } else if (logical === 'activities') {
@@ -35,7 +48,7 @@ export default async function handler(req, res) {
       if (error) throw new Error(`${logical}: ${error.message}`);
       data[logical] = rows || [];
     }
-    return res.status(200).json({ ok: true, data });
+    return res.status(200).json({ ok: true, data, trips: trips || [], trip: active });
   } catch (err) {
     console.error('data.js error:', err);
     return res.status(500).json({ ok: false, error: err.message });

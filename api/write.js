@@ -1,6 +1,7 @@
-// POST /api/write → escribir en cualquier tabla del eurotrip
+// POST /api/write → escribir en cualquier tabla del viaje activo
 // Requiere header X-Write-Key con la clave EUROTRIP_WRITE_KEY (David + Paty la conocen)
-import { getSupabase, TABLES, tableName, checkWriteKey } from './_supabase.js';
+// Multi-viaje: las tablas de datos se escopan por trip_id (del body); la tabla 'trips' es global.
+import { getSupabase, WRITE_TABLES, tableName, checkWriteKey, DEFAULT_TRIP_ID } from './_supabase.js';
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -13,42 +14,56 @@ export default async function handler(req, res) {
   if (!auth.ok) return res.status(401).json({ error: auth.error });
 
   const { action, table, row, id, patch } = req.body || {};
-  if (!table || !TABLES.includes(table)) {
-    return res.status(400).json({ error: `Tabla inválida. Usa: ${TABLES.join(', ')}` });
+  if (!table || !WRITE_TABLES.includes(table)) {
+    return res.status(400).json({ error: `Tabla inválida. Usa: ${WRITE_TABLES.join(', ')}` });
   }
+
+  const isTrips = table === 'trips';
+  // trip activo: del body (trip_id) o, como red de seguridad, el viaje semilla
+  const tripId = isTrips ? null : (req.body?.trip_id || DEFAULT_TRIP_ID);
 
   try {
     const sb = getSupabase();
     const real = tableName(table);
-    // PK por tabla: la mayoria es id uuid; budget usa category (text PK)
+    // PK lógica por tabla: budget usa 'category' (parte de PK compuesta con trip_id), el resto 'id'
     const pkCol = table === 'budget' ? 'category' : 'id';
-    // Para upsert, columna de conflicto especial por tabla
-    const conflictCol = table === 'hotel_choices' ? 'city'
-                      : table === 'day_overrides' ? 'date'
-                      : table === 'budget' ? 'category'
+    // columna(s) de conflicto para upsert
+    const conflictCol = table === 'hotel_choices' ? 'trip_id,city'
+                      : table === 'day_overrides' ? 'trip_id,date'
+                      : table === 'budget' ? 'trip_id,category'
                       : 'id';
     let result;
 
     if (action === 'insert') {
       if (!row) return res.status(400).json({ error: 'row requerido' });
-      const { data, error } = await sb.from(real).insert(row).select().single();
+      const payload = isTrips ? row : { ...row, trip_id: row.trip_id || tripId };
+      const { data, error } = await sb.from(real).insert(payload).select().single();
       if (error) throw error;
       result = { inserted: data };
+
     } else if (action === 'update') {
       if (!id || !patch) return res.status(400).json({ error: 'id + patch requeridos' });
-      const { data, error } = await sb.from(real).update(patch).eq(pkCol, id).select().single();
+      let q = sb.from(real).update(patch).eq(pkCol, id);
+      if (!isTrips) q = q.eq('trip_id', tripId); // escopa al viaje activo (clave para budget compuesto)
+      const { data, error } = await q.select().single();
       if (error) throw error;
       result = { updated: data };
+
     } else if (action === 'upsert') {
       if (!row) return res.status(400).json({ error: 'row requerido' });
-      const { data, error } = await sb.from(real).upsert(row, { onConflict: conflictCol }).select().single();
+      const payload = isTrips ? row : { ...row, trip_id: row.trip_id || tripId };
+      const { data, error } = await sb.from(real).upsert(payload, { onConflict: conflictCol }).select().single();
       if (error) throw error;
       result = { upserted: data };
+
     } else if (action === 'delete') {
       if (!id) return res.status(400).json({ error: 'id requerido' });
-      const { error } = await sb.from(real).delete().eq(pkCol, id);
+      let q = sb.from(real).delete().eq(pkCol, id);
+      if (!isTrips) q = q.eq('trip_id', tripId);
+      const { error } = await q;
       if (error) throw error;
       result = { deleted: id };
+
     } else {
       return res.status(400).json({ error: 'action debe ser: insert | update | upsert | delete' });
     }

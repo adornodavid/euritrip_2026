@@ -1,14 +1,8 @@
 'use strict';
 const DOW=['DOM','LUN','MAR','MIÉ','JUE','VIE','SÁB'];
 const CAT={comida:'🍽️',museo:'🏛️',paseo:'🚶','viñedo':'🍷',vinedo:'🍷',actividad:'🎟️',compras:'🛍️',traslado:'🚄',logistica:'🧳',flex:'✨'};
-const BASE_CITIES=[
-  {key:'Paris',name:'París',flag:'🇫🇷',img:'images/paris/eiffel.jpg',dates:['2026-10-16','2026-10-17','2026-10-18','2026-10-19'],range:'16-20 Oct · 4N'},
-  {key:'Bordeaux',name:'Bordeaux',flag:'🇫🇷',img:'images/bordeaux/place-bourse.jpg',dates:['2026-10-20','2026-10-21'],range:'20-22 Oct · 2N'},
-  {key:'San Sebastián',name:'San Sebastián',flag:'🇪🇸',img:'images/san-sebastian/bahia.jpg',dates:['2026-10-22','2026-10-23'],range:'22-24 Oct · 2N'},
-  {key:'Bilbao',name:'Bilbao',flag:'🇪🇸',img:'images/bilbao/panoramica.jpg',dates:['2026-10-24','2026-10-25'],range:'24-26 Oct · 2N'},
-  {key:'Madrid',name:'Madrid',flag:'🇪🇸',img:'images/madrid/palacio-real.jpg',dates:['2026-10-26','2026-10-27','2026-10-28','2026-10-29','2026-10-30','2026-10-31'],range:'26-31 Oct · 5N'}
-];
-let CITIES=BASE_CITIES.slice();
+const MES=['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+let CITIES=[];  // se construye desde DATA.trip_cities (multi-viaje)
 const SUGG={
   'Paris':[{t:'Crucero por el Sena',img:'images/paris/sena.jpg',r:'8.1',rev:'13577',p:'$19',cat:'actividad'},{t:'Louvre sin filas',img:'images/paris/louvre.jpg',r:'8.5',rev:'9200',p:'$32',cat:'museo'},{t:'Cima de la Torre Eiffel',img:'images/paris/eiffel.jpg',r:'8.7',rev:'21043',p:'$45',cat:'actividad'},{t:'Versalles día completo',img:'images/paris/versalles.jpg',r:'8.6',rev:'7810',p:'$65',cat:'museo'}],
   'Bordeaux':[{t:'Tour viñedos Saint-Émilion',img:'images/bordeaux/saint-emilion.jpg',r:'9.0',rev:'3412',p:'$115',cat:'viñedo'},{t:'Cité du Vin + cata',img:'images/bordeaux/cite-du-vin.jpg',r:'8.2',rev:'2104',p:'$22',cat:'museo'},{t:'Ostras + vino en el mercado',img:'images/bordeaux/oysters.jpg',r:'8.8',rev:'915',p:'$35',cat:'comida'}],
@@ -16,27 +10,31 @@ const SUGG={
   'Bilbao':[{t:'Entrada Museo Guggenheim',img:'images/bilbao/guggenheim.jpg',r:'9.0',rev:'5421',p:'$16',cat:'museo'},{t:'Txikiteo de pintxos',img:'images/bilbao/mercado-ribera.jpg',r:'8.9',rev:'1106',p:'$55',cat:'comida'},{t:'Bilbao esencial a pie',img:'images/bilbao/casco-viejo.jpg',r:'8.5',rev:'842',p:'$25',cat:'paseo'}],
   'Madrid':[{t:'Museo del Prado sin filas',img:'images/madrid/plaza-mayor.jpg',r:'8.6',rev:'12044',p:'$28',cat:'museo'},{t:'Show de flamenco',img:'images/madrid/tapas-madrid.jpg',r:'8.8',rev:'6530',p:'$35',cat:'actividad'},{t:'Toledo día completo',img:'images/madrid/toledo.jpg',r:'8.7',rev:'9012',p:'$55',cat:'museo'},{t:'Palacio Real',img:'images/madrid/palacio-real.jpg',r:'8.5',rev:'4310',p:'$18',cat:'museo'}]
 };
-let DATA={}, gCity='', gPayer='', chatStarted=false, pendingReceipt=null;
+let DATA={}, TRIPS=[], TRIP=null, gCity='', gPayer='', chatStarted=false, pendingReceipt=null;
+function activeTripId(){return localStorage.getItem('bayu_trip_id')||(TRIP&&TRIP.id)||'';}
+function tripStart(){return (TRIP&&TRIP.start_date)||'2026-10-16';}
+function tripEnd(){return (TRIP&&TRIP.end_date)||'2026-10-31';}
 const $=id=>document.getElementById(id);
 function esc(t){return (t==null?'':String(t)).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
-function dn(iso){const p=iso.split('-');const d=new Date(Date.UTC(+p[0],+p[1]-1,+p[2]));return DOW[d.getUTCDay()]+' '+(+p[2]);}
+function dn(iso){const p=iso.split('-');const d=new Date(Date.UTC(+p[0],+p[1]-1,+p[2]));return DOW[d.getUTCDay()]+' '+(+p[2])+' '+MES[+p[1]-1];}
 function wkey(){let k=localStorage.getItem('eurotrip_write_key');if(!k){k=prompt('Clave de escritura (David/Paty):');if(k)localStorage.setItem('eurotrip_write_key',k);}return k;}
 function money(n){return '$'+Number(n||0).toLocaleString('es-MX',{maximumFractionDigits:0});}
 function emptyState(icon,title,sub,btn){return '<div class="empty-rich"><div class="ei">'+icon+'</div><div class="et">'+esc(title)+'</div>'+(sub?'<div class="es">'+esc(sub)+'</div>':'')+(btn||'')+'</div>';}
-function openTrips(){/* FASE B multi-viaje — se cablea al sembrar trips */}
 let CITYKEYS=CITIES.map(c=>c.key);
 function cityByDate(date){const c=CITIES.find(c=>c.dates.includes(date));return c?c.key:null;}
 function resolveCity(a){if(a.city&&CITYKEYS.includes(a.city))return a.city;return cityByDate(a.activity_date)||CITIES[0].key;}
 function snapDateToCity(){const c=CITIES.find(c=>c.key===$('ma-city').value);if(!c)return;if($('ma-date').value&&!c.dates.includes($('ma-date').value))$('ma-date').value=c.dates[0];}
 function pad(n){return n<10?'0'+n:''+n;}
 function dateRange(s,e){const out=[];if(!s)return out;const a=new Date(s+'T00:00:00'),b=new Date((e||s)+'T00:00:00');for(let d=new Date(a);d<=b;d.setDate(d.getDate()+1))out.push(d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate()));return out;}
-function fmtRange(s,e){const dd=x=>x?(+x.slice(8,10))+'':'';if(!e||e===s)return dd(s)+' Oct · parada';return dd(s)+'-'+dd(e)+' Oct';}
+function fmtRange(s,e){if(!s)return '';const sd=+s.slice(8,10),sm=+s.slice(5,7)-1;if(!e||e===s)return sd+' '+MES[sm]+' · parada';const ed=+e.slice(8,10),em=+e.slice(5,7)-1;const nights=Math.max(1,Math.round((new Date(e+'T00:00:00')-new Date(s+'T00:00:00'))/86400000));return sd+(sm!==em?' '+MES[sm]:'')+'–'+ed+' '+MES[em]+' · '+nights+'N';}
 const DAYTRIPS=['Versalles','Saint-Émilion','Toledo'];
 function rebuildCities(){
-  const custom=(DATA.trip_cities||[]).map(tc=>({key:tc.name,name:tc.name,flag:tc.country_flag||'📍',img:tc.photo_url||'',custom:true,id:tc.id,start_date:tc.start_date,end_date:tc.end_date,notes:tc.notes,dates:dateRange(tc.start_date,tc.end_date),range:fmtRange(tc.start_date,tc.end_date)}));
-  CITIES=[...BASE_CITIES.map(c=>({...c})),...custom].sort((a,b)=>((a.dates[0]||'9')<(b.dates[0]||'9'))?-1:1);
+  CITIES=(DATA.trip_cities||[]).map(tc=>({key:tc.name,name:tc.name,flag:tc.country_flag||'📍',img:tc.photo_url||'',custom:true,id:tc.id,start_date:tc.start_date,end_date:tc.end_date,notes:tc.notes,dates:dateRange(tc.start_date,tc.end_date),range:fmtRange(tc.start_date,tc.end_date)}))
+    .sort((a,b)=>((a.dates[0]||'9')<(b.dates[0]||'9'))?-1:((a.dates[0]||'9')>(b.dates[0]||'9')?1:0));
   CITYKEYS=CITIES.map(c=>c.key);
-  const sel=$('ma-city');if(sel)sel.innerHTML='<option value="">—</option>'+CITIES.map(c=>'<option value="'+esc(c.key)+'">'+esc(c.flag)+' '+esc(c.name)+'</option>').join('')+DAYTRIPS.map(d=>'<option value="'+d+'">🚏 '+d+'</option>').join('');
+  const opts='<option value="">—</option>'+CITIES.map(c=>'<option value="'+esc(c.key)+'">'+esc(c.flag)+' '+esc(c.name)+'</option>').join('');
+  ['me-city','mr-city','ml-city'].forEach(function(id){const s=$(id);if(s){const v=s.value;s.innerHTML=opts;s.value=v;}});
+  const sel=$('ma-city');if(sel){const v=sel.value;sel.innerHTML=opts+DAYTRIPS.map(d=>'<option value="'+d+'">🚏 '+d+'</option>').join('');sel.value=v;}
 }
 function openCity(c){$('mc-id').value=c.id||'';$('mc-name').value=c.name||'';$('mc-flag').value=c.country_flag||c.flag||'📍';$('mc-start').value=c.start_date||'';$('mc-end').value=c.end_date||'';$('mc-photo').value=c.photo_url||c.img||'';$('mc-notes').value=c.notes||'';$('m-city').classList.add('open');}
 function openCity2(id){const c=(DATA.trip_cities||[]).find(x=>x.id===id);if(c)openCity(c);}
@@ -44,12 +42,13 @@ async function saveCity(){const id=$('mc-id').value,n=$('mc-name').value.trim(),
 async function delCity(id){if(confirm('¿Quitar esta parada? Las actividades quedan guardadas.'))await write({action:'delete',table:'trip_cities',id:id},'Quitada');}
 let toastT;
 function showToast(msg,err){const t=$('toast');if(!t)return;t.textContent=msg;t.className='toast show'+(err?' err':'');clearTimeout(toastT);toastT=setTimeout(()=>{t.className='toast'+(err?' err':'');},1900);}
-function tripInfo(){const start=new Date('2026-10-16T00:00:00'),end=new Date('2026-10-31T23:59:59'),now=new Date();
+function tripInfo(){if(!TRIP||!TRIP.start_date)return (TRIP&&TRIP.name)?('✦ '+TRIP.name):'Tu viaje';
+  const start=new Date(tripStart()+'T00:00:00'),end=new Date(tripEnd()+'T23:59:59'),now=new Date();
   if(now<start)return 'Faltan '+Math.ceil((start-now)/86400000)+' días para el viaje 🧳';
   if(now>end)return '¡Viaje terminado! 🏠';
   return 'Día '+(Math.floor((now-start)/86400000)+1)+' del viaje ✈️';}
-function todayISO(){const n=new Date(),start=new Date('2026-10-16T00:00:00'),end=new Date('2026-10-31T23:59:59');if(n<start||n>end)return null;const z=new Date(n.getTime()-n.getTimezoneOffset()*60000);return z.toISOString().slice(0,10);}
-function defaultOpenKey(){const t=todayISO();if(t){const c=CITIES.find(c=>c.dates.includes(t));if(c)return c.key;}return 'Paris';}
+function todayISO(){if(!TRIP||!TRIP.start_date)return null;const n=new Date(),start=new Date(tripStart()+'T00:00:00'),end=new Date(tripEnd()+'T23:59:59');if(n<start||n>end)return null;const z=new Date(n.getTime()-n.getTimezoneOffset()*60000);return z.toISOString().slice(0,10);}
+function defaultOpenKey(){const t=todayISO();if(t){const c=CITIES.find(c=>c.dates.includes(t));if(c)return c.key;}return CITIES[0]?CITIES[0].key:'';}
 function openKeys(){const st=localStorage.getItem('eurotrip_open');if(st){try{return new Set(JSON.parse(st));}catch(e){}}return new Set([defaultOpenKey()]);}
 function toggleCity(ci){const el=$('city-'+ci);el.classList.toggle('open');const set=openKeys();const k=CITIES[ci].key;if(el.classList.contains('open'))set.add(k);else set.delete(k);localStorage.setItem('eurotrip_open',JSON.stringify([...set]));}
 
@@ -57,19 +56,37 @@ function go(tab){
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
   $('s-'+tab).classList.add('active');
   document.querySelectorAll('.tabbar button').forEach(b=>b.classList.toggle('on',b.dataset.tab===tab));
+  if(tab==='viajes')renderViajes();
   if(tab==='explore')renderExplore();
   if(tab==='perfil')renderPerfil();
   if(tab==='claudia')startChat();
   window.scrollTo(0,0);
 }
+function openTrips(){go('viajes');}
 async function load(){
   if(!DATA.activities)$('planner-root').innerHTML='<div class="skel skel-city"></div><div class="skel skel-city"></div><div class="skel skel-city"></div>';
   try{
-    const r=await fetch('/api/data',{cache:'no-store'});const j=await r.json();
-    DATA=j.data||{};rebuildCities();renderPlanner();renderGastos();
+    const tid=activeTripId();
+    const r=await fetch('/api/data'+(tid?'?trip='+encodeURIComponent(tid):''),{cache:'no-store'});const j=await r.json();
+    DATA=j.data||{};TRIPS=j.trips||[];TRIP=j.trip||null;
+    if(TRIP)localStorage.setItem('bayu_trip_id',TRIP.id);
+    applyTripChrome();rebuildCities();renderPlanner();renderGastos();
+    if($('s-viajes').classList.contains('active'))renderViajes();
     if($('s-perfil').classList.contains('active'))renderPerfil();
     if($('s-explore').classList.contains('active'))renderExplore();
   }catch(e){ $('planner-root').innerHTML='<p class="empty">Sin conexión. '+esc(e.message)+'</p>'; }
+}
+/* ---------- chrome del viaje activo (hero + header + límites de fecha) ---------- */
+function heroDates(){if(!TRIP||!TRIP.start_date)return '';const s=TRIP.start_date,e=TRIP.end_date||s;const sd=+s.slice(8,10),sm=+s.slice(5,7)-1,ed=+e.slice(8,10),em=+e.slice(5,7)-1,yr=s.slice(0,4);return sd+' '+MES[sm]+' → '+ed+' '+MES[em]+' '+yr;}
+function heroKicker(){if(!TRIP)return '✦ Tu viaje';const t=todayISO();if(t)return '✦ Viaje en curso';if(TRIP.start_date&&new Date(tripEnd()+'T23:59:59')<new Date())return '✦ Viaje terminado';return '✦ Tu próximo viaje';}
+function setDateBounds(){const lo=TRIP&&TRIP.start_date?TRIP.start_date:'',hi=TRIP&&TRIP.end_date?TRIP.end_date:'';['ma-date','mr-date','mc-start','mc-end'].forEach(function(id){const el=$(id);if(!el)return;if(lo)el.min=lo;else el.removeAttribute('min');if(hi)el.max=hi;else el.removeAttribute('max');});}
+function applyTripChrome(){if(!TRIP)return;
+  const img=$('hero-img');if(img){if(TRIP.cover_image){img.src=TRIP.cover_image;img.style.display='';}}
+  const ttl=$('hero-title');if(ttl)ttl.textContent=TRIP.name+(TRIP.subtitle?' · '+TRIP.subtitle:'');
+  const pill=$('hero-pill');if(pill)pill.textContent=TRIP.start_date?('📅 '+heroDates()):'📅 Sin fechas aún';
+  const kick=$('hero-kicker');if(kick)kick.textContent=heroKicker();
+  const bsub=$('brand-sub');if(bsub)bsub.textContent=TRIP.subtitle||(TRIP.start_date?heroDates():'Tu viaje');
+  setDateBounds();
 }
 
 /* ---------- PLANNER ---------- */
@@ -82,6 +99,7 @@ function renderPlanner(){
   if(started)html+='<div class="pg"><span>✓ Actividades hechas</span><span>'+doneA+' / '+totalA+' ('+pg+'%)</span></div><div class="bar"><i style="width:'+pg+'%"></i></div>';
   else html+='<div class="pg"><span>📋 '+totalA+' actividades · '+(DATA.reservations||[]).length+' reservas</span><span>'+CITIES.length+' ciudades</span></div>';
   html+='</div>'+wishHtml(wish);
+  if(!CITIES.length)html+=emptyState('🗺️','Este viaje aún no tiene ciudades','Agrega tu primera ciudad o parada para empezar a planear día por día.','<button class="eb" onclick="openCity({})">+ Agregar ciudad</button>');
   CITIES.forEach((c,ci)=>{
     const cityActs=acts.filter(a=>a.activity_date&&resolveCity(a)===c.key);
     const hotel=hotels.find(h=>h.city===c.key), cnt=cityActs.length, dco=cityActs.filter(a=>a.status==='hecho').length;
@@ -97,7 +115,7 @@ function renderPlanner(){
     [...c.dates,..._extra].sort().forEach(d=>{
       const da=cityActs.filter(a=>a.activity_date===d).sort((a,b)=>(a.sort_order||0)-(b.sort_order||0)||((a.start_time||'')>(b.start_time||'')?1:-1));
       const isToday=(d===today);
-      html+='<div class="day'+(isToday?' today':'')+'"><div class="day-h">'+dn(d)+' Oct'+(isToday?'<span class="hoy-badge">HOY</span>':'')+'</div>'+resHtml(d);
+      html+='<div class="day'+(isToday?' today':'')+'"><div class="day-h">'+dn(d)+(isToday?'<span class="hoy-badge">HOY</span>':'')+'</div>'+resHtml(d);
       da.forEach((a,idx)=>{
         const done=a.status==='hecho';
         const up=idx>0?'<button class="mvbtn" onclick="moveAct(\''+a.id+'\',-1)">▲</button>':'';
@@ -141,7 +159,7 @@ function suggRow(key,name){
   sg.forEach((x,xi)=>{h+='<div class="sugg"><img src="'+x.img+'" alt="" onerror="this.style.display=\'none\'" onclick="openSug(\''+esc(key)+'\','+xi+')"/><div class="si"><div class="st">'+esc(x.t)+'</div><div class="sr">⭐ '+x.r+' · '+x.rev+' reseñas</div><div class="sp">desde '+x.p+'</div><button class="sadd" onclick="addSug(\''+esc(key)+'\','+xi+')">+ Agregar</button></div></div>';});
   return h+'</div></div>';
 }
-function firstDay(key){const c=CITIES.find(c=>c.key===key);return c?c.dates[0]:'2026-10-16';}
+function firstDay(key){const c=CITIES.find(c=>c.key===key);return c?c.dates[0]:tripStart();}
 function addSug(key,i){const x=(SUGG[key]||[])[i];if(!x)return;go('planner');openAct({title:x.t,category:x.cat,city:key});}
 function openSug(key,i){const x=(SUGG[key]||[])[i];if(!x)return;window.open('https://www.getyourguide.com/s/?q='+encodeURIComponent(x.t+' '+key),'_blank');}
 function openAct(a){$('ma-title').textContent=a.id?'Editar actividad':'Nueva actividad';$('ma-id').value=a.id||'';$('ma-date').value=a.activity_date||'';$('ma-time').value=a.start_time?a.start_time.slice(0,5):'';$('ma-tit').value=a.title||'';$('ma-cat').value=a.category||'';$('ma-city').value=a.city||'';$('ma-notes').value=a.notes||'';$('ma-link').value=a.link||'';$('ma-map').value=a.map_url||'';$('ma-tickets').value=a.tickets||'';$('m-act').classList.add('open');}
@@ -236,7 +254,8 @@ function emergencyHtml(){return '<div class="sec-h">🆘 Emergencia</div><div cl
 
 /* ---------- PERFIL ---------- */
 function renderPerfil(){const hotels=DATA.hotel_choices||[];
-  let h='<div class="bcard"><div class="lbl">El viaje</div><div style="font-size:1.2rem;font-weight:800;margin:.2rem 0">Eurotrip · Francia + País Vasco</div><div style="color:var(--muted);font-size:.88rem">15 noches · 16–31 Oct 2026 · David & Paty</div></div>';
+  const nm=(TRIP&&TRIP.name)||'Tu viaje',sub=(TRIP&&TRIP.subtitle)?' · '+TRIP.subtitle:'',dd=(TRIP&&TRIP.start_date)?heroDates():'Sin fechas aún';
+  let h='<div class="bcard"><div class="lbl">El viaje</div><div style="font-size:1.2rem;font-weight:800;margin:.2rem 0">'+esc(nm+sub)+'</div><div style="color:var(--muted);font-size:.88rem">'+esc(dd)+'</div><button class="chip" style="margin-top:.6rem" onclick="go(\'viajes\')">✈️ Cambiar de viaje</button></div>';
   h+='<div class="bcard"><div class="lbl" style="margin-bottom:.2rem">Hoteles</div>';
   CITIES.forEach(c=>{const ho=hotels.find(x=>x.city===c.key);h+='<div class="pf-row"><span>'+c.flag+' '+esc(c.name)+'</span><span style="color:var(--muted)">'+(ho?(ho.confirmed?'✅ '+esc(ho.hotel_name):'⏳ por definir'):'—')+'</span></div>';});
   h+='</div>';
@@ -244,10 +263,46 @@ function renderPerfil(){const hotels=DATA.hotel_choices||[];
   const _tm=localStorage.getItem('bayu_theme')||'auto';
   h+='<div class="bcard"><div class="lbl" style="margin-bottom:.4rem">🎨 Tema</div><div class="seg">'+['light','auto','dark'].map(function(x){return '<button class="seg-btn'+(_tm===x?' on':'')+'" onclick="setTheme(\''+x+'\')">'+({light:'☀️ Claro',auto:'🔄 Auto',dark:'🌙 Oscuro'}[x])+'</button>';}).join('')+'</div></div>';
   h+='<button class="pf-btn" onclick="changeKey()">🔑 Cambiar clave de escritura</button><a class="pf-btn" href="/guia">📖 Guía editorial completa</a><button class="pf-btn" onclick="alert(\'Para instalar: Safari → Compartir → Agregar a inicio. Chrome: ⋮ → Instalar app.\')">📲 Cómo instalar la app</button><button class="pf-btn" onclick="load();showToast(\'Actualizado ✓\')">🔄 Recargar datos</button>';
-  h+='<div style="text-align:center;color:var(--muted);font-size:.74rem;margin-top:1rem">Bayu PWA v9.6 · Arkamia Lab</div>';$('perfil-root').innerHTML=h;}
+  h+='<div style="text-align:center;color:var(--muted);font-size:.74rem;margin-top:1rem">Bayu PWA v9.7 · multi-viaje · Arkamia Lab</div>';$('perfil-root').innerHTML=h;}
 function applyTheme(){var m=localStorage.getItem('bayu_theme')||'auto';var d=m==='dark'||(m==='auto'&&matchMedia('(prefers-color-scheme:dark)').matches);document.documentElement.setAttribute('data-theme',d?'dark':'light');}
 function setTheme(m){localStorage.setItem('bayu_theme',m);applyTheme();renderPerfil();showToast('Tema: '+({light:'Claro',auto:'Auto',dark:'Oscuro'}[m]||m));}
 function changeKey(){localStorage.removeItem('eurotrip_write_key');const k=prompt('Nueva clave de escritura:');if(k){localStorage.setItem('eurotrip_write_key',k);showToast('Clave guardada ✓');}}
+
+/* ---------- MIS VIAJES (multi-viaje) ---------- */
+function statusBadge(s){return s==='active'?'<span class="tstat ta">● En curso</span>':s==='completed'?'<span class="tstat tc">✓ Terminado</span>':'<span class="tstat tp">◷ Planeando</span>';}
+function fmtTripDates(t){if(!t.start_date)return 'Sin fechas';const s=t.start_date,e=t.end_date||s;const sd=+s.slice(8,10),sm=+s.slice(5,7)-1,ed=+e.slice(8,10),em=+e.slice(5,7)-1,yr=s.slice(0,4);return sd+' '+MES[sm]+'–'+ed+' '+MES[em]+' '+yr;}
+function renderViajes(){
+  let h='';
+  if(!TRIPS.length){h=emptyState('🌍','Aún no hay viajes','Crea tu primer viaje para empezar a planear.','<button class="eb" onclick="openTrip({})">+ Nuevo viaje</button>');$('viajes-root').innerHTML=h;return;}
+  h+='<div class="sec-h" style="margin-top:.3rem">Toca un viaje para abrirlo</div>';
+  TRIPS.forEach(t=>{const on=TRIP&&t.id===TRIP.id;
+    h+='<div class="tcard'+(on?' on':'')+'" onclick="switchTrip(\''+t.id+'\')">';
+    h+='<div class="tcover"'+(t.cover_image?'':' style="background:linear-gradient(135deg,#FF5A5F,#FB923C)"')+'>'+(t.cover_image?'<img src="'+esc(t.cover_image)+'" onerror="this.style.display=\'none\'"/>':'')+'<span class="tflag">'+(t.flag||'🌍')+'</span></div>';
+    h+='<div class="tinfo"><div class="tname">'+esc(t.name)+(on?' <span class="tnow">activo</span>':'')+'</div>'+(t.subtitle?'<div class="tsub">'+esc(t.subtitle)+'</div>':'')+'<div class="tmeta">'+statusBadge(t.status)+' · '+fmtTripDates(t)+'</div></div>';
+    h+='<button class="tedit" onclick="event.stopPropagation();openTrip2(\''+t.id+'\')">✏️</button></div>';
+  });
+  h+='<button class="addbtn" style="margin-top:.8rem" onclick="openTrip({})">+ Nuevo viaje</button>';
+  $('viajes-root').innerHTML=h;
+}
+async function switchTrip(id){if(TRIP&&id===TRIP.id){go('planner');return;}localStorage.setItem('bayu_trip_id',id);DATA={};showToast('Cambiando de viaje…');await load();go('planner');}
+function openTrip(t){$('mt-id').value=t.id||'';$('mt-name').value=t.name||'';$('mt-sub').value=t.subtitle||'';$('mt-flag').value=t.flag||'🌍';$('mt-start').value=t.start_date||'';$('mt-end').value=t.end_date||'';$('mt-cover').value=t.cover_image||'';$('mt-status').value=t.status||'planning';$('mt-del').style.display=t.id?'block':'none';$('mt-title').textContent=t.id?'Editar viaje':'Nuevo viaje';$('m-trip').classList.add('open');}
+function openTrip2(id){const t=TRIPS.find(x=>x.id===id);if(t)openTrip(t);}
+async function saveTrip(){const id=$('mt-id').value,name=$('mt-name').value.trim();if(!name){alert('Ponle nombre al viaje');return;}
+  const row={name:name,subtitle:$('mt-sub').value||null,flag:$('mt-flag').value||'🌍',start_date:$('mt-start').value||null,end_date:$('mt-end').value||null,cover_image:$('mt-cover').value||null,status:$('mt-status').value||'planning'};
+  if(id){await write({action:'update',table:'trips',id:id,patch:row},'Viaje guardado ✓');closeM('m-trip');return;}
+  const k=wkey();if(!k)return;row.created_by='manual';
+  try{const r=await fetch('/api/write',{method:'POST',headers:{'Content-Type':'application/json','X-Write-Key':k},body:JSON.stringify({action:'insert',table:'trips',row:row})});const j=await r.json();
+    if(!j.ok){showToast(j.error||'Error',true);return;}
+    if(j.inserted&&j.inserted.id)localStorage.setItem('bayu_trip_id',j.inserted.id);
+    closeM('m-trip');showToast('Viaje creado ✓ — agrégale ciudades');await load();go('planner');
+  }catch(e){showToast('Sin red',true);}
+}
+async function delTrip(){const id=$('mt-id').value;if(!id)return;
+  if(TRIPS.length<=1){alert('No puedes borrar tu único viaje.');return;}
+  if(!confirm('¿Borrar este viaje y TODO su contenido (actividades, gastos, fotos, reservas…)? No se puede deshacer.'))return;
+  if(TRIP&&TRIP.id===id)localStorage.removeItem('bayu_trip_id');
+  closeM('m-trip');await write({action:'delete',table:'trips',id:id},'Viaje borrado');go('viajes');
+}
 
 /* ---------- CLAUDIA ---------- */
 let chatMsgs=[];
@@ -256,7 +311,7 @@ function startChat(){if(chatStarted)return;chatStarted=true;$('chat-chips').inne
 function chipSend(el){$('chat-in').value=el.textContent;sendChat();}
 function pushBub(role,text){const d=document.createElement('div');d.className='bub '+(role==='user'?'u':'a');d.textContent=text;$('chat-log').appendChild(d);d.scrollIntoView({behavior:'smooth'});return d;}
 async function sendChat(){const inp=$('chat-in'),t=inp.value.trim();if(!t)return;inp.value='';pushBub('user',t);chatMsgs.push({role:'user',content:t});const typing=pushBub('assistant','…');
-  try{const r=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({messages:chatMsgs})});const j=await r.json();const reply=j.reply||j.error||'(sin respuesta)';typing.textContent=reply;chatMsgs.push({role:'assistant',content:reply});if(j.tool_events&&j.tool_events.length){load();showToast('Plan actualizado ✓');}}catch(e){typing.textContent='Error: '+e.message;}}
+  try{const r=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({messages:chatMsgs,trip_id:activeTripId()})});const j=await r.json();const reply=j.reply||j.error||'(sin respuesta)';typing.textContent=reply;chatMsgs.push({role:'assistant',content:reply});if(j.tool_events&&j.tool_events.length){load();showToast('Plan actualizado ✓');}}catch(e){typing.textContent='Error: '+e.message;}}
 
 /* ---------- reservas / links (Push C) ---------- */
 const RES_ICON={flight:'✈️',hotel:'🏨',restaurant:'🍽️',train:'🚄',tour:'🎟️',transfer:'🚐',activity:'🎫',other:'📋'};
@@ -305,11 +360,12 @@ function mapDay(date){const acts=(DATA.activities||[]).filter(a=>a.activity_date
 /* ---------- shared ---------- */
 function closeM(id){$(id).classList.remove('open');}
 async function write(body,okMsg){const k=wkey();if(!k)return;
+  if(body.table!=='trips'&&!body.trip_id)body.trip_id=activeTripId();
   try{const r=await fetch('/api/write',{method:'POST',headers:{'Content-Type':'application/json','X-Write-Key':k},body:JSON.stringify(body)});const j=await r.json();
     if(!j.ok){showToast(j.error||'Error',true);if(/clave/i.test(j.error||''))localStorage.removeItem('eurotrip_write_key');return;}
     await load();showToast(okMsg||'Listo ✓');}catch(e){queuePush(body);showToast('Sin red: guardado, sincroniza al reconectar ⏳');}}
-async function writeMany(items,okMsg){const k=wkey();if(!k)return;
-  try{for(const it of items){await fetch('/api/write',{method:'POST',headers:{'Content-Type':'application/json','X-Write-Key':k},body:JSON.stringify({action:'update',table:'activities',id:it.id,patch:it.patch})});}await load();showToast(okMsg||'Listo ✓');}catch(e){items.forEach(it=>queuePush({action:'update',table:'activities',id:it.id,patch:it.patch}));showToast('Sin red ⏳');}}
+async function writeMany(items,okMsg){const k=wkey();if(!k)return;const tid=activeTripId();
+  try{for(const it of items){await fetch('/api/write',{method:'POST',headers:{'Content-Type':'application/json','X-Write-Key':k},body:JSON.stringify({action:'update',table:'activities',id:it.id,patch:it.patch,trip_id:tid})});}await load();showToast(okMsg||'Listo ✓');}catch(e){items.forEach(it=>queuePush({action:'update',table:'activities',id:it.id,patch:it.patch,trip_id:tid}));showToast('Sin red ⏳');}}
 
 /* offline queue + recibos (Push D) */
 function queueGet(){try{return JSON.parse(localStorage.getItem('eurotrip_queue')||'[]');}catch(e){return [];}}
