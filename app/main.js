@@ -14,6 +14,8 @@ let DATA={}, TRIPS=[], TRIP=null, gCity='', gPayer='', chatStarted=false, pendin
 function activeTripId(){return localStorage.getItem('bayu_trip_id')||(TRIP&&TRIP.id)||'';}
 function tripStart(){return (TRIP&&TRIP.start_date)||'2026-10-16';}
 function tripEnd(){return (TRIP&&TRIP.end_date)||'2026-10-31';}
+const SEED_TRIP='e0000000-0000-4000-8000-000000000001';
+function isEurotrip(){return TRIP&&TRIP.id===SEED_TRIP;}
 const $=id=>document.getElementById(id);
 function esc(t){return (t==null?'':String(t)).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
 function dn(iso){const p=iso.split('-');const d=new Date(Date.UTC(+p[0],+p[1]-1,+p[2]));return DOW[d.getUTCDay()]+' '+(+p[2])+' '+MES[+p[1]-1];}
@@ -220,9 +222,16 @@ async function saveExp(){const id=$('me-id').value,desc=$('me-desc').value.trim(
 
 /* ---------- EXPLORE ---------- */
 const TIPS=[['🛂','Schengen / ETIAS','Sin visa para mexicanos (<90 días). ETIAS podría arrancar en 2026. Pasaporte con 6+ meses de vigencia.'],['📶','eSIM','Holafly o Airalo, ~€80 datos ilimitados Europa. Actívala al aterrizar en CDG.'],['🧳','Equipaje','3 maletas total entre los dos. Cambias de hotel cada 2-4 noches — viaja ligero.'],['🔌','Enchufe','Europa tipo C/E (clavijas redondas, 230V). Lleva 1-2 adaptadores.'],['💶','Tax-free','Compras grandes: factura tax-free (DIVA) sellada en Barajas antes de volar el 31.'],['🍢','Pintxos','De pie, de barra en barra. Pide 1-2 + txakoli. Bar Néstor: apúntate 30 min antes.'],['🎨','Guggenheim','Entrada online con horario (€16). Mejor foto desde el puente de La Salve.'],['🍷','Saint-Émilion','Octubre = post-vendimia. Tour medio día con cata. Suéter + zapatos cerrados.'],['🌧️','Clima Oct','París 12-18° · Bordeaux 10-19° · País Vasco 12-20° (lluvioso) · Madrid 10-19°.'],['✈️','Vuelos','Ida AM44 MTY 15 Oct→CDG 16 (29A/B). Regreso AM35 MAD 31 Oct 10:30am→MTY (34H/J).']];
-function renderExplore(){let h='<button class="pf-btn" onclick="openTrans()">🌐 Traductor</button>'+docsHtml()+albumHtml()+exploreTop()+'<div class="sec-h">💡 Tips del viaje</div>'+TIPS.map(t=>'<div class="tip"><h3>'+t[0]+' '+t[1]+'</h3><p>'+t[2]+'</p></div>').join('');
-  h+='<div class="sec-h">🎟️ Ideas para hacer</div>';CITIES.forEach(c=>{h+='<div style="font-weight:800;font-size:.86rem;margin:.6rem 0 .2rem">'+c.flag+' '+esc(c.name)+'</div>'+suggRow(c.key,c.name);});
-  h+=packingHtml()+emergencyHtml()+'<a class="pf-btn" href="/guia" style="margin-top:1.2rem">📖 Abrir la guía completa por ciudad →</a>';$('explore-root').innerHTML=h;}
+const TIPS_GENERIC=[['🛂','Documentos','Revisa visa/permisos de tu destino y que el pasaporte tenga 6+ meses de vigencia.'],['📶','Conectividad','Una eSIM (Holafly/Airalo) te deja con datos apenas aterrizas.'],['🔌','Enchufes','Checa el tipo de clavija y voltaje del país y lleva adaptador.'],['🧳','Equipaje','Viaja ligero si cambias de hotel seguido. Revisa límites de tu aerolínea.'],['💳','Dinero','Avisa a tu banco, lleva algo de efectivo local y una tarjeta sin comisión.'],['🤖','Pregúntale a Claudia','Pídele tips, clima, números de emergencia o ideas específicas de tu destino.']];
+function renderExplore(){const euro=isEurotrip();
+  let h='<button class="pf-btn" onclick="openTrans()">🌐 Traductor</button>'+docsHtml()+albumHtml()+exploreTop();
+  const tips=euro?TIPS:TIPS_GENERIC;
+  h+='<div class="sec-h">💡 Tips '+(euro?'del viaje':'de viaje')+'</div>'+tips.map(t=>'<div class="tip"><h3>'+t[0]+' '+t[1]+'</h3><p>'+t[2]+'</p></div>').join('');
+  const citiesWithSugg=CITIES.filter(c=>(SUGG[c.key]||[]).length);
+  if(citiesWithSugg.length){h+='<div class="sec-h">🎟️ Ideas para hacer</div>';citiesWithSugg.forEach(c=>{h+='<div style="font-weight:800;font-size:.86rem;margin:.6rem 0 .2rem">'+c.flag+' '+esc(c.name)+'</div>'+suggRow(c.key,c.name);});}
+  h+=packingHtml()+emergencyHtml();
+  if(euro)h+='<a class="pf-btn" href="/guia" style="margin-top:1.2rem">📖 Abrir la guía completa por ciudad →</a>';
+  $('explore-root').innerHTML=h;}
 function openTrans(){$('tr-in').value='';$('tr-out').textContent='';$('m-trans').classList.add('open');}
 async function doTranslate(){const t=$('tr-in').value.trim();if(!t)return;$('tr-out').textContent='Traduciendo…';try{const r=await fetch('/api/translate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text:t,target:$('tr-lang').value})});const j=await r.json();$('tr-out').textContent=j.translation||j.error||'(sin resultado)';}catch(e){$('tr-out').textContent='Error: '+e.message;}}
 const PACK_DEFAULT=['Pasaporte','Visa/ETIAS (si aplica)','Adaptador EU tipo C/E','Cargadores + power bank','eSIM activada','Tarjetas + efectivo €','Medicinas personales','Ropa de otoño (capas)','Paraguas/impermeable','Zapatos cómodos','Copia de reservas','Cámara'];
@@ -244,7 +253,12 @@ async function uploadAndSave(file,kind,city){const isImg=(file.type||'').startsW
 function docsHtml(){const docs=(DATA.media||[]).filter(m=>m.kind==='document');let h='<div class="sec-h">📄 Documentos <button class="chip" style="float:right" onclick="docPick()">+ Subir</button></div><div class="bcard">';if(!docs.length)h+=emptyState('📄','Sin documentos','Pasaporte, pases de abordar, vouchers, seguro… súbelos para tenerlos offline.','<button class="eb" onclick="docPick()">+ Subir documento</button>');docs.forEach(m=>{h+='<div class="doc-row"><a href="'+esc(m.url)+'" target="_blank">📎 '+esc(m.title||'documento')+'</a><button class="x" onclick="delMedia(\''+m.id+'\')">🗑️</button></div>';});return h+'</div>';}
 function albumHtml(){const photos=(DATA.media||[]).filter(m=>m.kind==='photo'||m.kind==='video');let h='<div class="sec-h">📸 Álbum por ciudad</div>';CITIES.forEach(c=>{const ph=photos.filter(m=>m.city===c.key);h+='<div class="bcard"><div style="display:flex;justify-content:space-between;align-items:center"><strong>'+c.flag+' '+esc(c.name)+(ph.length?' · '+ph.length:'')+'</strong><button class="chip" onclick="albumPick(\''+esc(c.key)+'\')">+ Foto/Video</button></div>';if(ph.length)h+='<div class="media-grid">'+ph.map(m=>'<div class="media-item">'+(m.kind==='video'?'<video src="'+esc(m.url)+'" style="width:100%;aspect-ratio:1;object-fit:cover;border-radius:8px" onclick="window.open(\''+esc(m.url)+'\')"></video>':'<img src="'+esc(m.url)+'" onclick="window.open(\''+esc(m.url)+'\')"/>')+'<button class="del" onclick="delMedia(\''+m.id+'\')">×</button></div>').join('')+'</div>';h+='</div>';});return h;}
 async function delMedia(id){if(confirm('¿Borrar este archivo?'))await write({action:'delete',table:'media',id:id},'Borrado');}
-function emergencyHtml(){return '<div class="sec-h">🆘 Emergencia</div><div class="bcard">'
+function emergencyHtml(){
+  if(!isEurotrip())return '<div class="sec-h">🆘 Emergencia</div><div class="bcard">'
+    +'<div class="pf-row"><span>🚨 Emergencia general (UE y varios países)</span><a href="tel:112" style="color:var(--red);font-weight:800">112</a></div>'
+    +'<div class="pf-row" style="color:var(--muted);font-size:.82rem">📌 Pídele a Claudia los números locales de emergencia, embajada de México y qué hacer si pierdes tarjetas en tu destino.</div>'
+    +'</div>';
+  return '<div class="sec-h">🆘 Emergencia</div><div class="bcard">'
   +'<div class="pf-row"><span>🚨 Emergencias (toda la UE)</span><a href="tel:112" style="color:var(--red);font-weight:800">112</a></div>'
   +'<div class="pf-row"><span>🇫🇷 Francia · SAMU médico</span><a href="tel:15" style="color:var(--red);font-weight:800">15</a></div>'
   +'<div class="pf-row"><span>🇫🇷 Francia · Policía</span><a href="tel:17" style="color:var(--red);font-weight:800">17</a></div>'
@@ -263,7 +277,7 @@ function renderPerfil(){const hotels=DATA.hotel_choices||[];
   const _tm=localStorage.getItem('bayu_theme')||'auto';
   h+='<div class="bcard"><div class="lbl" style="margin-bottom:.4rem">🎨 Tema</div><div class="seg">'+['light','auto','dark'].map(function(x){return '<button class="seg-btn'+(_tm===x?' on':'')+'" onclick="setTheme(\''+x+'\')">'+({light:'☀️ Claro',auto:'🔄 Auto',dark:'🌙 Oscuro'}[x])+'</button>';}).join('')+'</div></div>';
   h+='<button class="pf-btn" onclick="changeKey()">🔑 Cambiar clave de escritura</button><a class="pf-btn" href="/guia">📖 Guía editorial completa</a><button class="pf-btn" onclick="alert(\'Para instalar: Safari → Compartir → Agregar a inicio. Chrome: ⋮ → Instalar app.\')">📲 Cómo instalar la app</button><button class="pf-btn" onclick="load();showToast(\'Actualizado ✓\')">🔄 Recargar datos</button>';
-  h+='<div style="text-align:center;color:var(--muted);font-size:.74rem;margin-top:1rem">Bayu PWA v9.7 · multi-viaje · Arkamia Lab</div>';$('perfil-root').innerHTML=h;}
+  h+='<div style="text-align:center;color:var(--muted);font-size:.74rem;margin-top:1rem">Bayu PWA v9.8 · multi-viaje · Arkamia Lab</div>';$('perfil-root').innerHTML=h;}
 function applyTheme(){var m=localStorage.getItem('bayu_theme')||'auto';var d=m==='dark'||(m==='auto'&&matchMedia('(prefers-color-scheme:dark)').matches);document.documentElement.setAttribute('data-theme',d?'dark':'light');}
 function setTheme(m){localStorage.setItem('bayu_theme',m);applyTheme();renderPerfil();showToast('Tema: '+({light:'Claro',auto:'Auto',dark:'Oscuro'}[m]||m));}
 function changeKey(){localStorage.removeItem('eurotrip_write_key');const k=prompt('Nueva clave de escritura:');if(k){localStorage.setItem('eurotrip_write_key',k);showToast('Clave guardada ✓');}}
@@ -284,7 +298,7 @@ function renderViajes(){
   h+='<button class="addbtn" style="margin-top:.8rem" onclick="openTrip({})">+ Nuevo viaje</button>';
   $('viajes-root').innerHTML=h;
 }
-async function switchTrip(id){if(TRIP&&id===TRIP.id){go('planner');return;}localStorage.setItem('bayu_trip_id',id);DATA={};showToast('Cambiando de viaje…');await load();go('planner');}
+async function switchTrip(id){if(TRIP&&id===TRIP.id){go('planner');return;}localStorage.setItem('bayu_trip_id',id);DATA={};chatStarted=false;chatMsgs=[];var cl=$('chat-log');if(cl)cl.innerHTML='';showToast('Cambiando de viaje…');await load();go('planner');}
 function openTrip(t){$('mt-id').value=t.id||'';$('mt-name').value=t.name||'';$('mt-sub').value=t.subtitle||'';$('mt-flag').value=t.flag||'🌍';$('mt-start').value=t.start_date||'';$('mt-end').value=t.end_date||'';$('mt-cover').value=t.cover_image||'';$('mt-status').value=t.status||'planning';$('mt-del').style.display=t.id?'block':'none';$('mt-title').textContent=t.id?'Editar viaje':'Nuevo viaje';$('m-trip').classList.add('open');}
 function openTrip2(id){const t=TRIPS.find(x=>x.id===id);if(t)openTrip(t);}
 async function saveTrip(){const id=$('mt-id').value,name=$('mt-name').value.trim();if(!name){alert('Ponle nombre al viaje');return;}
@@ -306,8 +320,9 @@ async function delTrip(){const id=$('mt-id').value;if(!id)return;
 
 /* ---------- CLAUDIA ---------- */
 let chatMsgs=[];
-const CHIPS=['¿Cuánto llevamos gastado?','Agrega cena €80 en San Sebastián el 23','Mueve Versalles al 18','¿Qué falta por reservar?'];
-function startChat(){if(chatStarted)return;chatStarted=true;$('chat-chips').innerHTML=CHIPS.map(c=>'<div class="chat-chip" onclick="chipSend(this)">'+esc(c)+'</div>').join('');pushBub('assistant','¡Hola David! Soy Claudia. Puedo armar tu plan, registrar gastos y resolver dudas del viaje. Dime qué necesitas o toca una sugerencia 👇');}
+const CHIPS_EURO=['¿Cuánto llevamos gastado?','Agrega cena €80 en San Sebastián el 23','Mueve Versalles al 18','¿Qué falta por reservar?'];
+const CHIPS_GENERIC=['¿Cuánto llevamos gastado?','¿Qué falta por reservar?','Dame ideas para este viaje','Agrega una actividad a un día'];
+function startChat(){if(chatStarted)return;chatStarted=true;const chips=isEurotrip()?CHIPS_EURO:CHIPS_GENERIC;$('chat-chips').innerHTML=chips.map(c=>'<div class="chat-chip" onclick="chipSend(this)">'+esc(c)+'</div>').join('');pushBub('assistant','¡Hola! Soy Claudia'+(TRIP&&TRIP.name?' — tu asistente para '+TRIP.name:'')+'. Puedo armar tu plan, registrar gastos y resolver dudas del viaje. Dime qué necesitas o toca una sugerencia 👇');}
 function chipSend(el){$('chat-in').value=el.textContent;sendChat();}
 function pushBub(role,text){const d=document.createElement('div');d.className='bub '+(role==='user'?'u':'a');d.textContent=text;$('chat-log').appendChild(d);d.scrollIntoView({behavior:'smooth'});return d;}
 async function sendChat(){const inp=$('chat-in'),t=inp.value.trim();if(!t)return;inp.value='';pushBub('user',t);chatMsgs.push({role:'user',content:t});const typing=pushBub('assistant','…');
