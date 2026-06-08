@@ -14,7 +14,7 @@
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
 :root{--bg:#FAF6F1;--card:#fff;--ink:#11190C;--red:#FF5A5F;--green:#10B981;--muted:#8c8c84;--line:rgba(0,0,0,.08);--shadow:0 1px 4px rgba(0,0,0,.06);}
-html,body{background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Sora,system-ui,sans-serif;}
+html,body{background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Sora,system-ui,sans-serif;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-rendering:optimizeLegibility;}
 body{padding-bottom:calc(72px + env(safe-area-inset-bottom));min-height:100vh;}
 .screen{display:none;animation:fade .2s ease;}
 .screen.active{display:block;}
@@ -249,6 +249,53 @@ button:active,.pf-btn:active,.sugg:active,.chip:active,.city-photo:active{transf
 .btn-add,.pf-btn,.chip,.addbtn,.save,.sadd{transition:transform .1s,background .15s,box-shadow .15s;}
 .act-detail{animation:detin .25s ease both;}
 @keyframes detin{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
+
+/* ============ UX DEEP PASS #3 — editorial hero · empty states · tipografía ============ */
+/* — Tipografía global más afinada — */
+.app-bar h1{font-size:1.6rem;letter-spacing:-.03em;}
+.bn{letter-spacing:-.04em;}
+.sec-h{font-size:.78rem;font-weight:800;text-transform:uppercase;letter-spacing:.07em;opacity:.92;margin:1.4rem 0 .55rem;}
+.lbl{letter-spacing:.06em;}
+h2,h3{letter-spacing:-.02em;}
+
+/* — Hero editorial — */
+.hero{height:208px;border-radius:22px;cursor:pointer;}
+.hero img{object-position:center 38%;transition:transform 6s ease;}
+.hero:active img{transform:scale(1.04);}
+.hero .ov{background:linear-gradient(165deg,rgba(0,0,0,0) 18%,rgba(0,0,0,.28) 58%,rgba(0,0,0,.74) 100%);}
+.hero .ht{padding:1.15rem 1.2rem;width:100%;}
+.hero-kicker{display:inline-block;font-family:ui-monospace,'Space Mono',monospace;font-size:.64rem;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:#fff;opacity:.92;margin-bottom:.4rem;text-shadow:0 1px 4px rgba(0,0,0,.5);}
+.hero .ht h2{font-size:1.62rem;font-weight:800;line-height:1.06;letter-spacing:-.03em;text-shadow:0 2px 10px rgba(0,0,0,.45);}
+.hero-meta{display:flex;align-items:center;gap:.5rem;margin-top:.6rem;flex-wrap:wrap;}
+.hero .pill{margin-top:0;box-shadow:0 2px 8px rgba(0,0,0,.18);}
+.hero-switch{font-size:.72rem;font-weight:800;color:#fff;background:rgba(255,255,255,.2);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);padding:.32rem .65rem;border-radius:20px;border:1px solid rgba(255,255,255,.3);text-shadow:0 1px 3px rgba(0,0,0,.4);}
+
+/* — Summary card más editorial — */
+.pl-summary{padding:1.05rem 1.15rem;border:1px solid var(--line);}
+.pl-summary .cd{font-size:1.05rem;letter-spacing:-.02em;}
+.pl-summary .bar{height:8px;}
+
+/* — Cards: sombra + radios más suaves — */
+.bcard,.city,.pl-summary,.tip{box-shadow:0 2px 12px rgba(17,25,12,.05),0 1px 3px rgba(17,25,12,.04);}
+[data-theme="dark"] .bcard,[data-theme="dark"] .city,[data-theme="dark"] .pl-summary,[data-theme="dark"] .tip{box-shadow:0 2px 14px rgba(0,0,0,.45);}
+.city-photo{height:120px;}
+
+/* — Estados vacíos ILUSTRADOS — */
+.empty{padding:1.6rem 1.1rem;line-height:1.5;}
+.empty-rich{text-align:center;padding:2rem 1.2rem 1.7rem;display:flex;flex-direction:column;align-items:center;gap:.15rem;animation:fade .3s ease both;}
+.empty-rich .ei{width:62px;height:62px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.85rem;margin-bottom:.7rem;background:radial-gradient(circle at 32% 28%,rgba(255,90,95,.16),rgba(251,146,60,.12));box-shadow:inset 0 0 0 1px var(--line);}
+.empty-rich .et{font-size:.98rem;font-weight:800;letter-spacing:-.01em;color:var(--ink);}
+.empty-rich .es{font-size:.84rem;color:var(--muted);max-width:30ch;line-height:1.45;margin-top:.2rem;}
+.empty-rich .eb{margin-top:.9rem;background:linear-gradient(120deg,#FF5A5F,#FB923C);color:#fff;border:0;border-radius:12px;padding:.6rem 1.1rem;font-weight:800;font-size:.86rem;cursor:pointer;box-shadow:0 4px 12px rgba(255,90,95,.3);}
+
+/* — Inputs/labels más finos — */
+.sheet label{font-size:.7rem;letter-spacing:.05em;}
+.sheet input,.sheet select,.sheet textarea{border-radius:12px;border-color:var(--line);transition:border-color .15s,box-shadow .15s;}
+.sheet input:focus,.sheet select:focus,.sheet textarea:focus{outline:0;border-color:var(--brand);box-shadow:0 0 0 3px rgba(255,90,95,.12);}
+
+/* — Chips/tip refinamiento — */
+.tip h3{letter-spacing:-.01em;}
+.chip{transition:background .15s,color .15s,border-color .15s;}
 </style>
 <script>(function(){try{var m=localStorage.getItem("bayu_theme")||"auto";var d=m==="dark"||(m==="auto"&&matchMedia("(prefers-color-scheme:dark)").matches);document.documentElement.setAttribute("data-theme",d?"dark":"light");}catch(e){}})();</script>
 </head>
@@ -256,11 +303,15 @@ button:active,.pf-btn:active,.sugg:active,.chip:active,.city-photo:active{transf
 
 <!-- PLANNER -->
 <section id="s-planner" class="screen active">
-  <div class="app-bar"><div class="brandbar"><img src="app/icon-192.png" alt="Bayu"/><div><div class="bn">Bayu</div><div class="sub">Tu viaje · 15–31 Oct 2026</div></div></div></div>
-  <div class="hero">
-    <img src="images/paris/eiffel.jpg" alt="" onerror="this.style.display='none'"/>
+  <div class="app-bar"><div class="brandbar"><img src="app/icon-192.png" alt="Bayu"/><div><div class="bn">Bayu</div><div class="sub" id="brand-sub">Tu viaje · 15–31 Oct 2026</div></div></div></div>
+  <div class="hero" id="hero" onclick="openTrips()">
+    <img id="hero-img" src="images/paris/eiffel.jpg" alt="" onerror="this.style.display='none'"/>
     <div class="ov"></div>
-    <div class="ht"><h2>Eurotrip · Francia + País Vasco</h2><span class="pill">📅 16 Oct → 31 Oct 2026</span></div>
+    <div class="ht">
+      <span class="hero-kicker" id="hero-kicker">✦ Tu próximo viaje</span>
+      <h2 id="hero-title">Eurotrip · Francia + País Vasco</h2>
+      <div class="hero-meta"><span class="pill" id="hero-pill">📅 16 Oct → 31 Oct 2026</span><span class="hero-switch" id="hero-switch">Cambiar ▾</span></div>
+    </div>
   </div>
   <div class="wrap"><div id="planner-root" class="loading">Cargando tu plan…</div></div>
   <button class="fab" onclick="openAct({})" title="Agregar actividad">+</button>

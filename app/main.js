@@ -22,6 +22,8 @@ function esc(t){return (t==null?'':String(t)).replace(/[&<>"]/g,c=>({'&':'&amp;'
 function dn(iso){const p=iso.split('-');const d=new Date(Date.UTC(+p[0],+p[1]-1,+p[2]));return DOW[d.getUTCDay()]+' '+(+p[2]);}
 function wkey(){let k=localStorage.getItem('eurotrip_write_key');if(!k){k=prompt('Clave de escritura (David/Paty):');if(k)localStorage.setItem('eurotrip_write_key',k);}return k;}
 function money(n){return '$'+Number(n||0).toLocaleString('es-MX',{maximumFractionDigits:0});}
+function emptyState(icon,title,sub,btn){return '<div class="empty-rich"><div class="ei">'+icon+'</div><div class="et">'+esc(title)+'</div>'+(sub?'<div class="es">'+esc(sub)+'</div>':'')+(btn||'')+'</div>';}
+function openTrips(){/* FASE B multi-viaje — se cablea al sembrar trips */}
 let CITYKEYS=CITIES.map(c=>c.key);
 function cityByDate(date){const c=CITIES.find(c=>c.dates.includes(date));return c?c.key:null;}
 function resolveCity(a){if(a.city&&CITYKEYS.includes(a.city))return a.city;return cityByDate(a.activity_date)||CITIES[0].key;}
@@ -127,7 +129,7 @@ function toggleDetail(id){const d=$('det-'+id);if(d)d.style.display=(d.style.dis
 async function rateAct(id,n){await write({action:'update',table:'activities',id:id,patch:{rating:n||null}},n?('⭐ '+n+' estrellas'):'Rating quitado');}
 function wishHtml(wish){
   let h='<div class="bcard"><div class="lbl" style="margin-bottom:.3rem">💡 Cosas por hacer (sin fecha)</div>';
-  if(!wish.length)h+='<div class="empty" style="padding:.9rem">Ideas que te recomienden y aún no sabes cuándo. Agrégalas aquí y luego les pones día.</div>';
+  if(!wish.length)h+=emptyState('💡','Sin pendientes sueltos','Ideas que te recomienden y aún no sabes cuándo. Agrégalas aquí y luego les pones día.');
   wish.forEach(a=>{const m=[];if(a.city)m.push('📍 '+esc(a.city));if(a.category)m.push((CAT[a.category]||'•')+' '+esc(a.category));
     h+='<div class="act"><span style="flex:0 0 auto;font-size:1.05rem;margin-top:.1rem">💡</span><div class="a-body"><div class="a-title">'+esc(a.title)+'</div>'+(m.length?'<div class="a-meta">'+m.join(' · ')+'</div>':'')+'</div><div class="a-act"><button onclick="editAct(\''+a.id+'\')" title="Ponerle día">📅</button><button onclick="delAct(\''+a.id+'\')">🗑️</button></div></div>';});
   h+='<button class="addbtn" style="margin-top:.5rem" onclick="openAct({})">+ Cosa por hacer (sin fecha)</button></div>';
@@ -176,7 +178,7 @@ function renderGastos(){
   html+='<div class="chips">'+['','David','Paty','Joint'].map(p=>'<div class="chip'+(gPayer===p?' on':'')+'" onclick="setFilter(\'payer\',\''+p+'\')">'+(p===''?'Todos':(p==='Joint'?'🤝 Juntos':'👤 '+p))+'</div>').join('')+'</div>';
   let list=exp.slice();if(gCity)list=list.filter(e=>e.city===gCity);if(gPayer)list=list.filter(e=>e.payer===gPayer);
   html+='<div class="bcard"><div class="lbl" style="margin-bottom:.3rem">Gastos'+(list.length?' ('+list.length+')':'')+'</div>';
-  if(!list.length)html+='<div class="empty">Sin gastos'+(gCity||gPayer?' con ese filtro':' aún')+'. Toca + para agregar.</div>';
+  if(!list.length)html+=(gCity||gPayer)?emptyState('🔍','Sin gastos con ese filtro','Prueba quitar el filtro de ciudad o pagador.'):emptyState('💸','Aún no hay gastos','Registra tu primer gasto y mira cómo va tu presupuesto en vivo.','<button class="eb" onclick="openExp({})">+ Agregar gasto</button>');
   list.slice(0,60).forEach(e=>{const orig=(e.currency&&e.currency!=='MXN'&&e.amount_original)?' ('+(e.currency==='EUR'?'€':'$')+e.amount_original+')':'';
     html+='<div class="exp"><div><div class="d">'+esc(e.description)+'</div><div class="m">'+(e.expense_date||'')+(e.city?' · '+esc(e.city):'')+(e.payer?' · '+esc(e.payer):'')+'</div></div><div style="display:flex;align-items:center;gap:.3rem">'+(e.receipt_url?'<a href="'+esc(e.receipt_url)+'" target="_blank" class="x">📎</a>':'')+'<span class="amt">'+money(e.amount_mxn)+orig+'</span><button class="x" onclick="editExpById(\''+e.id+'\')">✏️</button><button class="x" onclick="delExp(\''+e.id+'\')">🗑️</button></div></div>';});
   html+='</div>';
@@ -221,7 +223,7 @@ function albumPick(city){currentAlbumCity=city;$('album-file').click();}
 function albumUpload(input){const f=input.files[0];if(f)uploadAndSave(f,(f.type||'').startsWith('video')?'video':'photo',currentAlbumCity);input.value='';}
 function fileToB64Raw(file,cb){const rd=new FileReader();rd.onload=e=>cb(e.target.result.split(',')[1]);rd.readAsDataURL(file);}
 async function uploadAndSave(file,kind,city){const isImg=(file.type||'').startsWith('image/');if(!isImg&&file.size>4*1024*1024){showToast('Máx ~4MB por ahora (videos largos: próximamente)',true);return;}const ext=(file.name.split('.').pop()||'bin').toLowerCase();showToast('Subiendo…');const k=wkey();if(!k)return;const proceed=async(b64,ct,ex)=>{try{const up=await fetch('/api/upload',{method:'POST',headers:{'Content-Type':'application/json','X-Write-Key':k},body:JSON.stringify({content_b64:b64,contentType:ct,ext:ex})});const uj=await up.json();if(!uj.ok){showToast(uj.error||'Error al subir',true);return;}await write({action:'insert',table:'media',row:{kind:kind,title:file.name,url:uj.url,city:city||null,mime:file.type,created_by:'manual'}},kind==='document'?'Documento guardado ✓':'Subido ✓');}catch(e){showToast('Error de red',true);}};if(isImg)fileToB64Resized(file,1600,b64=>proceed(b64,'image/jpeg','jpg'));else fileToB64Raw(file,b64=>proceed(b64,file.type||'application/octet-stream',ext));}
-function docsHtml(){const docs=(DATA.media||[]).filter(m=>m.kind==='document');let h='<div class="sec-h">📄 Documentos <button class="chip" style="float:right" onclick="docPick()">+ Subir</button></div><div class="bcard">';if(!docs.length)h+='<div class="empty" style="padding:.8rem">Pasaporte, pases de abordar, vouchers, seguro… súbelos para tenerlos a la mano y offline.</div>';docs.forEach(m=>{h+='<div class="doc-row"><a href="'+esc(m.url)+'" target="_blank">📎 '+esc(m.title||'documento')+'</a><button class="x" onclick="delMedia(\''+m.id+'\')">🗑️</button></div>';});return h+'</div>';}
+function docsHtml(){const docs=(DATA.media||[]).filter(m=>m.kind==='document');let h='<div class="sec-h">📄 Documentos <button class="chip" style="float:right" onclick="docPick()">+ Subir</button></div><div class="bcard">';if(!docs.length)h+=emptyState('📄','Sin documentos','Pasaporte, pases de abordar, vouchers, seguro… súbelos para tenerlos offline.','<button class="eb" onclick="docPick()">+ Subir documento</button>');docs.forEach(m=>{h+='<div class="doc-row"><a href="'+esc(m.url)+'" target="_blank">📎 '+esc(m.title||'documento')+'</a><button class="x" onclick="delMedia(\''+m.id+'\')">🗑️</button></div>';});return h+'</div>';}
 function albumHtml(){const photos=(DATA.media||[]).filter(m=>m.kind==='photo'||m.kind==='video');let h='<div class="sec-h">📸 Álbum por ciudad</div>';CITIES.forEach(c=>{const ph=photos.filter(m=>m.city===c.key);h+='<div class="bcard"><div style="display:flex;justify-content:space-between;align-items:center"><strong>'+c.flag+' '+esc(c.name)+(ph.length?' · '+ph.length:'')+'</strong><button class="chip" onclick="albumPick(\''+esc(c.key)+'\')">+ Foto/Video</button></div>';if(ph.length)h+='<div class="media-grid">'+ph.map(m=>'<div class="media-item">'+(m.kind==='video'?'<video src="'+esc(m.url)+'" style="width:100%;aspect-ratio:1;object-fit:cover;border-radius:8px" onclick="window.open(\''+esc(m.url)+'\')"></video>':'<img src="'+esc(m.url)+'" onclick="window.open(\''+esc(m.url)+'\')"/>')+'<button class="del" onclick="delMedia(\''+m.id+'\')">×</button></div>').join('')+'</div>';h+='</div>';});return h;}
 async function delMedia(id){if(confirm('¿Borrar este archivo?'))await write({action:'delete',table:'media',id:id},'Borrado');}
 function emergencyHtml(){return '<div class="sec-h">🆘 Emergencia</div><div class="bcard">'
@@ -242,7 +244,7 @@ function renderPerfil(){const hotels=DATA.hotel_choices||[];
   const _tm=localStorage.getItem('bayu_theme')||'auto';
   h+='<div class="bcard"><div class="lbl" style="margin-bottom:.4rem">🎨 Tema</div><div class="seg">'+['light','auto','dark'].map(function(x){return '<button class="seg-btn'+(_tm===x?' on':'')+'" onclick="setTheme(\''+x+'\')">'+({light:'☀️ Claro',auto:'🔄 Auto',dark:'🌙 Oscuro'}[x])+'</button>';}).join('')+'</div></div>';
   h+='<button class="pf-btn" onclick="changeKey()">🔑 Cambiar clave de escritura</button><a class="pf-btn" href="/guia">📖 Guía editorial completa</a><button class="pf-btn" onclick="alert(\'Para instalar: Safari → Compartir → Agregar a inicio. Chrome: ⋮ → Instalar app.\')">📲 Cómo instalar la app</button><button class="pf-btn" onclick="load();showToast(\'Actualizado ✓\')">🔄 Recargar datos</button>';
-  h+='<div style="text-align:center;color:var(--muted);font-size:.74rem;margin-top:1rem">Eurotrip PWA v8.4 · Arkamia Lab</div>';$('perfil-root').innerHTML=h;}
+  h+='<div style="text-align:center;color:var(--muted);font-size:.74rem;margin-top:1rem">Bayu PWA v9.6 · Arkamia Lab</div>';$('perfil-root').innerHTML=h;}
 function applyTheme(){var m=localStorage.getItem('bayu_theme')||'auto';var d=m==='dark'||(m==='auto'&&matchMedia('(prefers-color-scheme:dark)').matches);document.documentElement.setAttribute('data-theme',d?'dark':'light');}
 function setTheme(m){localStorage.setItem('bayu_theme',m);applyTheme();renderPerfil();showToast('Tema: '+({light:'Claro',auto:'Auto',dark:'Oscuro'}[m]||m));}
 function changeKey(){localStorage.removeItem('eurotrip_write_key');const k=prompt('Nueva clave de escritura:');if(k){localStorage.setItem('eurotrip_write_key',k);showToast('Clave guardada ✓');}}
@@ -264,13 +266,13 @@ function resHtml(date){const rs=(DATA.reservations||[]).filter(r=>r.date===date)
 function exploreTop(){
   let h='<div class="sec-h">📋 Reservas <button class="chip" style="float:right" onclick="openRes({})">+ Reserva</button></div><div class="bcard">';
   const rs=(DATA.reservations||[]).slice().sort((a,b)=>((a.date||'')+(a.time||''))<((b.date||'')+(b.time||''))?-1:1);
-  if(!rs.length)h+='<div class="empty">Sin reservas aún. Agrega vuelos, hoteles, tours…</div>';
+  if(!rs.length)h+=emptyState('🎟️','Sin reservas todavía','Vuelos, hoteles, tours, cenas… guárdalos aquí y aparecen en tu itinerario por día.','<button class="eb" onclick="openRes({})">+ Agregar reserva</button>');
   rs.forEach(r=>{const ic=RES_ICON[r.type]||'📋';const meta=[r.date,r.time,(r.confirmation_code?'cód '+r.confirmation_code:''),r.cost].filter(Boolean).map(esc).join(' · ');
     h+='<div class="resv"><span class="ri">'+ic+'</span><div class="rb"><div class="rt">'+esc(r.title)+'</div><div class="rm">'+meta+(r.link?' · <a href="'+esc(r.link)+'" target="_blank">abrir</a>':'')+'</div></div><button class="rx" onclick="openRes2(\''+r.id+'\')">✏️</button><button class="rx" onclick="delRes(\''+r.id+'\')">🗑️</button></div>';});
   h+='</div>';
   const bm=(DATA.bookmarks||[]);
   h+='<div class="sec-h">🔖 Links <button class="chip" style="float:right" onclick="openLink({})">+ Link</button></div><div class="bcard">';
-  if(!bm.length)h+='<div class="empty">Sin links guardados.</div>';
+  if(!bm.length)h+=emptyState('🔖','Sin links guardados','Recetas, reseñas, mapas, artículos… guárdalos para tenerlos a mano.','<button class="eb" onclick="openLink({})">+ Agregar link</button>');
   bm.forEach(b=>{h+='<div class="linkrow"><a href="'+esc(b.url)+'" target="_blank">'+esc(b.title)+'</a><button class="rx" onclick="delBookmark(\''+b.id+'\')">🗑️</button></div>';});
   h+='</div>';
   return h;
