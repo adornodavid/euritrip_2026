@@ -123,12 +123,12 @@ function renderPlanner(){
         const up=idx>0?'<button class="mvbtn" onclick="moveAct(\''+a.id+'\',-1)">▲</button>':'';
         const dw=idx<da.length-1?'<button class="mvbtn" onclick="moveAct(\''+a.id+'\',1)">▼</button>':'';
         html+='<div class="act'+(done?' done':'')+'"><button class="chk" onclick="togAct(\''+a.id+'\','+done+')">'+(done?'✓':'')+'</button>';
-        html+='<div class="a-body" onclick="toggleDetail(\''+a.id+'\')"><div class="a-title">'+(a.start_time?'<span class="a-time">'+esc(a.start_time.slice(0,5))+'</span>':'')+esc(a.title)+(a.is_suggestion?'<span class="sug">sugerida</span>':'')+((a.link||a.map_url||a.tickets||a.notes)?' <span style="opacity:.4;font-size:.7rem">▾</span>':'')+'</div>';
+        html+='<div class="a-body" onclick="toggleDetail(\''+a.id+'\')"><div class="a-title">'+(a.start_time?'<span class="a-time">'+esc(a.start_time.slice(0,5))+'</span>':'')+esc(a.title)+(a.is_suggestion?'<span class="sug">sugerida</span>':'')+' <span style="opacity:.4;font-size:.7rem">▾</span></div>';
         const m=[];if(a.category)m.push((CAT[a.category]||'•')+' '+esc(a.category));
         if(m.length)html+='<div class="a-meta">'+m.join(' · ')+'</div>';
         html+='</div><div class="a-act">'+up+dw+'<button onclick="editAct(\''+a.id+'\')">✏️</button><button onclick="delAct(\''+a.id+'\')">🗑️</button></div></div>'+detailHtml(a);
       });
-      html+='<button class="addbtn" onclick="openAct({activity_date:\''+d+'\',city:\''+esc(c.key)+'\'})">+ actividad el '+dn(d)+'</button>'+(da.length?'<button class="addbtn" style="margin-top:.3rem;border-style:solid;color:var(--green)" onclick="mapDay(\''+d+'\')">🗺️ Ver el día en Google Maps</button>':'')+'</div>';
+      html+='<button class="addbtn" onclick="openAct({activity_date:\''+d+'\',city:\''+esc(c.key)+'\'})">+ actividad el '+dn(d)+'</button>'+(da.length?'<button class="addbtn" style="margin-top:.3rem;border-style:solid;color:var(--green)" onclick="mapDay(\''+d+'\')">🗺️ Ver el día en Google Maps</button>':'')+(da.length>=2?'<button class="addbtn" style="margin-top:.3rem;border-style:solid;color:var(--red)" onclick="optimizeDay(\''+d+'\')">✨ Optimizar día con IA</button>':'')+'</div>';
     });
     html+=suggRow(c.key,c.name)+'</div></div>';
   });
@@ -143,9 +143,33 @@ function detailHtml(a){
   if(a.tickets)p.push('<div class="dt-row">🎫 '+esc(a.tickets)+'</div>');
   const rt=a.rating||0;
   const stars='<div class="dt-row">⭐ Rating: '+[1,2,3,4,5].map(function(n){return '<span class="star'+(n<=rt?' on':'')+'" onclick="rateAct(\''+a.id+'\','+n+')">★</span>';}).join('')+(rt?' <a onclick="rateAct(\''+a.id+'\',0)" style="font-size:.72rem;color:var(--muted)">quitar</a>':'')+'</div>';
-  return '<div class="act-detail" id="det-'+a.id+'" style="display:none">'+stars+p.join('')+'<button class="addbtn" style="margin-top:.45rem" onclick="editAct(\''+a.id+'\')">✏️ Editar detalles, links, boletos</button></div>';
+  const quick='<div class="dt-quick">'
+    +'<button onclick="actQuick(\''+a.id+'\',\'map\')">🗺️ Mapa</button>'
+    +'<button onclick="actQuick(\''+a.id+'\',\'img\')">🖼️ Fotos</button>'
+    +'<button onclick="actQuick(\''+a.id+'\',\'vid\')">▶️ Videos</button>'
+    +'<button onclick="actQuick(\''+a.id+'\',\'tour\')">🎟️ Tours</button>'
+    +'<button class="tips" onclick="actQuick(\''+a.id+'\',\'tips\')">💡 Consejos</button>'
+    +'</div>';
+  return '<div class="act-detail" id="det-'+a.id+'" style="display:none">'+quick+stars+p.join('')+'<button class="addbtn" style="margin-top:.45rem" onclick="editAct(\''+a.id+'\')">✏️ Editar detalles, links, boletos</button></div>';
 }
 function toggleDetail(id){const d=$('det-'+id);if(d)d.style.display=(d.style.display==='none'?'block':'none');}
+function actQuick(id,kind){
+  const a=(DATA.activities||[]).find(x=>x.id===id);if(!a)return;
+  const term=a.title+(a.city?', '+a.city:''),q=encodeURIComponent(term);
+  if(kind==='map')window.open('https://www.google.com/maps/search/?api=1&query='+q,'_blank');
+  else if(kind==='img')window.open('https://www.google.com/search?tbm=isch&q='+q,'_blank');
+  else if(kind==='vid')window.open('https://www.youtube.com/results?search_query='+q,'_blank');
+  else if(kind==='tour')window.open('https://www.getyourguide.com/s/?q='+q,'_blank');
+  else if(kind==='tips')askClaudia('Dame consejos prácticos, mejor horario para visitar y precio aproximado de: '+term+'. Sé breve.');
+}
+function askClaudia(text){go('claudia');const inp=$('chat-in');if(inp){inp.value=text;sendChat();}}
+function optimizeDay(date){
+  const acts=(DATA.activities||[]).filter(a=>a.activity_date===date&&a.category!=='logistica'&&a.category!=='traslado');
+  if(acts.length<2){showToast('Necesitas 2+ actividades ese día');return;}
+  const city=(acts.find(a=>a.city)||{}).city||'';
+  const list=acts.map(a=>'- '+a.title+(a.start_time?' (ahora '+a.start_time.slice(0,5)+')':'')+' [id:'+a.id+']').join('\n');
+  askClaudia('Optimiza el orden de mi día '+dn(date)+' ('+date+')'+(city?' en '+city:'')+'. Actividades con su id:\n'+list+'\n\nReordénalas en la secuencia más lógica por cercanía geográfica y horarios sensatos (comidas, apertura de museos) y propón una hora para cada una. Muéstrame el plan y pregúntame si confirmo; cuando confirme, aplícalo con la herramienta reorder_day usando date="'+date+'" y los ids en el nuevo orden.');
+}
 async function rateAct(id,n){await write({action:'update',table:'activities',id:id,patch:{rating:n||null}},n?('⭐ '+n+' estrellas'):'Rating quitado');}
 function wishHtml(wish){
   let h='<div class="bcard"><div class="lbl" style="margin-bottom:.3rem">💡 Cosas por hacer (sin fecha)</div>';
@@ -277,7 +301,7 @@ function renderPerfil(){const hotels=DATA.hotel_choices||[];
   const _tm=localStorage.getItem('bayu_theme')||'auto';
   h+='<div class="bcard"><div class="lbl" style="margin-bottom:.4rem">🎨 Tema</div><div class="seg">'+['light','auto','dark'].map(function(x){return '<button class="seg-btn'+(_tm===x?' on':'')+'" onclick="setTheme(\''+x+'\')">'+({light:'☀️ Claro',auto:'🔄 Auto',dark:'🌙 Oscuro'}[x])+'</button>';}).join('')+'</div></div>';
   h+='<button class="pf-btn" onclick="changeKey()">🔑 Cambiar clave de escritura</button><a class="pf-btn" href="/guia">📖 Guía editorial completa</a><button class="pf-btn" onclick="alert(\'Para instalar: Safari → Compartir → Agregar a inicio. Chrome: ⋮ → Instalar app.\')">📲 Cómo instalar la app</button><button class="pf-btn" onclick="load();showToast(\'Actualizado ✓\')">🔄 Recargar datos</button>';
-  h+='<div style="text-align:center;color:var(--muted);font-size:.74rem;margin-top:1rem">Bayu PWA v9.8 · multi-viaje · Arkamia Lab</div>';$('perfil-root').innerHTML=h;}
+  h+='<div style="text-align:center;color:var(--muted);font-size:.74rem;margin-top:1rem">Bayu PWA v9.9 · multi-viaje · Arkamia Lab</div>';$('perfil-root').innerHTML=h;}
 function applyTheme(){var m=localStorage.getItem('bayu_theme')||'auto';var d=m==='dark'||(m==='auto'&&matchMedia('(prefers-color-scheme:dark)').matches);document.documentElement.setAttribute('data-theme',d?'dark':'light');}
 function setTheme(m){localStorage.setItem('bayu_theme',m);applyTheme();renderPerfil();showToast('Tema: '+({light:'Claro',auto:'Auto',dark:'Oscuro'}[m]||m));}
 function changeKey(){localStorage.removeItem('eurotrip_write_key');const k=prompt('Nueva clave de escritura:');if(k){localStorage.setItem('eurotrip_write_key',k);showToast('Clave guardada ✓');}}

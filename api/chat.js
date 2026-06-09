@@ -29,6 +29,7 @@ CÓMO USAR TUS HERRAMIENTAS (sin preguntar, salvo que falte info crítica):
 8. list_saved — ver qué hay guardado.
 9. update_record — editar un registro. SIEMPRE pide confirmación. Para 'budget' el id es la category; para lo demás el id es el UUID (obténlo con list_saved). patch = solo los campos a cambiar.
 10. delete_record — borrar un registro. SIEMPRE pide confirmación.
+11. reorder_day — OPTIMIZAR/REORDENAR un día completo del planner de una sola vez. Cuando te pidan "optimizar el día" (o el mensaje ya trae las actividades con sus ids): propón el nuevo orden lógico por cercanía geográfica + horarios sensatos (comidas, apertura de museos) con una hora para cada una, MUÉSTRALO y pregunta "¿confirmas?" UNA sola vez; al recibir el sí, llama reorder_day con date y order=[{id,start_time},...] en el nuevo orden cronológico. No hagas update_record uno por uno para esto.
 
 REGLA CRÍTICA UPDATE/DELETE — OBLIGATORIA:
 1) Si no sabes el id exacto, usa list_saved primero. 2) Resume qué exacto vas a cambiar/borrar (descripción + id corto). 3) Termina con "¿Confirmas?" y ESPERA un sí. 4) Solo entonces ejecuta. INSERT (add_*, set_*) NO requiere confirmación.
@@ -240,6 +241,29 @@ const TOOLS = [
       required: ['table', 'id']
     }
   },
+  {
+    name: 'reorder_day',
+    description: 'Reordena TODAS las actividades de un día concreto del planner en una sola operación, y opcionalmente les asigna hora. Úsalo cuando te pidan "optimizar el día" o cambiar el orden de varias actividades. Pasa `order` con los ids EN EL NUEVO ORDEN cronológico (de la mañana a la noche). NO necesitas list_saved si ya te dieron los ids en el mensaje.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        date: { type: 'string', description: 'Fecha YYYY-MM-DD del día a reordenar' },
+        order: {
+          type: 'array',
+          description: 'Actividades en el nuevo orden cronológico (de la mañana a la noche)',
+          items: {
+            type: 'object',
+            properties: {
+              id: { type: 'string', description: 'UUID de la actividad' },
+              start_time: { type: 'string', description: 'Hora HH:MM sugerida (opcional)' }
+            },
+            required: ['id']
+          }
+        }
+      },
+      required: ['date', 'order']
+    }
+  },
   // Server-side web search tool — Anthropic ejecuta la búsqueda y retorna resultados con citations
   // max_uses bajo para reducir consumo de tokens (cada búsqueda mete ~5KB de contexto)
   {
@@ -336,6 +360,22 @@ async function executeTool(sb, tripId, name, input) {
       const { error } = await sb.from(tableName(table)).delete().eq(pkCol, id).eq('trip_id', tripId);
       if (error) throw error;
       return { ok: true, message: `Borrado de ${table} (${id.toString().slice(0, 8)})` };
+    }
+    if (name === 'reorder_day') {
+      const { date, order } = input;
+      if (!date || !Array.isArray(order) || !order.length) return { ok: false, error: 'Faltan date u order[]' };
+      let i = 0;
+      for (const item of order) {
+        if (!item || !item.id) continue;
+        const patch = { sort_order: (i + 1) * 10 };
+        if (item.start_time) patch.start_time = item.start_time;
+        const { error } = await sb.from(tableName('activities'))
+          .update(patch)
+          .eq('id', item.id).eq('trip_id', tripId).eq('activity_date', date);
+        if (error) throw error;
+        i++;
+      }
+      return { ok: true, message: `Día ${date} reordenado (${i} actividades)`, count: i };
     }
     return { ok: false, error: `Tool desconocida: ${name}` };
   } catch (err) {
