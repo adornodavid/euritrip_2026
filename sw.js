@@ -1,4 +1,4 @@
-const CACHE='bayu-v9-9';
+const CACHE='bayu-v10-0';
 const CORE=['/','/manifest.json','/app/main.js','/app/icon-192.png','/app/icon-512.png','/app/apple-touch.png','/app/favicon.png'];
 const IMGS=['/images/paris/eiffel.jpg','/images/bordeaux/place-bourse.jpg','/images/san-sebastian/bahia.jpg','/images/bilbao/panoramica.jpg','/images/madrid/palacio-real.jpg'];
 self.addEventListener('install',e=>{e.waitUntil((async()=>{

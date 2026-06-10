@@ -117,7 +117,7 @@ function renderPlanner(){
     [...c.dates,..._extra].sort().forEach(d=>{
       const da=cityActs.filter(a=>a.activity_date===d).sort((a,b)=>(a.sort_order||0)-(b.sort_order||0)||((a.start_time||'')>(b.start_time||'')?1:-1));
       const isToday=(d===today);
-      html+='<div class="day'+(isToday?' today':'')+'"><div class="day-h">'+dn(d)+(isToday?'<span class="hoy-badge">HOY</span>':'')+'</div>'+resHtml(d);
+      html+='<div class="day'+(isToday?' today':'')+'"><div class="day-h"><span class="day-h-date">'+dn(d)+'</span>'+(isToday?'<span class="hoy-badge">HOY</span>':'')+'<span class="wx" data-wx="'+d+'|'+esc(c.key)+'"></span></div>'+resHtml(d);
       da.forEach((a,idx)=>{
         const done=a.status==='hecho';
         const up=idx>0?'<button class="mvbtn" onclick="moveAct(\''+a.id+'\',-1)">▲</button>':'';
@@ -133,7 +133,7 @@ function renderPlanner(){
     html+=suggRow(c.key,c.name)+'</div></div>';
   });
   html+='<button class="addbtn" style="margin-top:.7rem" onclick="openCity({})">+ Agregar ciudad o parada</button>';
-  $('planner-root').innerHTML=html;
+  $('planner-root').innerHTML=html;hydrateWeather();
 }
 function detailHtml(a){
   const p=[];
@@ -169,6 +169,33 @@ function optimizeDay(date){
   const city=(acts.find(a=>a.city)||{}).city||'';
   const list=acts.map(a=>'- '+a.title+(a.start_time?' (ahora '+a.start_time.slice(0,5)+')':'')+' [id:'+a.id+']').join('\n');
   askClaudia('Optimiza el orden de mi día '+dn(date)+' ('+date+')'+(city?' en '+city:'')+'. Actividades con su id:\n'+list+'\n\nReordénalas en la secuencia más lógica por cercanía geográfica y horarios sensatos (comidas, apertura de museos) y propón una hora para cada una. Muéstrame el plan y pregúntame si confirmo; cuando confirme, aplícalo con la herramienta reorder_day usando date="'+date+'" y los ids en el nuevo orden.');
+}
+/* ---------- CLIMA POR DÍA (Open-Meteo · sin API key) ---------- */
+const WX_COORDS={'Paris':[48.857,2.352],'París':[48.857,2.352],'Bordeaux':[44.838,-0.579],'Burdeos':[44.838,-0.579],'San Sebastián':[43.318,-1.981],'Bilbao':[43.263,-2.935],'Madrid':[40.417,-3.703],'Versalles':[48.801,2.130],'Saint-Émilion':[44.893,-0.156],'Toledo':[39.862,-4.027],'Valencia':[39.470,-0.376],'Barcelona':[41.385,2.173],'Lisboa':[38.722,-9.139],'Lisbon':[38.722,-9.139]};
+const WX_OCT={'Paris':[16,9,2],'París':[16,9,2],'Bordeaux':[19,10,2],'Burdeos':[19,10,2],'San Sebastián':[20,13,61],'Bilbao':[20,12,61],'Madrid':[20,10,1],'Versalles':[16,8,2],'Saint-Émilion':[19,10,2],'Toledo':[20,9,1],'Valencia':[24,15,1],'Barcelona':[22,15,1],'Lisboa':[22,15,1],'Lisbon':[22,15,1]};
+function wxIcon(c){c=+c;if(c===0)return'☀️';if(c<=2)return'🌤️';if(c===3)return'☁️';if(c<=48)return'🌫️';if(c<=57)return'🌦️';if(c<=67)return'🌧️';if(c<=77)return'🌨️';if(c<=82)return'🌧️';if(c<=86)return'🌨️';return'⛈️';}
+function wxCache(k){try{const v=JSON.parse(localStorage.getItem('bayu_wx_'+k));if(v&&Date.now()-v.ts<6*3600e3)return v.d;}catch(e){}return null;}
+function wxStore(k,d){try{localStorage.setItem('bayu_wx_'+k,JSON.stringify({ts:Date.now(),d:d}));}catch(e){}}
+function wxFallback(city,date){const n=WX_OCT[city];if(!n||(+date.slice(5,7))!==10)return null;return {hi:n[0],lo:n[1],code:n[2],live:false};}
+async function fetchWx(city,date){
+  const key=city+'|'+date,cached=wxCache(key);if(cached)return cached;
+  const co=WX_COORDS[city],days=Math.round((new Date(date+'T12:00:00')-new Date())/86400000);
+  if(co&&days>=0&&days<=15){
+    try{const r=await fetch('https://api.open-meteo.com/v1/forecast?latitude='+co[0]+'&longitude='+co[1]+'&daily=weather_code,temperature_2m_max,temperature_2m_min&timezone=auto&start_date='+date+'&end_date='+date);
+      const j=await r.json(),dd=j.daily;
+      if(dd&&dd.time&&dd.time.length){const d={hi:Math.round(dd.temperature_2m_max[0]),lo:Math.round(dd.temperature_2m_min[0]),code:dd.weather_code[0],live:true};wxStore(key,d);return d;}
+    }catch(e){}
+  }
+  return wxFallback(city,date);
+}
+function hydrateWeather(){
+  document.querySelectorAll('[data-wx]').forEach(async function(el){
+    if(el.dataset.done)return;el.dataset.done='1';
+    const parts=el.dataset.wx.split('|'),w=await fetchWx(parts[1],parts[0]);
+    if(!w){el.style.display='none';return;}
+    el.innerHTML='<span class="wx-ic">'+wxIcon(w.code)+'</span>'+w.hi+'°<span class="wx-lo">/'+w.lo+'°</span>'+(w.live?'':'<span class="wx-avg">oct</span>');
+    el.classList.add('show');
+  });
 }
 async function rateAct(id,n){await write({action:'update',table:'activities',id:id,patch:{rating:n||null}},n?('⭐ '+n+' estrellas'):'Rating quitado');}
 function wishHtml(wish){
@@ -301,7 +328,7 @@ function renderPerfil(){const hotels=DATA.hotel_choices||[];
   const _tm=localStorage.getItem('bayu_theme')||'auto';
   h+='<div class="bcard"><div class="lbl" style="margin-bottom:.4rem">🎨 Tema</div><div class="seg">'+['light','auto','dark'].map(function(x){return '<button class="seg-btn'+(_tm===x?' on':'')+'" onclick="setTheme(\''+x+'\')">'+({light:'☀️ Claro',auto:'🔄 Auto',dark:'🌙 Oscuro'}[x])+'</button>';}).join('')+'</div></div>';
   h+='<button class="pf-btn" onclick="changeKey()">🔑 Cambiar clave de escritura</button><a class="pf-btn" href="/guia">📖 Guía editorial completa</a><button class="pf-btn" onclick="alert(\'Para instalar: Safari → Compartir → Agregar a inicio. Chrome: ⋮ → Instalar app.\')">📲 Cómo instalar la app</button><button class="pf-btn" onclick="load();showToast(\'Actualizado ✓\')">🔄 Recargar datos</button>';
-  h+='<div style="text-align:center;color:var(--muted);font-size:.74rem;margin-top:1rem">Bayu PWA v9.9 · multi-viaje · Arkamia Lab</div>';$('perfil-root').innerHTML=h;}
+  h+='<div style="text-align:center;color:var(--muted);font-size:.74rem;margin-top:1rem">Bayu PWA v10 ✨ Sunset Editorial · Arkamia Lab</div>';$('perfil-root').innerHTML=h;}
 function applyTheme(){var m=localStorage.getItem('bayu_theme')||'auto';var d=m==='dark'||(m==='auto'&&matchMedia('(prefers-color-scheme:dark)').matches);document.documentElement.setAttribute('data-theme',d?'dark':'light');}
 function setTheme(m){localStorage.setItem('bayu_theme',m);applyTheme();renderPerfil();showToast('Tema: '+({light:'Claro',auto:'Auto',dark:'Oscuro'}[m]||m));}
 function changeKey(){localStorage.removeItem('eurotrip_write_key');const k=prompt('Nueva clave de escritura:');if(k){localStorage.setItem('eurotrip_write_key',k);showToast('Clave guardada ✓');}}
