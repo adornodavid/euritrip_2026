@@ -375,9 +375,30 @@ const CHIPS_EURO=['¿Cuánto llevamos gastado?','Agrega cena €80 en San Sebast
 const CHIPS_GENERIC=['¿Cuánto llevamos gastado?','¿Qué falta por reservar?','Dame ideas para este viaje','Agrega una actividad a un día'];
 function startChat(){if(chatStarted)return;chatStarted=true;const chips=isEurotrip()?CHIPS_EURO:CHIPS_GENERIC;$('chat-chips').innerHTML=chips.map(c=>'<div class="chat-chip" onclick="chipSend(this)">'+esc(c)+'</div>').join('');pushBub('assistant','¡Hola! Soy Claudia'+(TRIP&&TRIP.name?' — tu asistente para '+TRIP.name:'')+'. Puedo armar tu plan, registrar gastos y resolver dudas del viaje. Dime qué necesitas o toca una sugerencia 👇');}
 function chipSend(el){$('chat-in').value=el.textContent;sendChat();}
-function pushBub(role,text){const d=document.createElement('div');d.className='bub '+(role==='user'?'u':'a');d.textContent=text;$('chat-log').appendChild(d);d.scrollIntoView({behavior:'smooth'});return d;}
+function mdInline(s){return s
+  .replace(/!\[([^\]]*)\]\((https?:[^)\s]+)\)/g,'<img class="md-img" src="$2" alt="$1" loading="lazy" onclick="window.open(this.src,\'_blank\')" onerror="this.remove()"/>')
+  .replace(/\[([^\]]+)\]\((https?:[^)\s]+)\)/g,'<a href="$2" target="_blank" rel="noopener">$1</a>')
+  .replace(/\*\*([^*]+)\*\*/g,'<strong>$1</strong>')
+  .replace(/(^|[\s(])\*([^*\n]+)\*(?=[\s).,!?:;]|$)/g,'$1<em>$2</em>')
+  .replace(/`([^`]+)`/g,'<code>$1</code>')
+  .replace(/(^|[\s(])(https?:\/\/[^\s<"')]+)/g,'$1<a href="$2" target="_blank" rel="noopener">$2</a>');}
+function mdToHtml(raw){
+  const text=esc(raw||'');const lines=text.split('\n');let html='',list=null;
+  const closeList=function(){if(list){html+='</'+list+'>';list=null;}};
+  for(let i=0;i<lines.length;i++){
+    let l=lines[i].trim();
+    if(!l){closeList();continue;}
+    if(/^---+$/.test(l)||/^___+$/.test(l)){closeList();html+='<hr/>';continue;}
+    let m;
+    if(m=l.match(/^#{1,6}\s+(.*)$/)){closeList();html+='<div class="md-h">'+mdInline(m[1])+'</div>';continue;}
+    if(m=l.match(/^[-*•]\s+(.*)$/)){if(list!=='ul'){closeList();html+='<ul>';list='ul';}html+='<li>'+mdInline(m[1])+'</li>';continue;}
+    if(m=l.match(/^\d+[.)]\s+(.*)$/)){if(list!=='ol'){closeList();html+='<ol>';list='ol';}html+='<li>'+mdInline(m[1])+'</li>';continue;}
+    closeList();html+='<p>'+mdInline(l)+'</p>';
+  }
+  closeList();return html||'<p></p>';}
+function pushBub(role,text){const d=document.createElement('div');d.className='bub '+(role==='user'?'u':'a md');if(role==='user')d.textContent=text;else d.innerHTML=mdToHtml(text);$('chat-log').appendChild(d);d.scrollIntoView({behavior:'smooth'});return d;}
 async function sendChat(){const inp=$('chat-in'),t=inp.value.trim();if(!t)return;inp.value='';pushBub('user',t);chatMsgs.push({role:'user',content:t});const typing=pushBub('assistant','…');
-  try{const r=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({messages:chatMsgs,trip_id:activeTripId()})});const j=await r.json();const reply=j.reply||j.error||'(sin respuesta)';typing.textContent=reply;chatMsgs.push({role:'assistant',content:reply});if(j.tool_events&&j.tool_events.length){load();showToast('Plan actualizado ✓');}}catch(e){typing.textContent='Error: '+e.message;}}
+  try{const r=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({messages:chatMsgs,trip_id:activeTripId()})});const j=await r.json();const reply=j.reply||j.error||'(sin respuesta)';typing.innerHTML=mdToHtml(reply);chatMsgs.push({role:'assistant',content:reply});if(j.tool_events&&j.tool_events.length){load();showToast('Plan actualizado ✓');}}catch(e){typing.textContent='Error: '+e.message;}}
 
 /* ---------- reservas / links (Push C) ---------- */
 const RES_ICON={flight:'✈️',hotel:'🏨',restaurant:'🍽️',train:'🚄',tour:'🎟️',transfer:'🚐',activity:'🎫',other:'📋'};
