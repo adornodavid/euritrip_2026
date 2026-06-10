@@ -48,17 +48,17 @@ ACCESO A INTERNET (web_search): úsalo para info que cambia (horarios, precios, 
 // Conocimiento RICO del Eurotrip — SOLO se inyecta cuando el viaje activo es el Eurotrip semilla.
 const EUROTRIP_KNOWLEDGE = `
 
-=== CONOCIMIENTO ESPECÍFICO DEL EUROTRIP (aplica porque es el viaje activo) ===
-Eurotrip 2026 · 15-31 octubre · Francia + País Vasco + Madrid. La ruta ya NO incluye Toulouse, Barcelona ni Valencia.
-Ruta (15 noches): Paris 4N (16-20, llega de MTY) · Bordeaux 2N (20-22) · San Sebastián 2N (22-24) · Bilbao 2N (24-26) · Madrid 5N (26-31, vuela a MTY 31 oct 10:30am).
-Ritmo: 16 llegada slow · 17-18 Paris fuerte · 19 Versalles · 20 mañana Paris + tren a Bordeaux · 21 Bordeaux + Saint-Émilion · 22 medio día Bordeaux + tarde San Sebastián · 29 Madrid FLEX (Toledo/Segovia/Chinchón).
-Vuelos (pagados): AM44 MTY 15 oct 3:25PM → CDG 16 oct 9:40AM (29A+29B) · AM35 MAD 31 oct 10:30AM → MTY 3:45PM (34H+34J).
-Day trips: Versalles (Paris), Saint-Émilion (Bordeaux), Toledo (Madrid), 29 oct FLEX.
-Hoteles: Paris Hôtel Filigrane & Spa (confirmado, 2º/Bourse) · Bordeaux Grand Hôtel Français (confirmado) · San Sebastián por definir (Parte Vieja/Gros) · Bilbao por definir (Casco Viejo/Abando) · Madrid Catalonia Atocha (confirmado).
-Presupuesto pareja: Económico $145K MXN · Premium $156K MXN.
-Traslados: Paris→Bordeaux TGV ~2h · Bordeaux→San Sebastián tren a Hendaya+Euskotren o bus ~3-4h · San Sebastián→Bilbao ~1h15 · Bilbao→Madrid Renfe ~4.5h o vuelo.
-Restaurantes: Paris (Bistrot Paul Bert, Bouillon Chartier, Café de Flore, L'As du Fallafel) · Bordeaux (La Tupina, Le Petit Commerce, Garopapilles) · San Sebastián pintxos (La Cuchara de San Telmo, Gandarias, Bar Néstor, Borda Berri) y alta cocina (Arzak, Mugaritz, Akelarre) · Bilbao (Mercado de la Ribera, Café Iruña, La Viña del Ensanche) y alta cocina (Azurmendi, Nerua) · Madrid (Casa Botín, Casa Lucio, La Bola, Mercado de San Miguel).
-Logística: 3 maletas total, NO visa Schengen, ETIAS posible Q4 2026, eSIM Holafly €80, tax-free DIVA Barajas, pasaporte 6 meses vigencia.`;
+=== CONOCIMIENTO ESPECÍFICO DEL EUROTRIP ===
+Eurotrip 2026 · 15-31 octubre · viaje de David y Paty por Francia + País Vasco + Madrid.
+
+FUENTE DE VERDAD DE LA RUTA: usa SIEMPRE la lista de ciudades/fechas/noches del bloque "=== VIAJE ACTIVO ===" de arriba — se actualiza solo cuando editan el viaje. NO asumas noches, day trips ni orden de memoria; si algo no cuadra, confía en esa lista (o usa list_saved). Si una ciudad dura 1 día (start = end) es un day trip, no una noche de hotel. No preguntes por destinos que ya están en la lista como si fueran nuevos.
+
+Contexto de zona: Hondarribia es un pueblo fronterizo vasco (escapada desde San Sebastián). La Guardia / Laguardia es el pueblo medieval de la Rioja Alavesa (vino, bodegas, calados) — entre Bilbao y Madrid.
+Vuelos (pagados, fijos): AM44 MTY 15 oct 3:25PM → CDG 16 oct 9:40AM (asientos 29A+29B) · AM35 MAD 31 oct 10:30AM → MTY 3:45PM (34H+34J).
+Presupuesto pareja: Económico ~$145K MXN · Premium ~$156K MXN.
+Restaurantes de referencia: Paris (Bistrot Paul Bert, Bouillon Chartier, Café de Flore, L'As du Fallafel) · Bordeaux (La Tupina, Le Petit Commerce, Garopapilles) · San Sebastián pintxos (La Cuchara de San Telmo, Gandarias, Bar Néstor, Borda Berri) y alta cocina (Arzak, Mugaritz, Akelarre) · Bilbao (Mercado de la Ribera, Café Iruña, La Viña del Ensanche) y alta cocina (Azurmendi, Nerua) · Madrid (Casa Botín, Casa Lucio, La Bola, Mercado de San Miguel).
+Traslados típicos: Paris→Bordeaux TGV ~2h · Bordeaux→San Sebastián tren a Hendaya+Euskotren o bus ~3-4h · San Sebastián→Bilbao ~1h15 · Bilbao→Madrid Renfe ~4.5h o vuelo.
+Logística: 3 maletas total entre los dos, NO visa Schengen (mexicanos <90 días), ETIAS posible Q4 2026, eSIM Holafly ~€80, tax-free DIVA en Barajas, pasaporte con 6 meses de vigencia.`;
 
 // Contexto dinámico del viaje activo (cualquier viaje), armado desde la DB.
 function tripContextBlock(trip, cities, hotels) {
