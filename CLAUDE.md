@@ -18,6 +18,12 @@ criterios de aceptación, y el borrador de migración
 Orden de fases: 0 auth+RLS → 1 de-hardcodeo → 2 Capacitor → 3 Explore dinámico →
 4 ads+Pro → 5 afiliados → 6 stores. Las fases 0 y 1 son bloqueantes.
 
+**Para trabajo visual/UX, lee `BAYU_V2_DESIGN_SYSTEM.md`**: identidad nueva
+"RÁFAGA" (tokens, tipografía, iconos Lucide, sistema de botones), navegación de
+5 tabs con Claudia al centro, Modo HOY, y 4 sprints de implementación (D1-D4).
+Regla: nada de emojis en chrome de UI, nada de `confirm()/alert()`, todo color/
+espaciado/radio sale de `app/tokens.css`.
+
 ## Mapa del código (v1 actual)
 
 | Archivo | Qué es |
