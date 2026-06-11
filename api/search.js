@@ -4,13 +4,14 @@
 // GET /api/search?type=hotels&city=<ciudad>&checkin=YYYY-MM-DD&checkout=YYYY-MM-DD&adults=2
 // origin/destination/city aceptan texto libre (se resuelven con autocomplete) o código IATA.
 import { hasKey, searchAirports, searchFlights, searchHotels } from './_skyscanner.js';
+import { setCors, requireUser } from './_auth.js';
 
 export default async function handler(req, res) {
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  setCors(req, res, 'GET, OPTIONS');
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
+  const auth = await requireUser(req);
+  if (auth.error) return res.status(auth.status).json({ error: auth.error });
 
   if (!hasKey()) return res.status(500).json({ error: 'RAPIDAPI_KEY no configurada en Vercel' });
 

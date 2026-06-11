@@ -1,11 +1,51 @@
 'use strict';
 /* migración suave de claves localStorage eurotrip_* → bayu_* (v11 Fase 1) */
-(function(){try{['write_key','open','queue'].forEach(function(k){var o=localStorage.getItem('eurotrip_'+k);if(o!=null&&localStorage.getItem('bayu_'+k)==null)localStorage.setItem('bayu_'+k,o);localStorage.removeItem('eurotrip_'+k);});}catch(e){}})();
+(function(){try{['open','queue'].forEach(function(k){var o=localStorage.getItem('eurotrip_'+k);if(o!=null&&localStorage.getItem('bayu_'+k)==null)localStorage.setItem('bayu_'+k,o);localStorage.removeItem('eurotrip_'+k);});['eurotrip_write_key','bayu_write_key'].forEach(function(k){localStorage.removeItem(k);});}catch(e){}})();
 const DOW=['DOM','LUN','MAR','MIÉ','JUE','VIE','SÁB'];
 const CAT={comida:'🍽️',museo:'🏛️',paseo:'🚶','viñedo':'🍷',vinedo:'🍷',actividad:'🎟️',compras:'🛍️',traslado:'🚄',logistica:'🧳',flex:'✨'};
 const MES=['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
 let CITIES=[];  // se construye desde DATA.trip_cities (multi-viaje)
 let DATA={}, TRIPS=[], TRIP=null, gCity='', gPayer='', chatStarted=false, pendingReceipt=null;
+/* ---- Fase 0: auth real (Supabase) ---- */
+const sbc=window.supabase.createClient('https://qflyzgbsufvwrfkrrpfo.supabase.co','eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFmbHl6Z2JzdWZ2d3Jma3JycGZvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUzMDU2ODksImV4cCI6MjA4MDg4MTY4OX0.tSM56ApNtYqJbZe9q66Y36LwWRsolrpYCBCoZhvSA6U');
+let SESSION=null;
+function authHeaders(){return SESSION?{'Authorization':'Bearer '+SESSION.access_token}:{};}
+function showAuth(){var a=document.getElementById('auth');if(a)a.classList.add('show');}
+function hideAuth(){var a=document.getElementById('auth');if(a)a.classList.remove('show');}
+async function ensureProfile(){try{const u=SESSION.user;await sbc.from('bayu_profiles').upsert({id:u.id,email:(u.email||'').toLowerCase(),display_name:(u.user_metadata&&(u.user_metadata.full_name||u.user_metadata.name))||(u.email||'').split('@')[0]},{onConflict:'id'});}catch(e){}}
+async function initAuth(){
+  try{const r=await sbc.auth.getSession();SESSION=r.data.session;}catch(e){SESSION=null;}
+  sbc.auth.onAuthStateChange(async function(ev,sn){
+    SESSION=sn;
+    if(ev==='PASSWORD_RECOVERY'){const np=await promptSheet('Nueva contraseña','Mínimo 8 caracteres','Guardar');if(np){await sbc.auth.updateUser({password:np});showToast('Contraseña actualizada ✓');}}
+    if(ev==='SIGNED_IN'){hideAuth();ensureProfile();load();}
+    if(ev==='SIGNED_OUT'){DATA={};TRIPS=[];TRIP=null;chatStarted=false;chatMsgs=[];showAuth();}
+  });
+  if(SESSION){hideAuth();ensureProfile();load();flushQueue();}else showAuth();
+}
+async function authIn(){const em=$('au-email').value.trim(),pw=$('au-pass').value;if(!em||!pw){showToast('Email y contraseña',true);return;}
+  const r=await sbc.auth.signInWithPassword({email:em,password:pw});
+  if(r.error)showToast(r.error.message==='Invalid login credentials'?'Credenciales incorrectas':r.error.message,true);}
+async function authUp(){const em=$('au-email').value.trim(),pw=$('au-pass').value;if(!em||pw.length<8){showToast('Email válido y contraseña de 8+ caracteres',true);return;}
+  const r=await sbc.auth.signUp({email:em,password:pw,options:{emailRedirectTo:location.origin}});
+  if(r.error){showToast(r.error.message,true);return;}
+  if(!r.data.session)infoSheet('Confirma tu correo','Te mandamos un link para activar la cuenta. Ábrelo y regresa aquí.');}
+async function authGoogle(){await sbc.auth.signInWithOAuth({provider:'google',options:{redirectTo:location.origin}});}
+async function authForgot(){let em=$('au-email').value.trim();if(!em)em=await promptSheet('Tu email','correo@ejemplo.com','Enviar');if(!em)return;
+  await sbc.auth.resetPasswordForEmail(em,{redirectTo:location.origin});infoSheet('Revisa tu correo','Si la cuenta existe, te llegará un link para restablecer la contraseña.');}
+async function logout(){if(await confirmSheet('¿Cerrar sesión?',null,'Salir'))await sbc.auth.signOut();}
+async function exportData(){try{const r=await fetch('/api/account?action=export',{headers:authHeaders()});const j=await r.json();const b=new Blob([JSON.stringify(j,null,1)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='bayu-export.json';a.click();showToast('Export descargado ✓');}catch(e){showToast('Error al exportar',true);}}
+async function deleteAccount(){const c=await promptSheet('⚠️ Borra tu cuenta y TODOS tus viajes. Escribe BORRAR para confirmar','BORRAR','Borrar todo');if(c!=='BORRAR')return;
+  try{const r=await fetch('/api/account',{method:'POST',headers:Object.assign({'Content-Type':'application/json'},authHeaders()),body:JSON.stringify({action:'delete',confirm:'BORRAR'})});const j=await r.json();
+    if(j.ok){showToast('Cuenta borrada');await sbc.auth.signOut();}else showToast(j.error||'Error',true);}catch(e){showToast('Error de red',true);}}
+async function inviteMember(){const em=await promptSheet('Email de la persona (ya debe tener cuenta Bayu)','correo@ejemplo.com','Invitar');if(!em)return;
+  const p=await sbc.from('bayu_profiles').select('id,display_name').eq('email',em.toLowerCase().trim()).maybeSingle();
+  if(!p.data){infoSheet('No encontrado','Esa persona primero debe crear su cuenta en Bayu (con ese email); luego invítala de nuevo.');return;}
+  const r=await sbc.from('bayu_trip_members').insert({trip_id:activeTripId(),user_id:p.data.id,role:'editor'});
+  if(r.error)showToast(r.error.message.includes('duplicate')?'Ya es miembro de este viaje':r.error.message,true);else{showToast('Invitado ✓ — ya puede ver y editar este viaje');load();}}
+async function removeMember(uid,name){if(!await confirmSheet('¿Quitar a '+name+' del viaje?',null,'Quitar'))return;
+  const r=await sbc.from('bayu_trip_members').delete().eq('trip_id',activeTripId()).eq('user_id',uid);
+  if(r.error)showToast(r.error.message,true);else{showToast('Quitado');load();}}
 function activeTripId(){return localStorage.getItem('bayu_trip_id')||(TRIP&&TRIP.id)||'';}
 function tripStart(){return (TRIP&&TRIP.start_date)||null;}
 function tripEnd(){return (TRIP&&TRIP.end_date)||tripStart();}
@@ -36,7 +76,6 @@ function confirmSheet(title,body,okLabel){return askSheet({title:title,body:body
 function promptSheet(title,placeholder,okLabel){return askSheet({title:title,input:true,placeholder:placeholder,okLabel:okLabel||'Guardar'});}
 function infoSheet(title,body){return askSheet({title:title,body:body,okLabel:'Entendido',cancel:false});}
 function dn(iso){const p=iso.split('-');const d=new Date(Date.UTC(+p[0],+p[1]-1,+p[2]));return DOW[d.getUTCDay()]+' '+(+p[2])+' '+MES[+p[1]-1];}
-async function wkey(){let k=localStorage.getItem('bayu_write_key');if(!k){k=await promptSheet('Clave de escritura','La clave compartida del viaje','Continuar');if(k)localStorage.setItem('bayu_write_key',k);}return k;}
 const CUR_SYM={MXN:'$',USD:'$',EUR:'€',GBP:'£',JPY:'¥',CAD:'$',COP:'$',ARS:'$',BRL:'R$',CHF:'CHF '};
 function curCode(){return (TRIP&&TRIP.home_currency)||'MXN';}
 function curSym(c){c=c||curCode();return CUR_SYM[c]!=null?CUR_SYM[c]:c+' ';}
@@ -86,10 +125,31 @@ function go(tab){
 function openTrips(){go('viajes');}
 async function load(){
   if(!DATA.activities)$('planner-root').innerHTML='<div class="skel skel-city"></div><div class="skel skel-city"></div><div class="skel skel-city"></div>';
+  if(!SESSION){showAuth();return;}
   try{
+    const tr=await sbc.from('bayu_trips').select('*').order('is_default',{ascending:false}).order('sort_order',{ascending:true}).order('created_at',{ascending:true});
+    if(tr.error)throw new Error(tr.error.message);
+    TRIPS=tr.data||[];
     const tid=activeTripId();
-    const r=await fetch('/api/data'+(tid?'?trip='+encodeURIComponent(tid):''),{cache:'no-store'});const j=await r.json();
-    DATA=j.data||{};TRIPS=j.trips||[];TRIP=j.trip||null;
+    TRIP=TRIPS.find(t=>t.id===tid)||TRIPS.find(t=>t.is_default)||TRIPS[0]||null;
+    DATA={};
+    if(TRIP){
+      const TBLS=['notes','bookmarks','reservations','hotel_choices','day_overrides','expenses','budget','activities','trip_cities','media','trip_travelers','packing_items'];
+      const ORD={budget:['sort_order',true],expenses:['expense_date',false],trip_travelers:['sort_order',true],packing_items:['sort_order',true]};
+      const results=await Promise.all(TBLS.map(function(t){
+        let q=sbc.from('bayu_'+t).select('*').eq('trip_id',TRIP.id);
+        if(t==='trip_cities')q=q.order('start_date',{ascending:true,nullsFirst:false}).order('sort_order',{ascending:true});
+        else if(t==='activities')q=q.order('activity_date',{ascending:true,nullsFirst:false}).order('sort_order',{ascending:true,nullsFirst:false}).order('start_time',{ascending:true,nullsFirst:true});
+        else{const o=ORD[t]||['created_at',false];q=q.order(o[0],{ascending:o[1],nullsFirst:false});}
+        return q;
+      }));
+      TBLS.forEach(function(t,i){DATA[t]=results[i].data||[];});
+      try{const mm=await sbc.from('bayu_trip_members').select('user_id,role').eq('trip_id',TRIP.id);
+        const ids=(mm.data||[]).map(m=>m.user_id);let profs=[];
+        if(ids.length){const pr=await sbc.from('bayu_profiles').select('id,display_name,email').in('id',ids);profs=pr.data||[];}
+        DATA.members=(mm.data||[]).map(m=>Object.assign({},m,{profile:profs.find(p=>p.id===m.user_id)||{}}));
+      }catch(e){DATA.members=[];}
+    }
     if(TRIP)localStorage.setItem('bayu_trip_id',TRIP.id);
     applyTripChrome();rebuildCities();renderPlanner();renderGastos();healCoords();migratePack();
     if($('s-viajes').classList.contains('active'))renderViajes();
@@ -195,10 +255,10 @@ function wxCache(k){try{const v=JSON.parse(localStorage.getItem('bayu_wx_'+k));i
 function wxStore(k,d){try{localStorage.setItem('bayu_wx_'+k,JSON.stringify({ts:Date.now(),d:d}));}catch(e){}}
 async function geocode(name){try{const r=await fetch('https://geocoding-api.open-meteo.com/v1/search?name='+encodeURIComponent(name)+'&count=1&language=es');const j=await r.json();const g=j.results&&j.results[0];return g?{lat:g.latitude,lng:g.longitude,country_code:(g.country_code||'').toUpperCase()||null}:null;}catch(e){return null;}}
 const _healed={};
-async function healCoords(){if(!localStorage.getItem('bayu_write_key'))return;const tid=activeTripId();if(!tid)return;
+async function healCoords(){if(!SESSION)return;const tid=activeTripId();if(!tid)return;
   for(const c of CITIES){if(!c.custom||c.lat!=null||_healed[c.id])continue;_healed[c.id]=1;
     const g=await geocode(c.name);if(!g)continue;c.lat=g.lat;c.lng=g.lng;c.cc=g.country_code;
-    try{await fetch('/api/write',{method:'POST',headers:{'Content-Type':'application/json','X-Write-Key':localStorage.getItem('bayu_write_key')},body:JSON.stringify({action:'update',table:'trip_cities',id:c.id,patch:{lat:g.lat,lng:g.lng,country_code:g.country_code},trip_id:tid})});}catch(e){}}
+    try{await execWrite({action:'update',table:'trip_cities',id:c.id,patch:{lat:g.lat,lng:g.lng,country_code:g.country_code},trip_id:tid});}catch(e){}}
 }
 async function fetchWx(city,date){
   const key=city+'|'+date,cached=wxCache(key);if(cached)return cached;
@@ -314,7 +374,7 @@ function renderExplore(){
   if(TRIP&&TRIP.guide_url)h+='<a class="pf-btn" href="'+esc(TRIP.guide_url)+'" style="margin-top:1.2rem">📖 Abrir la guía completa por ciudad →</a>';
   $('explore-root').innerHTML=h;}
 function openTrans(){$('tr-in').value='';$('tr-out').textContent='';$('m-trans').classList.add('open');}
-async function doTranslate(){const t=$('tr-in').value.trim();if(!t)return;$('tr-out').textContent='Traduciendo…';try{const r=await fetch('/api/translate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text:t,target:$('tr-lang').value})});const j=await r.json();$('tr-out').textContent=j.translation||j.error||'(sin resultado)';}catch(e){$('tr-out').textContent='Error: '+e.message;}}
+async function doTranslate(){const t=$('tr-in').value.trim();if(!t)return;$('tr-out').textContent='Traduciendo…';try{const r=await fetch('/api/translate',{method:'POST',headers:Object.assign({'Content-Type':'application/json'},authHeaders()),body:JSON.stringify({text:t,target:$('tr-lang').value})});const j=await r.json();$('tr-out').textContent=j.translation||j.error||'(sin resultado)';}catch(e){$('tr-out').textContent='Error: '+e.message;}}
 const PACK_BASIC=['Pasaporte / documentos','Visa o permisos (si aplica)','Adaptador de corriente','Cargadores + power bank','eSIM o plan de datos','Tarjetas + efectivo local','Medicinas personales','Ropa según el clima','Paraguas / impermeable','Zapatos cómodos','Copia de reservas','Cámara'];
 function packingHtml(){const p=DATA.packing_items||[],done=p.filter(x=>x.checked).length;
   let h='<div class="sec-h">🧳 Empaque'+(p.length?' ('+done+'/'+p.length+')':'')+'</div><div class="bcard">';
@@ -325,14 +385,14 @@ function packingHtml(){const p=DATA.packing_items||[],done=p.filter(x=>x.checked
 async function packTog(id,checked){await write({action:'update',table:'packing_items',id:id,patch:{checked:!checked}},checked?'Pendiente':'✓');}
 async function packDel(id){await write({action:'delete',table:'packing_items',id:id},'Quitado');}
 async function packAdd(){const t=await promptSheet('¿Qué agregas al empaque?','Ej: Bloqueador solar','Agregar');if(t)await write({action:'insert',table:'packing_items',row:{title:t,sort_order:(DATA.packing_items||[]).length+1,created_by:'manual'}},'Agregado al empaque ✓');}
-async function packStarter(){const k=await wkey();if(!k)return;const tid=activeTripId();showToast('Creando lista…');
-  for(let i=0;i<PACK_BASIC.length;i++){try{await fetch('/api/write',{method:'POST',headers:{'Content-Type':'application/json','X-Write-Key':k},body:JSON.stringify({action:'insert',table:'packing_items',row:{title:PACK_BASIC[i],sort_order:i+1,created_by:'manual'},trip_id:tid})});}catch(e){}}
+async function packStarter(){if(!SESSION){showAuth();return;}const tid=activeTripId();showToast('Creando lista…');
+  for(let i=0;i<PACK_BASIC.length;i++){try{await execWrite({action:'insert',table:'packing_items',row:{title:PACK_BASIC[i],sort_order:i+1,created_by:'manual'},trip_id:tid});}catch(e){}}
   await load();showToast('Lista básica creada ✓');}
 /* migración 1 vez: empaque viejo de localStorage → DB del viaje activo */
 async function migratePack(){try{const v=localStorage.getItem('eurotrip_pack');if(!v)return;const old=JSON.parse(v);
   if((DATA.packing_items||[]).length||!old.length){localStorage.removeItem('eurotrip_pack');return;}
-  const k=localStorage.getItem('bayu_write_key');if(!k)return;const tid=activeTripId();if(!tid)return;
-  for(let i=0;i<old.length;i++){await fetch('/api/write',{method:'POST',headers:{'Content-Type':'application/json','X-Write-Key':k},body:JSON.stringify({action:'insert',table:'packing_items',row:{title:old[i].t,checked:!!old[i].c,sort_order:i+1,created_by:'migracion'},trip_id:tid})});}
+  if(!SESSION)return;const tid=activeTripId();if(!tid)return;
+  for(let i=0;i<old.length;i++){await execWrite({action:'insert',table:'packing_items',row:{title:old[i].t,checked:!!old[i].c,sort_order:i+1,created_by:'migracion'},trip_id:tid});}
   localStorage.removeItem('eurotrip_pack');await load();}catch(e){}}
 let currentAlbumCity='';
 function docPick(){$('doc-file').click();}
@@ -340,7 +400,7 @@ function docUpload(input){const f=input.files[0];if(f)uploadAndSave(f,'document'
 function albumPick(city){currentAlbumCity=city;$('album-file').click();}
 function albumUpload(input){const f=input.files[0];if(f)uploadAndSave(f,(f.type||'').startsWith('video')?'video':'photo',currentAlbumCity);input.value='';}
 function fileToB64Raw(file,cb){const rd=new FileReader();rd.onload=e=>cb(e.target.result.split(',')[1]);rd.readAsDataURL(file);}
-async function uploadAndSave(file,kind,city){const isImg=(file.type||'').startsWith('image/');if(!isImg&&file.size>4*1024*1024){showToast('Máx ~4MB por ahora (videos largos: próximamente)',true);return;}const ext=(file.name.split('.').pop()||'bin').toLowerCase();showToast('Subiendo…');const k=await wkey();if(!k)return;const proceed=async(b64,ct,ex)=>{try{const up=await fetch('/api/upload',{method:'POST',headers:{'Content-Type':'application/json','X-Write-Key':k},body:JSON.stringify({content_b64:b64,contentType:ct,ext:ex})});const uj=await up.json();if(!uj.ok){showToast(uj.error||'Error al subir',true);return;}await write({action:'insert',table:'media',row:{kind:kind,title:file.name,url:uj.url,city:city||null,mime:file.type,created_by:'manual'}},kind==='document'?'Documento guardado ✓':'Subido ✓');}catch(e){showToast('Error de red',true);}};if(isImg)fileToB64Resized(file,1600,b64=>proceed(b64,'image/jpeg','jpg'));else fileToB64Raw(file,b64=>proceed(b64,file.type||'application/octet-stream',ext));}
+async function uploadAndSave(file,kind,city){const isImg=(file.type||'').startsWith('image/');if(!isImg&&file.size>4*1024*1024){showToast('Máx ~4MB por ahora (videos largos: próximamente)',true);return;}const ext=(file.name.split('.').pop()||'bin').toLowerCase();showToast('Subiendo…');if(!SESSION){showAuth();return;}const proceed=async(b64,ct,ex)=>{try{const up=await fetch('/api/upload',{method:'POST',headers:Object.assign({'Content-Type':'application/json'},authHeaders()),body:JSON.stringify({content_b64:b64,contentType:ct,ext:ex,trip_id:activeTripId()})});const uj=await up.json();if(!uj.ok){showToast(uj.error||'Error al subir',true);return;}await write({action:'insert',table:'media',row:{kind:kind,title:file.name,url:uj.url,city:city||null,mime:file.type,created_by:'manual'}},kind==='document'?'Documento guardado ✓':'Subido ✓');}catch(e){showToast('Error de red',true);}};if(isImg)fileToB64Resized(file,1600,b64=>proceed(b64,'image/jpeg','jpg'));else fileToB64Raw(file,b64=>proceed(b64,file.type||'application/octet-stream',ext));}
 function docsHtml(){const docs=(DATA.media||[]).filter(m=>m.kind==='document');let h='<div class="sec-h">📄 Documentos <button class="chip" style="float:right" onclick="docPick()">+ Subir</button></div><div class="bcard">';if(!docs.length)h+=emptyState('📄','Sin documentos','Pasaporte, pases de abordar, vouchers, seguro… súbelos para tenerlos offline.','<button class="eb" onclick="docPick()">+ Subir documento</button>');docs.forEach(m=>{h+='<div class="doc-row"><a href="'+esc(m.url)+'" target="_blank">📎 '+esc(m.title||'documento')+'</a><button class="x" onclick="delMedia(\''+m.id+'\')" aria-label="Borrar">'+I('trash',15)+'</button></div>';});return h+'</div>';}
 function albumHtml(){const photos=(DATA.media||[]).filter(m=>m.kind==='photo'||m.kind==='video');let h='<div class="sec-h">📸 Álbum por ciudad</div>';CITIES.forEach(c=>{const ph=photos.filter(m=>m.city===c.key);h+='<div class="bcard"><div style="display:flex;justify-content:space-between;align-items:center"><strong>'+c.flag+' '+esc(c.name)+(ph.length?' · '+ph.length:'')+'</strong><button class="chip" onclick="albumPick(\''+esc(c.key)+'\')">+ Foto/Video</button></div>';if(ph.length)h+='<div class="media-grid">'+ph.map(m=>'<div class="media-item">'+(m.kind==='video'?'<video src="'+esc(m.url)+'" style="width:100%;aspect-ratio:1;object-fit:cover;border-radius:8px" onclick="window.open(\''+esc(m.url)+'\')"></video>':'<img src="'+esc(m.url)+'" onclick="window.open(\''+esc(m.url)+'\')"/>')+'<button class="del" onclick="delMedia(\''+m.id+'\')" aria-label="Borrar">'+I('x',13)+'</button></div>').join('')+'</div>';h+='</div>';});return h;}
 async function delMedia(id){if(await confirmSheet('¿Borrar este archivo?',null,'Borrar'))await write({action:'delete',table:'media',id:id},'Borrado');}
@@ -363,6 +423,14 @@ function renderPerfil(){const hotels=DATA.hotel_choices||[];
   h+='<div class="bcard"><div class="lbl" style="margin-bottom:.2rem">Hoteles</div>';
   CITIES.forEach(c=>{const ho=hotels.find(x=>x.city===c.key);h+='<div class="pf-row"><span>'+c.flag+' '+esc(c.name)+'</span><span style="color:var(--muted)">'+(ho?(ho.confirmed?'✅ '+esc(ho.hotel_name):'⏳ por definir'):'—')+'</span></div>';});
   h+='</div>';
+  const ME=(SESSION&&SESSION.user)||{};
+  h+='<div class="bcard"><div class="lbl">Tu cuenta</div><div class="pf-row"><span>📧 '+esc(ME.email||'—')+'</span><button class="chip" onclick="logout()">Salir</button></div>';
+  h+='<div class="pf-row"><button class="chip" onclick="exportData()">⬇️ Exportar mis datos</button><button class="chip" style="color:var(--red)" onclick="deleteAccount()">🗑️ Borrar cuenta</button></div></div>';
+  const MEM=DATA.members||[];
+  h+='<div class="bcard"><div class="lbl" style="margin-bottom:.2rem">Compañeros con acceso a este viaje</div>';
+  MEM.forEach(function(m){const nm=(m.profile&&(m.profile.display_name||m.profile.email))||'usuario';
+    h+='<div class="pf-row"><span>👥 '+esc(nm)+' <span style="color:var(--muted);font-size:.74rem">'+esc(m.role)+'</span></span>'+(m.user_id!==ME.id?'<button class="x" onclick="removeMember(\''+m.user_id+'\',\''+esc(nm)+'\')" aria-label="Quitar">'+I('trash',14)+'</button>':'<span style="color:var(--muted);font-size:.74rem">tú</span>')+'</div>';});
+  h+='<button class="chip" onclick="inviteMember()">+ Invitar por email</button></div>';
   const TRV=DATA.trip_travelers||[];
   h+='<div class="bcard"><div class="lbl" style="margin-bottom:.2rem">Viajeros · moneda '+esc(curCode())+'</div>';
   TRV.forEach(t=>{h+='<div class="pf-row"><span>👤 '+esc(t.name)+'</span><button class="x" onclick="delTraveler(\''+t.id+'\',\''+esc(t.name)+'\')" aria-label="Quitar">'+I('trash',14)+'</button></div>';});
@@ -370,14 +438,13 @@ function renderPerfil(){const hotels=DATA.hotel_choices||[];
   const _pq=queueGet().length;if(_pq)h+='<div class="bcard" style="background:#FFF3B0;color:#7a6a00;font-weight:700">⏳ '+_pq+' cambios pendientes <button class="chip" onclick="flushQueue()">Sincronizar</button></div>';
   const _tm=localStorage.getItem('bayu_theme')||'auto';
   h+='<div class="bcard"><div class="lbl" style="margin-bottom:.4rem">🎨 Tema</div><div class="seg">'+['light','auto','dark'].map(function(x){return '<button class="seg-btn'+(_tm===x?' on':'')+'" onclick="setTheme(\''+x+'\')">'+({light:'☀️ Claro',auto:'🔄 Auto',dark:'🌙 Oscuro'}[x])+'</button>';}).join('')+'</div></div>';
-  h+='<button class="pf-btn" onclick="changeKey()">🔑 Cambiar clave de escritura</button>'+(TRIP&&TRIP.guide_url?'<a class="pf-btn" href="'+esc(TRIP.guide_url)+'">📖 Guía editorial completa</a>':'')+'<button class="pf-btn" onclick="infoSheet(\'Instalar Bayu\',\'iPhone: Safari → Compartir → Agregar a pantalla de inicio. Android: Chrome → menú ⋮ → Instalar app.\')">📲 Cómo instalar la app</button><button class="pf-btn" onclick="load();showToast(\'Actualizado ✓\')">🔄 Recargar datos</button>';
-  h+='<div style="text-align:center;color:var(--muted);font-size:.74rem;margin-top:1rem">Bayu v11 · Arkamia Lab</div>';$('perfil-root').innerHTML=h;}
+  h+=''+(TRIP&&TRIP.guide_url?'<a class="pf-btn" href="'+esc(TRIP.guide_url)+'">📖 Guía editorial completa</a>':'')+'<button class="pf-btn" onclick="infoSheet(\'Instalar Bayu\',\'iPhone: Safari → Compartir → Agregar a pantalla de inicio. Android: Chrome → menú ⋮ → Instalar app.\')">📲 Cómo instalar la app</button><button class="pf-btn" onclick="load();showToast(\'Actualizado ✓\')">🔄 Recargar datos</button>';
+  h+='<div style="text-align:center;color:var(--muted);font-size:.74rem;margin-top:1rem">Bayu v12 · Arkamia Lab</div>';$('perfil-root').innerHTML=h;}
 function applyTheme(){var m=localStorage.getItem('bayu_theme')||'auto';var d=m==='dark'||(m==='auto'&&matchMedia('(prefers-color-scheme:dark)').matches);document.documentElement.setAttribute('data-theme',d?'dark':'light');}
 function setTheme(m){localStorage.setItem('bayu_theme',m);applyTheme();renderPerfil();showToast('Tema: '+({light:'Claro',auto:'Auto',dark:'Oscuro'}[m]||m));}
 async function addTraveler(){const n=await promptSheet('Nombre del viajero','Ej: Ana','Agregar');if(!n)return;
   await write({action:'insert',table:'trip_travelers',row:{name:n,sort_order:(DATA.trip_travelers||[]).length+1,created_by:'manual'}},'Viajero agregado ✓');}
 async function delTraveler(id,name){if(await confirmSheet('¿Quitar a '+name+'?','Sus gastos registrados se conservan con su nombre.','Quitar'))await write({action:'delete',table:'trip_travelers',id:id},'Quitado');}
-async function changeKey(){localStorage.removeItem('bayu_write_key');const k=await promptSheet('Nueva clave de escritura','Escribe la clave','Guardar');if(k){localStorage.setItem('bayu_write_key',k);showToast('Clave guardada ✓');}}
 
 /* ---------- MIS VIAJES (multi-viaje) ---------- */
 function statusBadge(s){return s==='active'?'<span class="tstat ta">● En curso</span>':s==='completed'?'<span class="tstat tc">✓ Terminado</span>':'<span class="tstat tp">◷ Planeando</span>';}
@@ -401,12 +468,13 @@ function openTrip2(id){const t=TRIPS.find(x=>x.id===id);if(t)openTrip(t);}
 async function saveTrip(){const id=$('mt-id').value,name=$('mt-name').value.trim();if(!name){showToast('Ponle nombre al viaje',true);return;}
   const row={name:name,subtitle:$('mt-sub').value||null,flag:$('mt-flag').value||'🌍',start_date:$('mt-start').value||null,end_date:$('mt-end').value||null,cover_image:$('mt-cover').value||null,status:$('mt-status').value||'planning',home_currency:$('mt-cur').value||'MXN'};
   if(id){await write({action:'update',table:'trips',id:id,patch:row},'Viaje guardado ✓');closeM('m-trip');return;}
-  const k=await wkey();if(!k)return;row.created_by='manual';
-  try{const r=await fetch('/api/write',{method:'POST',headers:{'Content-Type':'application/json','X-Write-Key':k},body:JSON.stringify({action:'insert',table:'trips',row:row})});const j=await r.json();
-    if(!j.ok){showToast(j.error||'Error',true);return;}
-    if(j.inserted&&j.inserted.id){localStorage.setItem('bayu_trip_id',j.inserted.id);
+  if(!SESSION){showAuth();return;}
+  row.created_by='manual';row.owner_id=SESSION.user.id;
+  try{const r=await execWrite({action:'insert',table:'trips',row:row});
+    if(!r.ok){showToast(r.error||'Error',true);return;}
+    if(r.data&&r.data.id){localStorage.setItem('bayu_trip_id',r.data.id);
       const me=await promptSheet('¿Quién viaja? (tu nombre)','Ej: Ana','Continuar');
-      if(me)try{await fetch('/api/write',{method:'POST',headers:{'Content-Type':'application/json','X-Write-Key':k},body:JSON.stringify({action:'insert',table:'trip_travelers',row:{name:me,sort_order:1,created_by:'manual'},trip_id:j.inserted.id})});}catch(e){}
+      if(me)await execWrite({action:'insert',table:'trip_travelers',row:{name:me,sort_order:1,created_by:'manual'},trip_id:r.data.id});
     }
     closeM('m-trip');showToast('Viaje creado ✓ — agrégale ciudades');await load();go('planner');
   }catch(e){showToast('Sin red',true);}
@@ -423,7 +491,7 @@ let chatMsgs=[];
 const CHIPS=['¿Cuánto llevamos gastado?','¿Qué falta por reservar?','Busca hoteles para una ciudad','Dame ideas para este viaje'];
 async function startChat(){if(chatStarted)return;chatStarted=true;
   $('chat-chips').innerHTML=CHIPS.map(c=>'<div class="chat-chip" onclick="chipSend(this)">'+esc(c)+'</div>').join('');
-  try{const r=await fetch('/api/chat?trip='+encodeURIComponent(activeTripId()));const j=await r.json();
+  try{const r=await fetch('/api/chat?trip='+encodeURIComponent(activeTripId()),{headers:authHeaders()});const j=await r.json();
     if(j.ok&&j.messages&&j.messages.length){j.messages.forEach(m=>{pushBub(m.role==='user'?'user':'assistant',m.content);chatMsgs.push({role:m.role,content:m.content});});return;}
   }catch(e){}
   pushBub('assistant','¡Hola! Soy Claudia'+(TRIP&&TRIP.name?' — tu asistente para '+TRIP.name:'')+'. Puedo armar tu plan, registrar gastos, buscar vuelos y hoteles con precios reales, y resolver dudas del viaje. Dime qué necesitas o toca una sugerencia 👇');}
@@ -451,7 +519,7 @@ function mdToHtml(raw){
   closeList();return html||'<p></p>';}
 function pushBub(role,text){const d=document.createElement('div');d.className='bub '+(role==='user'?'u':'a md');if(role==='user')d.textContent=text;else d.innerHTML=mdToHtml(text);$('chat-log').appendChild(d);d.scrollIntoView({behavior:'smooth'});return d;}
 async function sendChat(){const inp=$('chat-in'),t=inp.value.trim();if(!t)return;inp.value='';pushBub('user',t);chatMsgs.push({role:'user',content:t});const typing=pushBub('assistant','…');
-  try{const r=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({messages:chatMsgs,trip_id:activeTripId()})});const j=await r.json();const reply=j.reply||j.error||'(sin respuesta)';typing.innerHTML=mdToHtml(reply);chatMsgs.push({role:'assistant',content:reply});if(j.tool_events&&j.tool_events.length){load();showToast('Plan actualizado ✓');}}catch(e){typing.textContent='Error: '+e.message;}}
+  try{const r=await fetch('/api/chat',{method:'POST',headers:Object.assign({'Content-Type':'application/json'},authHeaders()),body:JSON.stringify({messages:chatMsgs,trip_id:activeTripId()})});const j=await r.json();const reply=j.reply||j.error||'(sin respuesta)';typing.innerHTML=mdToHtml(reply);chatMsgs.push({role:'assistant',content:reply});if(j.tool_events&&j.tool_events.length){load();showToast('Plan actualizado ✓');}}catch(e){typing.textContent='Error: '+e.message;}}
 
 /* ---------- reservas / links (Push C) ---------- */
 const RES_ICON={flight:'✈️',hotel:'🏨',restaurant:'🍽️',train:'🚄',tour:'🎟️',transfer:'🚐',activity:'🎫',other:'📋'};
@@ -499,22 +567,36 @@ function mapDay(date){const acts=(DATA.activities||[]).filter(a=>a.activity_date
 
 /* ---------- shared ---------- */
 function closeM(id){$(id).classList.remove('open');}
-async function write(body,okMsg){const k=await wkey();if(!k)return;
-  if(body.table!=='trips'&&!body.trip_id)body.trip_id=activeTripId();
-  try{const r=await fetch('/api/write',{method:'POST',headers:{'Content-Type':'application/json','X-Write-Key':k},body:JSON.stringify(body)});const j=await r.json();
-    if(!j.ok){showToast(j.error||'Error',true);if(/clave/i.test(j.error||''))localStorage.removeItem('bayu_write_key');return;}
-    await load();showToast(okMsg||'Listo ✓');}catch(e){queuePush(body);showToast('Sin red: guardado, sincroniza al reconectar ⏳');}}
-async function writeMany(items,okMsg){const k=await wkey();if(!k)return;const tid=activeTripId();
-  try{for(const it of items){await fetch('/api/write',{method:'POST',headers:{'Content-Type':'application/json','X-Write-Key':k},body:JSON.stringify({action:'update',table:'activities',id:it.id,patch:it.patch,trip_id:tid})});}await load();showToast(okMsg||'Listo ✓');}catch(e){items.forEach(it=>queuePush({action:'update',table:'activities',id:it.id,patch:it.patch,trip_id:tid}));showToast('Sin red ⏳');}}
+async function execWrite(body){
+  if(!SESSION)return {ok:false,error:'Sin sesión'};
+  const tid=body.trip_id||activeTripId(),isTrips=body.table==='trips',tn='bayu_'+body.table,pk=body.table==='budget'?'category':'id';
+  let q;
+  if(body.action==='insert'){const row=Object.assign({},body.row);if(!isTrips)row.trip_id=row.trip_id||tid;q=sbc.from(tn).insert(row).select().single();}
+  else if(body.action==='update'){q=sbc.from(tn).update(body.patch).eq(pk,body.id);if(!isTrips)q=q.eq('trip_id',tid);}
+  else if(body.action==='upsert'){const row=Object.assign({},body.row);if(!isTrips)row.trip_id=row.trip_id||tid;const onc=body.table==='hotel_choices'?'trip_id,city':body.table==='day_overrides'?'trip_id,date':body.table==='budget'?'trip_id,category':'id';q=sbc.from(tn).upsert(row,{onConflict:onc});}
+  else if(body.action==='delete'){q=sbc.from(tn).delete().eq(pk,body.id);if(!isTrips)q=q.eq('trip_id',tid);}
+  else return {ok:false,error:'acción inválida'};
+  const r=await q;
+  if(r.error){if(/fetch|network/i.test(r.error.message))throw new Error(r.error.message);return {ok:false,error:r.error.message};}
+  return {ok:true,data:r.data};
+}
+async function write(body,okMsg){
+  if(!SESSION){showAuth();return;}
+  try{const r=await execWrite(body);
+    if(!r.ok){showToast(r.error||'Error',true);return;}
+    await load();showToast(okMsg||'Listo ✓');
+  }catch(e){queuePush(Object.assign({},body,{trip_id:body.trip_id||activeTripId()}));showToast('Sin red: guardado, sincroniza al reconectar ⏳');}}
+async function writeMany(items,okMsg){if(!SESSION){showAuth();return;}const tid=activeTripId();
+  try{for(const it of items){await execWrite({action:'update',table:'activities',id:it.id,patch:it.patch,trip_id:tid});}await load();showToast(okMsg||'Listo ✓');}catch(e){items.forEach(it=>queuePush({action:'update',table:'activities',id:it.id,patch:it.patch,trip_id:tid}));showToast('Sin red ⏳');}}
 
 /* offline queue + recibos (Push D) */
 function queueGet(){try{return JSON.parse(localStorage.getItem('bayu_queue')||'[]');}catch(e){return [];}}
 function queuePush(b){const q=queueGet();q.push(b);localStorage.setItem('bayu_queue',JSON.stringify(q));}
-async function flushQueue(){let q=queueGet();if(!q.length)return;const k=localStorage.getItem('bayu_write_key');if(!k)return;const left=[];for(const b of q){try{const r=await fetch('/api/write',{method:'POST',headers:{'Content-Type':'application/json','X-Write-Key':k},body:JSON.stringify(b)});const j=await r.json();if(!j.ok)left.push(b);}catch(e){left.push(b);}}localStorage.setItem('bayu_queue',JSON.stringify(left));if(left.length<q.length){await load();showToast('Sincronizado ✓');}}
+async function flushQueue(){let q=queueGet();if(!q.length||!SESSION)return;const left=[];for(const b of q){try{const r=await execWrite(b);if(!r.ok)left.push(b);}catch(e){left.push(b);}}localStorage.setItem('bayu_queue',JSON.stringify(left));if(left.length<q.length){await load();showToast('Sincronizado ✓');}}
 window.addEventListener('online',flushQueue);
 function fileToB64Resized(file,max,cb){const rd=new FileReader();rd.onload=e=>{const img=new Image();img.onload=()=>{let w=img.width,h=img.height;if(w>h&&w>max){h=Math.round(h*max/w);w=max;}else if(h>=w&&h>max){w=Math.round(w*max/h);h=max;}const c=document.createElement('canvas');c.width=w;c.height=h;c.getContext('2d').drawImage(img,0,0,w,h);cb(c.toDataURL('image/jpeg',0.82).split(',')[1]);};img.src=e.target.result;};rd.readAsDataURL(file);}
 function pickReceipt(input){const f=input.files&&input.files[0];if(!f)return;fileToB64Resized(f,1200,b64=>{pendingReceipt=b64;document.getElementById('me-preview').innerHTML='<img src="data:image/jpeg;base64,'+b64+'" style="max-height:90px;border-radius:8px"/>';showToast('Foto lista, guarda el gasto');});}
-async function uploadReceipt(b64){const k=await wkey();if(!k)return null;try{const r=await fetch('/api/upload',{method:'POST',headers:{'Content-Type':'application/json','X-Write-Key':k},body:JSON.stringify({content_b64:b64,contentType:'image/jpeg',ext:'jpg'})});const j=await r.json();return j.ok?j.url:null;}catch(e){showToast('No se pudo subir la foto',true);return null;}}
+async function uploadReceipt(b64){if(!SESSION)return null;try{const r=await fetch('/api/upload',{method:'POST',headers:Object.assign({'Content-Type':'application/json'},authHeaders()),body:JSON.stringify({content_b64:b64,contentType:'image/jpeg',ext:'jpg',trip_id:activeTripId()})});const j=await r.json();return j.ok?j.url:null;}catch(e){showToast('No se pudo subir la foto',true);return null;}}
 
 /* pull-to-refresh */
 let ptrY=0,ptrOn=false;
@@ -522,8 +604,7 @@ document.addEventListener('touchstart',e=>{if(window.scrollY<=0){ptrY=e.touches[
 document.addEventListener('touchmove',e=>{if(!ptrOn)return;if(e.touches[0].clientY-ptrY>65)$('ptr').classList.add('show');else $('ptr').classList.remove('show');},{passive:true});
 document.addEventListener('touchend',()=>{if(ptrOn&&$('ptr').classList.contains('show')){load();showToast('Actualizando…');}$('ptr').classList.remove('show');ptrOn=false;},{passive:true});
 
-load();
-flushQueue();
+initAuth();
 if(!localStorage.getItem('bayu_onboarded')){var _o=document.getElementById('onb');if(_o)_o.classList.add('show');}
 function closeOnb(){var o=document.getElementById('onb');if(o)o.classList.remove('show');localStorage.setItem('bayu_onboarded','1');}
 if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('/sw.js').catch(()=>{}));}

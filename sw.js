@@ -1,4 +1,4 @@
-const CACHE='bayu-v12-fase1';
+const CACHE='bayu-v13-fase0';
 const CORE=['/','/manifest.json','/app/main.js','/app/ui.css','/app/icon-192.png','/app/icon-512.png','/app/apple-touch.png','/app/favicon.png'];
 const IMGS=[]; // covers de viajes son URLs dinámicas — sin precache de imágenes fijas
 self.addEventListener('install',e=>{e.waitUntil((async()=>{

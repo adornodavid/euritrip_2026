@@ -85,6 +85,31 @@
   AdMob+RevenueCat (no Stripe-only), Travelpayouts como red principal de
   afiliados, tablas renombradas a `bayu_*` en la migración v2.
 
+### Sesión 11 jun 2026 (Claude Code local — tarde 3) — FASE 0: auth real + RLS (PR #7)
+- David decidió: **quedarse en el proyecto Supabase compartido** (stream_match) — mitigado
+  con cero triggers en auth.users, redirectTo explícito y RLS por membresía.
+  Google OAuth de Stream Match le sirve a Bayu tal cual (mismo callback).
+- **Migración aplicada** (`sql/2026-06-11-fase0-auth-rls.sql`): BAYU v1 archivado como
+  `v1_bayu_*` (respaldo en `backups/backup-pre-fase0-2026-06-11.json`), rename
+  `eurotrip_*`→`bayu_*`, **vistas de compatibilidad transitorias** (solo service_role,
+  para el código viejo en prod), `bayu_profiles`/`bayu_trip_members`/`bayu_ai_usage`,
+  trigger owner→membership, helpers `bayu_can_read/can_edit/is_owner` (security definer),
+  RLS por membresía, **acceso anon CERRADO**. Fix posterior: 10 policies públicas viejas
+  con nombres no estandarizados (activities_select_public, tc_select_public, etc.)
+  sobrevivieron al rename → eliminadas.
+- **API**: `_auth.js` (requireUser + requireTripMember en servidor + quota 400 msgs IA/mes),
+  JWT en chat/translate/search/upload, `account.js` (export GDPR + borrado de cuenta),
+  eliminados `/api/data` y `/api/write`.
+- **App**: pantalla login (email+pass, Google, recuperar), supabase-js directo con RLS
+  (load/write/cola offline), Perfil con cuenta/compañeros/invitar por email, sw `bayu-v13-fase0`.
+  Murió `wkey()`/EUROTRIP_WRITE_KEY.
+- **Criterio de aceptación PASS** (usuarios de prueba A/B): B no lee ni escribe NADA de A
+  ni del Eurotrip (REST directo 0 rows/403 y API 401/403); login E2E en browser limpio.
+- **PENDIENTE INMEDIATO**: David+Paty se registran → ownership migration (owner_id +
+  Paty editor) → drop vistas compat → quitar EUROTRIP_WRITE_KEY de Vercel.
+- Pendiente Fase 0.5: bucket privado de Storage con URLs firmadas (media sigue en bucket
+  público `eurotrip`); SMTP propio si las confirmaciones de email se activan.
+
 ### Sesión 11 jun 2026 (Claude Code local — tarde 2) — FASE 1: de-hardcodeo total ejecutada
 - **Migración DB aplicada** (`sql/2026-06-11-fase1-dehardcodeo.sql`): `trips.home_currency`
   + `trips.guide_url` · `trip_cities.lat/lng/country_code` (backfill 7 ciudades Eurotrip) ·
