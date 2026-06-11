@@ -359,3 +359,10 @@ button .ic{pointer-events:none;}
 
 /* ---------- 17 · MOTION reducido ---------- */
 @media(prefers-reduced-motion:reduce){*{animation-duration:.001ms !important;animation-iteration-count:1 !important;transition-duration:.01ms !important;}}
+
+/* ---- Fase 0 · pantalla de auth ---- */
+#auth{z-index:300}
+.auth-card input{width:100%;margin:.32rem 0;padding:.78rem .9rem;border-radius:12px;border:1.5px solid var(--line,#d8d8e0);background:var(--card,#fff);color:inherit;font:inherit;font-size:16px}
+.auth-card .onb-btn{margin-top:.5rem}
+.auth-card .onb-btn.ghost{background:transparent;color:inherit;border:1.5px solid var(--line,#d8d8e0)}
+.auth-link{background:none;border:0;color:inherit;opacity:.65;font:inherit;font-size:.8rem;margin-top:.7rem;text-decoration:underline;cursor:pointer}

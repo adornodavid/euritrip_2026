@@ -14,17 +14,6 @@ export function getSupabase() {
   });
 }
 
-// Tablas de datos por-viaje (todas tienen trip_id). data.js itera sobre estas.
+// Tablas de datos por-viaje (todas tienen trip_id).
 export const TABLES = ['notes', 'bookmarks', 'reservations', 'hotel_choices', 'day_overrides', 'expenses', 'budget', 'activities', 'trip_cities', 'media', 'trip_travelers', 'packing_items'];
-// Tablas escribibles = las de datos + la tabla de viajes (sin trip_id propio)
-export const WRITE_TABLES = [...TABLES, 'trips'];
-export const tableName = (logical) => `eurotrip_${logical}`;
-
-// Verifica write key (clave compartida del viaje — muere con auth real en Fase 0)
-export function checkWriteKey(req) {
-  const writeKey = process.env.EUROTRIP_WRITE_KEY;
-  if (!writeKey) return { ok: false, error: 'EUROTRIP_WRITE_KEY no configurada en Vercel' };
-  const provided = req.headers['x-write-key'] || req.body?.write_key;
-  if (provided !== writeKey) return { ok: false, error: 'Clave de escritura incorrecta' };
-  return { ok: true };
-}
+export const tableName = (logical) => `bayu_${logical}`;

@@ -1,11 +1,14 @@
 // POST /api/translate → traduce texto con Claude (sin tools, rápido)
 import Anthropic from '@anthropic-ai/sdk';
+import { setCors, requireUser, checkAndCountAi } from './_auth.js';
 export default async function handler(req, res) {
-  res.setHeader('Access-Control-Allow-Origin','*');
-  res.setHeader('Access-Control-Allow-Methods','POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers','Content-Type');
+  setCors(req, res, 'POST, OPTIONS');
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return res.status(405).json({ error: 'Solo POST' });
+  const auth = await requireUser(req);
+  if (auth.error) return res.status(auth.status).json({ error: auth.error });
+  const quota = await checkAndCountAi(auth.user.id);
+  if (quota.error) return res.status(quota.status).json({ error: quota.error });
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) return res.status(500).json({ error: 'ANTHROPIC_API_KEY no configurada' });
   try {

@@ -4,6 +4,7 @@
 
 import Anthropic from '@anthropic-ai/sdk';
 import { getSupabase, TABLES, tableName } from './_supabase.js';
+import { setCors, requireUser, requireTripMember, checkAndCountAi } from './_auth.js';
 import { hasKey as hasSkyKey, searchFlights as skyFlights, searchHotels as skyHotels, compactFlights, compactHotels } from './_skyscanner.js';
 
 // Prompt GENÉRICO (aplica a cualquier viaje). El contexto del viaje activo se inyecta dinámico abajo.
@@ -453,16 +454,19 @@ async function executeTool(sb, tripId, name, input, ctx) {
 }
 
 export default async function handler(req, res) {
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  setCors(req, res, 'GET, POST, OPTIONS');
   if (req.method === 'OPTIONS') return res.status(200).end();
+
+  // Fase 0: toda llamada requiere sesión + membresía del viaje (verificada en servidor)
+  const auth = await requireUser(req);
+  if (auth.error) return res.status(auth.status).json({ error: auth.error });
 
   // GET → historial de chat del viaje (persistente por trip)
   if (req.method === 'GET') {
     try {
       const tid = req.query?.trip;
-      if (!tid) return res.status(400).json({ error: 'trip requerido' });
+      const mem = await requireTripMember(auth.user.id, tid, 'viewer');
+      if (mem.error) return res.status(mem.status).json({ error: mem.error });
       const sb = getSupabase();
       const { data, error } = await sb.from(tableName('chat_messages'))
         .select('role,content,created_at').eq('trip_id', tid)
@@ -485,6 +489,10 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'messages[] requerido' });
     }
     if (!trip_id) return res.status(400).json({ error: 'trip_id requerido — selecciona un viaje activo' });
+    const mem = await requireTripMember(auth.user.id, trip_id, 'editor');
+    if (mem.error) return res.status(mem.status).json({ error: mem.error });
+    const quota = await checkAndCountAi(auth.user.id);
+    if (quota.error) return res.status(quota.status).json({ error: quota.error });
     const tripId = trip_id;
 
     const client = new Anthropic({ apiKey });

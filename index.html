@@ -90,6 +90,19 @@
 <div id="toast" class="toast"></div>
 <div class="ptr" id="ptr"><span>↻</span></div>
 
+<!-- AUTH (Fase 0) -->
+<div id="auth" class="onb"><div class="onb-card auth-card">
+  <img src="app/icon-192.png" class="onb-logo" alt="Bayu"/>
+  <h1 class="onb-title">Bayu</h1>
+  <p class="onb-tag">Inicia sesión para ver tus viajes.</p>
+  <input type="email" id="au-email" placeholder="Email" autocomplete="email" inputmode="email"/>
+  <input type="password" id="au-pass" placeholder="Contraseña" autocomplete="current-password" onkeydown="if(event.key==='Enter')authIn()"/>
+  <button class="onb-btn" onclick="authIn()">Entrar</button>
+  <button class="onb-btn ghost" onclick="authUp()">Crear cuenta</button>
+  <button class="onb-btn ghost" onclick="authGoogle()">Continuar con Google</button>
+  <button class="auth-link" onclick="authForgot()">Olvidé mi contraseña</button>
+</div></div>
+
 <!-- ONBOARDING -->
 <div id="onb" class="onb"><div class="onb-card">
   <img src="app/icon-192.png" class="onb-logo" alt="Bayu"/>
@@ -224,6 +237,7 @@
   <button class="cancel" onclick="closeM('m-trans')">Cerrar</button>
 </div></div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="app/main.js"></script>
 </body>
 </html>
