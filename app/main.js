@@ -45,7 +45,7 @@ async function deleteAccount(){const c=await promptSheet('⚠️ Borra tu cuenta
   try{const r=await fetch('/api/account',{method:'POST',headers:Object.assign({'Content-Type':'application/json'},authHeaders()),body:JSON.stringify({action:'delete',confirm:'BORRAR'})});const j=await r.json();
     if(j.ok){showToast('Cuenta borrada');await sbc.auth.signOut();}else showToast(j.error||'Error',true);}catch(e){showToast('Error de red',true);}}
 async function inviteMember(){const em=await promptSheet('Email de la persona (ya debe tener cuenta Bayu)','correo@ejemplo.com','Invitar');if(!em)return;
-  const p=await sbc.from('bayu_profiles').select('id,display_name').eq('email',em.toLowerCase().trim()).maybeSingle();
+  const p=await sbc.rpc('bayu_invite_lookup',{p_email:em}).maybeSingle();
   if(!p.data){infoSheet('No encontrado','Esa persona primero debe crear su cuenta en Bayu (con ese email); luego invítala de nuevo.');return;}
   const r=await sbc.from('bayu_trip_members').insert({trip_id:activeTripId(),user_id:p.data.id,role:'editor'});
   if(r.error)showToast(r.error.message.includes('duplicate')?'Ya es miembro de este viaje':r.error.message,true);else{showToast('Invitado ✓ — ya puede ver y editar este viaje');load();}}
@@ -60,7 +60,7 @@ function esc(t){return (t==null?'':String(t)).replace(/[&<>"]/g,c=>({'&':'&amp;'
 /* ícono SVG del sprite (#i-*) — la interfaz no usa emojis */
 function I(n,s){s=s||18;return '<svg class="ic" width="'+s+'" height="'+s+'" aria-hidden="true"><use href="#i-'+n+'"/></svg>';}
 /* ---- sheets de confirmación/captura: reemplazan confirm()/prompt()/alert() nativos ---- */
-function askSheet(o){return new Promise(function(res){
+function askSheet(o){if(document.querySelector('.modal.open .asheet'))return Promise.resolve(o.input?null:false);return new Promise(function(res){
   var m=document.createElement('div');m.className='modal open';
   m.innerHTML='<div class="sheet asheet"><h3>'+esc(o.title||'')+'</h3>'
     +(o.body?'<p class="ask-body">'+esc(o.body)+'</p>':'')
@@ -187,6 +187,10 @@ function renderPlanner(){
   else html+='<div class="pg"><span>📋 '+totalA+' actividades · '+(DATA.reservations||[]).length+' reservas</span><span>'+CITIES.length+' ciudades</span></div>';
   html+='</div>'+wishHtml(wish);
   if(!CITIES.length)html+=emptyState('🗺️','Este viaje aún no tiene ciudades','Agrega tu primera ciudad o parada para empezar a planear día por día.','<button class="eb" onclick="openCity({})">+ Agregar ciudad</button>');
+  if(!CITIES.length&&dated.length){
+    html+='<div class="bcard"><div class="lbl" style="margin-bottom:.3rem">📅 Actividades con fecha</div><div style="color:var(--muted);font-size:.78rem;margin-bottom:.4rem">Agrega la ciudad de esos días para verlas en el plan día por día.</div>';
+    dated.forEach(a=>{html+='<div class="act"><span style="flex:0 0 auto;margin-top:.1rem">📅</span><div class="a-body"><div class="a-title">'+esc(a.title)+'</div><div class="a-meta">'+dn(a.activity_date)+(a.city?' · 📍 '+esc(a.city):'')+'</div></div><div class="a-act"><button onclick="editAct(\''+a.id+'\')" aria-label="Editar">'+I('pencil',16)+'</button><button onclick="delAct(\''+a.id+'\')" aria-label="Borrar">'+I('trash',16)+'</button></div></div>';});
+    html+='</div>';}
   CITIES.forEach((c,ci)=>{
     const cityActs=acts.filter(a=>a.activity_date&&resolveCity(a)===c.key);
     const hotel=hotels.find(h=>h.city===c.key), cnt=cityActs.length, dco=cityActs.filter(a=>a.status==='hecho').length;
@@ -335,8 +339,10 @@ function renderGastos(){
   if(TRV.length>=2)split+='<div><div class="who">🤝 Juntos</div><div class="amt2">'+money(byP('Joint'))+'</div></div>';
   html+=split+'</div></div>';
   html+='<div class="bcard">';
+  if(!budget.length)html+=emptyState('📊','Este viaje aún no tiene presupuesto','Crea las categorías para proyectar y poder registrar gastos.','<button class="eb" onclick="seedDefaultBudget()">+ Categorías típicas</button> <button class="eb" onclick="addBudgetCat()">+ Crear una</button>');
   budget.forEach(b=>{const sp=exp.filter(e=>e.category===b.category).reduce((s,e)=>s+Number(e.amount_mxn||0),0);const mx=Number(b.projected_max_mxn||0),p=mx?Math.min(100,sp/mx*100):0;
     html+='<div class="catrow" style="cursor:pointer" onclick="openBudget(\''+b.category+'\')"><div class="top"><span>'+(b.emoji||'')+' '+esc(b.label)+'</span><span>'+money(sp)+' <span class="sub">/ '+money(mx)+'</span></span></div><div class="bar"><i style="width:'+p+'%;background:'+(p>=100?'var(--red)':'var(--green)')+'"></i></div></div>';});
+  if(budget.length)html+='<button class="addbtn" style="margin-top:.4rem" onclick="addBudgetCat()">+ Nueva categoría</button>';
   html+='</div>';
   html+='<div class="chips"><div class="chip'+(gCity===''?' on':'')+'" onclick="setFilter(\'city\',\'\')">Todas</div>'+CITIES.map(c=>'<div class="chip'+(gCity===c.key?' on':'')+'" onclick="setFilter(\'city\',\''+esc(c.key)+'\')">'+c.flag+' '+esc(c.name)+'</div>').join('')+'</div>';
   const payerOpts=['',...TRV.map(t=>t.name),...(TRV.length>=2?['Joint']:[])];
@@ -360,7 +366,8 @@ function fxCalc(){const cur=$('me-cur').value,base=curCode(),orig=parseFloat($('
   $('me-fxrow').style.display='flex';let fx=parseFloat($('me-fx').value);
   if(!fx){$('me-fxhint').textContent='Buscando tasa '+cur+'→'+base+'…';fxRate(cur,base).then(v=>{if(v&&!parseFloat($('me-fx').value)){$('me-fx').value=v.toFixed(2);fxCalc();}else if(!v)$('me-fxhint').textContent='Sin tasa automática — escríbela manual';});return;}
   const mxn=Math.round(orig*fx);$('me-mxn').value=mxn||'';$('me-fxhint').textContent=orig?curSym(cur)+orig+' × '+fx+' = '+money(mxn):'';}
-function openExp(e){$('me-title').textContent=e.id?'Editar gasto':'Nuevo gasto';$('me-id').value=e.id||'';$('me-desc').value=e.description||'';$('me-cur').value=e.currency||curCode();$('me-orig').value=(e.currency&&e.currency!=='MXN')?(e.amount_original||''):(e.amount_mxn||'');$('me-fx').value=e.fx_rate||'';$('me-mxn').value=e.amount_mxn||'';$('me-cat').value=e.category||(DATA.budget&&DATA.budget[0]&&DATA.budget[0].category)||'';$('me-payer').value=e.payer||'Joint';$('me-city').value=e.city||'';$('me-notes').value=e.notes||'';pendingReceipt=null;$('me-photo').value='';$('me-preview').innerHTML=e.receipt_url?'<a href="'+e.receipt_url+'" target="_blank"><img src="'+e.receipt_url+'" style="max-height:90px;border-radius:8px"/></a>':'';fxCalc();$('m-exp').classList.add('open');}
+function openExp(e){if(!(DATA.budget||[]).length){infoSheet('Primero crea el presupuesto','Para registrar gastos necesitas al menos una categoría de presupuesto. Arriba en Gastos toca "+ Categorías típicas" o "+ Crear una".');return;}
+  $('me-title').textContent=e.id?'Editar gasto':'Nuevo gasto';$('me-id').value=e.id||'';$('me-desc').value=e.description||'';$('me-cur').value=e.currency||curCode();$('me-orig').value=(e.currency&&e.currency!=='MXN')?(e.amount_original||''):(e.amount_mxn||'');$('me-fx').value=e.fx_rate||'';$('me-mxn').value=e.amount_mxn||'';$('me-cat').value=e.category||(DATA.budget&&DATA.budget[0]&&DATA.budget[0].category)||'';$('me-payer').value=e.payer||'Joint';$('me-city').value=e.city||'';$('me-notes').value=e.notes||'';pendingReceipt=null;$('me-photo').value='';$('me-preview').innerHTML=e.receipt_url?'<a href="'+e.receipt_url+'" target="_blank"><img src="'+e.receipt_url+'" style="max-height:90px;border-radius:8px"/></a>':'';fxCalc();$('m-exp').classList.add('open');}
 async function delExp(id){if(await confirmSheet('¿Borrar este gasto?',null,'Borrar'))await write({action:'delete',table:'expenses',id:id},'Borrado');}
 async function saveExp(){const id=$('me-id').value,desc=$('me-desc').value.trim(),cur=$('me-cur').value,mxn=parseFloat($('me-mxn').value);const base=curCode();
   if(!desc){showToast('Escribe la descripción',true);return;}if(isNaN(mxn)){showToast('Monto inválido',true);return;}
@@ -445,7 +452,7 @@ function renderPerfil(){const hotels=DATA.hotel_choices||[];
   const _tm=localStorage.getItem('bayu_theme')||'auto';
   h+='<div class="bcard"><div class="lbl" style="margin-bottom:.4rem">🎨 Tema</div><div class="seg">'+['light','auto','dark'].map(function(x){return '<button class="seg-btn'+(_tm===x?' on':'')+'" onclick="setTheme(\''+x+'\')">'+({light:'☀️ Claro',auto:'🔄 Auto',dark:'🌙 Oscuro'}[x])+'</button>';}).join('')+'</div></div>';
   h+=''+(TRIP&&TRIP.guide_url?'<a class="pf-btn" href="'+esc(TRIP.guide_url)+'">📖 Guía editorial completa</a>':'')+'<button class="pf-btn" onclick="infoSheet(\'Instalar Bayu\',\'iPhone: Safari → Compartir → Agregar a pantalla de inicio. Android: Chrome → menú ⋮ → Instalar app.\')">📲 Cómo instalar la app</button><button class="pf-btn" onclick="load();showToast(\'Actualizado ✓\')">🔄 Recargar datos</button><button class="pf-btn" onclick="forceUpdate()">⬆️ Actualizar app</button><button class="pf-btn" onclick="logout()" style="color:var(--red);font-weight:700">🚪 Cerrar sesión</button>';
-  h+='<div style="text-align:center;color:var(--muted);font-size:.74rem;margin-top:1rem">Bayu v13.5 · Arkamia Lab</div>';$('perfil-root').innerHTML=h;}
+  h+='<div style="text-align:center;color:var(--muted);font-size:.74rem;margin-top:1rem">Bayu v13.6 · Arkamia Lab</div>';$('perfil-root').innerHTML=h;}
 function applyTheme(){var m=localStorage.getItem('bayu_theme')||'auto';var d=m==='dark'||(m==='auto'&&matchMedia('(prefers-color-scheme:dark)').matches);document.documentElement.setAttribute('data-theme',d?'dark':'light');}
 function setTheme(m){localStorage.setItem('bayu_theme',m);applyTheme();renderPerfil();showToast('Tema: '+({light:'Claro',auto:'Auto',dark:'Oscuro'}[m]||m));}
 async function addTraveler(){const n=await promptSheet('Nombre del viajero','Ej: Ana','Agregar');if(!n)return;
@@ -469,7 +476,7 @@ function renderViajes(){
   $('viajes-root').innerHTML=h;
 }
 async function switchTrip(id){if(TRIP&&id===TRIP.id){go('planner');return;}localStorage.setItem('bayu_trip_id',id);DATA={};chatStarted=false;chatMsgs=[];var cl=$('chat-log');if(cl)cl.innerHTML='';showToast('Cambiando de viaje…');await load();go('planner');}
-function openTrip(t){$('mt-id').value=t.id||'';$('mt-name').value=t.name||'';$('mt-sub').value=t.subtitle||'';$('mt-flag').value=t.flag||'🌍';$('mt-start').value=t.start_date||'';$('mt-end').value=t.end_date||'';$('mt-cover').value=t.cover_image||'';$('mt-status').value=t.status||'planning';$('mt-cur').value=t.home_currency||'MXN';$('mt-del').style.display=t.id?'block':'none';$('mt-title').textContent=t.id?'Editar viaje':'Nuevo viaje';$('m-trip').classList.add('open');}
+function openTrip(t){t=t||{};$('mt-title').textContent=t.id?'Editar viaje':'Nuevo viaje';$('mt-del').style.display=t.id?'block':'none';$('mt-id').value=t.id||'';$('mt-name').value=t.name||'';$('mt-sub').value=t.subtitle||'';$('mt-flag').value=t.flag||'🌍';$('mt-start').value=t.start_date||'';$('mt-end').value=t.end_date||'';$('mt-cover').value=t.cover_image||'';$('mt-status').value=t.status||'planning';$('mt-cur').value=t.home_currency||'MXN';$('mt-del').style.display=t.id?'block':'none';$('mt-title').textContent=t.id?'Editar viaje':'Nuevo viaje';$('m-trip').classList.add('open');}
 function openTrip2(id){const t=TRIPS.find(x=>x.id===id);if(t)openTrip(t);}
 async function saveTrip(){const id=$('mt-id').value,name=$('mt-name').value.trim();if(!name){showToast('Ponle nombre al viaje',true);return;}
   const row={name:name,subtitle:$('mt-sub').value||null,flag:$('mt-flag').value||'🌍',start_date:$('mt-start').value||null,end_date:$('mt-end').value||null,cover_image:$('mt-cover').value||null,status:$('mt-status').value||'planning',home_currency:$('mt-cur').value||'MXN'};
@@ -481,7 +488,9 @@ async function saveTrip(){const id=$('mt-id').value,name=$('mt-name').value.trim
     if(!r.ok){showToast(r.error||'Error',true);return;}
     if(r.data&&r.data.id){localStorage.setItem('bayu_trip_id',r.data.id);
       const me=await promptSheet('¿Quién viaja? (tu nombre)','Ej: Ana','Continuar');
-      if(me)await execWrite({action:'insert',table:'trip_travelers',row:{name:me,sort_order:1,created_by:'manual'},trip_id:r.data.id});
+      const u=SESSION.user,myName=me||((u.user_metadata&&(u.user_metadata.full_name||u.user_metadata.name))||(u.email||'Yo').split('@')[0]);
+      await execWrite({action:'insert',table:'trip_travelers',row:{name:myName,sort_order:1,created_by:'manual'},trip_id:r.data.id});
+      await seedDefaultBudget(r.data.id);
     }
     closeM('m-trip');showToast('Viaje creado ✓ — agrégale ciudades');await load();go('planner');
   }catch(e){showToast('Sin red',true);}
@@ -563,8 +572,26 @@ function openHotel(city){const h=(DATA.hotel_choices||[]).find(x=>x.city===city)
 async function saveHotel(){const city=$('mh-city').value,name=$('mh-name').value.trim();if(!name){showToast('Escribe el hotel',true);return;}
   const row={city:city,hotel_name:name,zone:$('mh-zone').value||null,price_per_night:$('mh-price').value||null,confirmed:$('mh-conf').value==='true',booking_url:$('mh-url').value||null,notes:$('mh-notes').value||null};
   await write({action:'upsert',table:'hotel_choices',row:row},'Hotel guardado ✓');closeM('m-hotel');}
-function openBudget(cat){const b=(DATA.budget||[]).find(x=>x.category===cat);if(!b)return;$('mb-cat').value=cat;$('mb-label').value=(b.emoji||'')+' '+b.label;$('mb-min').value=b.projected_min_mxn||0;$('mb-max').value=b.projected_max_mxn||0;$('m-budget').classList.add('open');}
-async function saveBudget(){const cat=$('mb-cat').value,mn=parseFloat($('mb-min').value),mx=parseFloat($('mb-max').value);if(isNaN(mn)||isNaN(mx)||mx<mn){showToast('Montos inválidos (máx ≥ mín)',true);return;}await write({action:'update',table:'budget',id:cat,patch:{projected_min_mxn:mn,projected_max_mxn:mx}},'Presupuesto actualizado ✓');closeM('m-budget');}
+function openBudget(cat){const b=(DATA.budget||[]).find(x=>x.category===cat);if(!b)return;$('mb-cat').value=cat;$('mb-label').value=(b.emoji||'')+' '+b.label;$('mb-label').disabled=true;$('mb-min').value=b.projected_min_mxn||0;$('mb-max').value=b.projected_max_mxn||0;$('mb-title').textContent='Editar presupuesto';const d=$('mb-del');if(d)d.style.display='block';$('m-budget').classList.add('open');}
+function addBudgetCat(){$('mb-cat').value='';$('mb-label').value='';$('mb-label').disabled=false;$('mb-min').value=0;$('mb-max').value=0;$('mb-title').textContent='Nueva categoría';const d=$('mb-del');if(d)d.style.display='none';$('m-budget').classList.add('open');}
+async function saveBudget(){const cat=$('mb-cat').value,mn=parseFloat($('mb-min').value)||0,mx=parseFloat($('mb-max').value)||0;if(mx<mn){showToast('Montos inválidos (máx ≥ mín)',true);return;}
+  if(cat){await write({action:'update',table:'budget',id:cat,patch:{projected_min_mxn:mn,projected_max_mxn:mx}},'Presupuesto actualizado ✓');closeM('m-budget');return;}
+  const raw=$('mb-label').value.trim();if(!raw){showToast('Ponle nombre a la categoría',true);return;}
+  const _em=raw.match(/^(\p{Extended_Pictographic}️?)\s*/u);const em=_em?_em[1]:'📌';
+  const label=raw.replace(/^(\p{Extended_Pictographic}️?)\s*/u,'').trim()||raw;
+  const slug=label.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'');
+  if(!slug){showToast('Nombre inválido',true);return;}
+  if((DATA.budget||[]).some(b=>b.category===slug)){showToast('Ya existe esa categoría',true);return;}
+  await write({action:'upsert',table:'budget',row:{category:slug,label:label,emoji:em,projected_min_mxn:mn,projected_max_mxn:mx,sort_order:(DATA.budget||[]).length+1}},'Categoría creada ✓');closeM('m-budget');}
+async function delBudgetCat(){const cat=$('mb-cat').value;if(!cat)return;
+  const n=(DATA.expenses||[]).filter(e=>e.category===cat).length;
+  if(n){infoSheet('No se puede borrar','Esta categoría tiene '+n+' gasto(s) registrados. Bórralos o cámbialos de categoría primero.');return;}
+  if(!await confirmSheet('¿Borrar esta categoría?','Solo se borra la categoría (no tiene gastos).','Borrar'))return;
+  closeM('m-budget');await write({action:'delete',table:'budget',id:cat},'Categoría borrada');}
+const DEFAULT_BUDGET=[['flights','Vuelos','✈️'],['hotels','Hospedaje','🏨'],['food','Comida','🍽️'],['attractions','Atracciones','🎟️'],['transport','Transporte','🚇'],['trains','Trenes','🚄'],['shopping','Compras','🛍️'],['misc','Otros','📦']];
+async function seedDefaultBudget(tripId){if(!SESSION){showAuth();return;}const tid=tripId||activeTripId();if(!tid)return;showToast('Creando categorías…');
+  for(let i=0;i<DEFAULT_BUDGET.length;i++){const b=DEFAULT_BUDGET[i];try{await execWrite({action:'upsert',table:'budget',row:{category:b[0],label:b[1],emoji:b[2],projected_min_mxn:0,projected_max_mxn:0,sort_order:i+1},trip_id:tid});}catch(e){}}
+  if(!tripId){await load();showToast('Categorías creadas ✓');}}
 function mapDay(date){const acts=(DATA.activities||[]).filter(a=>a.activity_date===date&&a.category!=='logistica');if(!acts.length){showToast('Sin lugares ese día');return;}
   const pts=acts.map(a=>encodeURIComponent(a.title+(a.city?', '+a.city:'')));let url;
   if(pts.length===1)url='https://www.google.com/maps/search/?api=1&query='+pts[0];
@@ -588,7 +615,8 @@ async function execWrite(body){
 }
 async function write(body,okMsg){
   if(!SESSION){showAuth();return;}
-  if(write._busy)return;write._busy=true;setTimeout(function(){write._busy=false;},2200);
+  const _k=JSON.stringify(body),_n=Date.now(); // anti doble-tap: solo bloquea la MISMA escritura repetida, no escrituras distintas
+  if(write._k===_k&&_n-(write._t||0)<1500)return;write._k=_k;write._t=_n;
   try{const r=await execWrite(body);
     if(!r.ok){showToast(r.error||'Error',true);return;}
     await load();showToast(okMsg||'Listo ✓');

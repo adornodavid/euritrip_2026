@@ -367,6 +367,11 @@ async function executeTool(sb, tripId, name, input, ctx) {
       const travelers = ctx.travelers || [];
       if (!row.payer) row.payer = travelers.length >= 2 ? 'Joint' : (travelers[0]?.name || 'Joint');
       if (!row.currency) row.currency = ctx.homeCurrency || 'MXN';
+      if (row.category) { // FK (trip_id,category)→budget: si el viaje no tiene esa categoría, créala con presupuesto 0
+        const LBL = { flights: ['Vuelos', '✈️'], hotels: ['Hospedaje', '🏨'], trains: ['Trenes', '🚄'], food: ['Comida', '🍽️'], attractions: ['Atracciones', '🎟️'], transport: ['Transporte', '🚇'], shopping: ['Compras', '🛍️'], misc: ['Otros', '📦'] };
+        const lb = LBL[row.category] || [row.category, '📌'];
+        await sb.from(tableName('budget')).upsert({ trip_id: tripId, category: row.category, label: lb[0], emoji: lb[1], projected_min_mxn: 0, projected_max_mxn: 0, sort_order: 99 }, { onConflict: 'trip_id,category', ignoreDuplicates: true });
+      }
       const { data, error } = await sb.from(tableName('expenses')).insert(row).select().single();
       if (error) throw error;
       return { ok: true, message: `Gasto registrado: ${data.description} · $${Number(data.amount_mxn).toLocaleString('es-MX')} ${ctx.homeCurrency || 'MXN'}`, data };

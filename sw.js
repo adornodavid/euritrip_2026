@@ -1,4 +1,4 @@
-const CACHE='bayu-v13-5';
+const CACHE='bayu-v13-6';
 const CORE=['/','/manifest.json','/app/main.js','/app/ui.css','/app/icon-192.png','/app/icon-512.png','/app/apple-touch.png','/app/favicon.png'];
 const IMGS=[]; // covers de viajes son URLs dinámicas — sin precache de imágenes fijas
 self.addEventListener('install',e=>{e.waitUntil((async()=>{
@@ -15,8 +15,8 @@ self.addEventListener('activate',e=>{e.waitUntil((async()=>{
 self.addEventListener('fetch',e=>{
   if(e.request.method!=='GET')return;
   const u=new URL(e.request.url);
-  // API: red primero, cae a caché
-  if(u.pathname.startsWith('/api/')){ e.respondWith(fetch(e.request).catch(()=>caches.match(e.request))); return; }
+  // API y Supabase (REST/auth/storage): red primero, cae a caché — NUNCA servir datos stale
+  if(u.pathname.startsWith('/api/')||u.hostname.endsWith('.supabase.co')){ e.respondWith(fetch(e.request).catch(()=>caches.match(e.request))); return; }
   // App shell (navegación + JS/CSS/JSON propios): RED PRIMERO → así el código nuevo siempre llega; offline cae a caché
   const isShell = e.request.mode==='navigate' || (u.origin===self.location.origin && /\.(js|css|json)$/.test(u.pathname));
   if(isShell){

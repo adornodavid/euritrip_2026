@@ -175,9 +175,10 @@
 <div id="m-budget" class="modal"><div class="sheet">
   <h3 id="mb-title">Editar presupuesto</h3>
   <input type="hidden" id="mb-cat"/>
-  <label>Categoría</label><input type="text" id="mb-label" disabled/>
+  <label>Categoría</label><input type="text" id="mb-label" placeholder="Ej: 🍷 Vinos" disabled/>
   <div class="row2"><div><label>Mín MXN</label><input type="number" id="mb-min" inputmode="decimal"/></div><div><label>Máx MXN</label><input type="number" id="mb-max" inputmode="decimal"/></div></div>
   <button class="save" onclick="saveBudget()">Guardar</button>
+  <button class="cancel" id="mb-del" style="color:var(--red)" onclick="delBudgetCat()">Borrar categoría</button>
   <button class="cancel" onclick="closeM('m-budget')">Cancelar</button>
 </div></div>
 
