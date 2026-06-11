@@ -1,126 +1,99 @@
-# Eurotrip 2026 · David + Paty
+# Bayu · Trip Planner
 
-Propuesta interactiva HTML para viaje a Europa **15-31 Octubre 2026** (15 noches).
+App de planeación de viajes (PWA) de David + Paty. Nació como propuesta interactiva del **Eurotrip 2026 (15–31 octubre)** y evolucionó a una app **multi-viaje** con asistente de IA.
 
-🌐 **Sitio público**: https://adornodavid.github.io/euritrip_2026/ (GitHub Pages, sin chatbot)
-🤖 **Sitio con chatbot IA** (Vercel): pendiente de deploy — ver instrucciones abajo
+🌐 **Sitio público**: https://adornodavid.github.io/euritrip_2026/ (GitHub Pages, solo `guia.html`, sin backend)
+🤖 **App completa** (Vercel): requiere las env vars de abajo — chatbot, gastos, planner y datos en vivo.
 
-## Ruta v6
+## Qué hace la app
 
-**Paris 4N → Bordeaux 2N → Toulouse 1N → Barcelona 3N → Valencia 1N → Madrid 4N = 15N**
+Seis pestañas:
 
-Todo por tren de alta velocidad, sin vuelos cortos, máximo 3h15min por tramo.
+- 🗺️ **Planner** — itinerario día por día con actividades editables, clima por día, botones rápidos por actividad (info, mapa, boletos) y "Optimizar día con IA" (reordena por cercanía y horarios).
+- 💰 **Gastos** — presupuesto vs. gastos reales en MXN, por categoría, con fotos de recibos.
+- 🧭 **Explore** — tips, ideas y guía de emergencia por viaje.
+- 🤖 **Claudia** — asistente de viaje con IA (ver abajo).
+- 👤 **Perfil** — datos del viaje activo y ajustes.
+- ✈️ **Viajes** — crear, editar y cambiar entre viajes (multi-viaje: nada está hardcodeado a un solo trip).
 
-## Day trips
+La **ruta, ciudades, fechas y hoteles viven en Supabase**, no en el código: se editan desde la app o vía Claudia, y todos los componentes (incluida Claudia) leen el itinerario en vivo.
 
-- 🏰 **Versalles** (desde Paris)
-- 🍷 **Saint-Émilion** viñedo UNESCO (desde Bordeaux)
-- 🏰 **Toledo** UNESCO (desde Madrid)
-- 🍷 Día 29 flex: Chinchón / Vinos Madrid DO / Ribera del Duero (según presupuesto)
+## Claudia (chatbot IA)
 
-## Vuelos (ya pagados · $30K MXN pareja)
+Serverless function (`api/chat.js`) con Claude + tool use:
 
-- **IDA**: AM44 · MTY 3:25 PM (jue 15 oct) → CDG 9:40 AM (vie 16 oct) · Asientos 29A + 29B
-- **REGRESO**: AM35 · MAD 10:30 AM (sáb 31 oct) → MTY 3:45 PM · Asientos 34H + 34J
+- CRUD completo sobre el viaje activo: notas, links, reservaciones, hoteles, gastos, actividades, ciudades y presupuesto.
+- `web_search` para horarios, precios, links oficiales y fotos reales.
+- Reordena días completos del planner (`reorder_day`).
+- Responde en Markdown con fotos y links; pide confirmación antes de editar o borrar.
+- Conocimiento extra del Eurotrip semilla (vuelos, restaurantes, logística) solo cuando ese es el viaje activo.
 
-## Features v6 (Da Maria style)
+## Eurotrip 2026 (viaje semilla)
 
-- **Diseño editorial** estilo awwwards.com/sites/da-maria
-- Tipografía **Playfair Display** (italic serif) + Sora + Space Mono
-- Scroll animations con IntersectionObserver
-- 6 mapas Leaflet con zonas hoteles + restaurantes + museos + landmarks
-- Links automáticos a Google Maps + Booking + Tripadvisor + TheFork + YouTube por cada lugar
-- Galería de fotos clickeable → Google Images del lugar real
-- Widgets de clima por ciudad (octubre)
-- Gastronomía + platos típicos por ciudad
-- **Chatbot IA "Mily"** powered by Claude (requiere deploy en Vercel)
-- Presupuesto detallado EUR + MXN
+- **Vuelos pagados**: AM44 MTY 15 oct 3:25 PM → CDG 16 oct 9:40 AM (29A+29B) · AM35 MAD 31 oct 10:30 AM → MTY 3:45 PM (34H+34J).
+- **Ruta actual**: vive en la DB (tab ✈️ Viajes) — Francia + País Vasco + Madrid. La guía editorial original (ruta v6 por Barcelona/Valencia) se conserva en `guia.html` como referencia histórica.
+- **Presupuesto pareja**: Económico ~$145K MXN · Premium ~$156K MXN.
+
+## Estructura del repo
+
+```
+index.html        App shell de Bayu (PWA)
+app/main.js       Lógica de la app (tabs, planner, gastos, chat, viajes)
+app/              Íconos, logo (viento/Vayu) y opciones de logo
+api/chat.js       Claudia: Claude + tool use + web_search
+api/data.js       GET estado completo del viaje activo (lectura pública)
+api/write.js      Escritura a Supabase (protegida con write key)
+api/upload.js     Subida de imágenes a Supabase Storage (recibos)
+api/translate.js  Traductor rápido de frases de viaje (Claude Haiku)
+api/_supabase.js  Cliente compartido + tablas + auth de escritura
+guia.html         Guía editorial estática original del Eurotrip (standalone)
+sql/              Migraciones de Supabase
+manifest.json     PWA manifest (Bayu)
+sw.js             Service worker — network-first para el app shell
+```
 
 ## Stack
 
-- Frontend: HTML + CSS + JS vanilla
-- Mapas: Leaflet 1.9.4
-- Fuentes: Google Fonts (Playfair Display, Sora, Space Mono)
-- IA chatbot: Anthropic Claude vía Vercel Serverless Function
-- Hosting: GitHub Pages (sin chatbot) + Vercel (con chatbot)
+- Frontend: HTML + CSS + JS vanilla · PWA (manifest + service worker)
+- Diseño: "Sunset Editorial" v10 · Playfair Display + Sora + Space Mono
+- DB: Supabase (tablas `eurotrip_*`: trips, trip_cities, activities, expenses, budget, notes, bookmarks, reservations, hotel_choices, day_overrides, media) + Storage
+- IA: Anthropic Claude vía Vercel Serverless Functions
+- Hosting: Vercel (app completa) · GitHub Pages (guía estática)
 
-## Cómo hacer deploy en Vercel (con chatbot funcional)
+## Deploy en Vercel
 
-### 1. Conectar repo a Vercel
-
-1. Ve a https://vercel.com/new
-2. Login con GitHub (`adornodavid`)
-3. **Import** el repo `adornodavid/euritrip_2026`
-4. Framework Preset: **Other** (Vercel detecta automáticamente)
-5. Root Directory: dejar default (raíz)
-6. Build Command: dejar vacío
-7. Output Directory: dejar vacío
-8. **NO hagas deploy todavía** — primero env vars (siguiente paso)
-
-### 2. Configurar Environment Variables
-
-**ANTES de hacer deploy** (o agrega después y haz Redeploy):
+1. https://vercel.com/new → Import `adornodavid/euritrip_2026` → Framework Preset: **Other**, build/output vacíos.
+2. Configura las env vars **antes** del primer deploy (o agrega y haz Redeploy):
 
 | Name | Value | Para qué |
 |---|---|---|
-| `ANTHROPIC_API_KEY` | `sk-ant-api03-...` | Chatbot Claudia |
-| `SUPABASE_URL` | `https://qflyzgbsufvwrfkrrpfo.supabase.co` | DB Stream Match |
-| `SUPABASE_SERVICE_ROLE_KEY` | `eyJ...` (copia de Supabase dashboard) | Acceso server-side a DB |
-| `EUROTRIP_WRITE_KEY` | invéntala (ej: `paty-david-2026`) | Auth para form manual |
+| `ANTHROPIC_API_KEY` | `sk-ant-api03-...` | Claudia + traductor |
+| `SUPABASE_URL` | `https://qflyzgbsufvwrfkrrpfo.supabase.co` | DB |
+| `SUPABASE_SERVICE_ROLE_KEY` | `eyJ...` (Supabase dashboard → Project API Keys → `service_role`) | Acceso server-side a DB |
+| `EUROTRIP_WRITE_KEY` | clave compartida inventada | Auth para escrituras desde la app |
 
-**Para conseguir SUPABASE_SERVICE_ROLE_KEY:**
-1. Ve a https://supabase.com/dashboard/project/qflyzgbsufvwrfkrrpfo/settings/api
-2. Sección "Project API Keys"
-3. Copia el valor de **`service_role`** (no anon, el service_role)
-4. Pégalo en Vercel como `SUPABASE_SERVICE_ROLE_KEY`
+⚠️ **NUNCA** subas `service_role` ni la API key a Git. Solo env vars en Vercel.
 
-⚠️ **NUNCA** subas `service_role` a Git. Solo va en Vercel env vars.
+3. Abre el sitio → pestaña 🤖 Claudia → pregunta algo del viaje. Si responde con datos del itinerario → ✅ funcional.
 
-### 3. Verificar que funciona
-
-1. Vercel te da URL tipo `https://euritrip-2026-xxxxxx.vercel.app`
-2. Abre el sitio
-3. Click en el botón flotante 💬 (esquina inferior derecha)
-4. Pregunta: *"¿Cuánto cuesta el viaje?"*
-5. Si responde con info del viaje → ✅ funcional
-6. Si dice "API key no configurada" → revisar env vars en Vercel
-
-### 4. (Opcional) Dominio custom
-
-En Vercel → Settings → Domains → puedes apuntar `eurotrip.arkamia.mx` o lo que quieras.
-
-## Cómo desarrollar localmente
+## Desarrollo local
 
 ```bash
-# Instalar Vercel CLI (solo primera vez)
-npm install -g vercel
-
-# En la carpeta del proyecto
-cd "Proyectos Personales/eurotrip 2026"
+npm install -g vercel   # solo primera vez
 npm install
-
-# Linkear con tu proyecto Vercel
 vercel link
-
-# Pull env vars (incluye ANTHROPIC_API_KEY)
 vercel env pull .env.local
-
-# Correr localhost con función serverless
-vercel dev
+vercel dev              # http://localhost:3000 con funciones serverless
 ```
-
-Abre http://localhost:3000 — el chatbot funciona localmente igual que en prod.
 
 ## Seguridad
 
-🚨 **API key**: NUNCA en el código frontend ni en commits. Vive como env var en Vercel.
-
-🚨 Si por error la committeas, **revoca inmediatamente** en https://console.anthropic.com/settings/keys y genera una nueva.
+🚨 Si una API key llega a un commit por error, **revócala de inmediato** en https://console.anthropic.com/settings/keys y genera una nueva.
 
 ## Branding
 
-Arkamia Brandbook: Off White + Lightning Yellow + Bolt Black · Playfair Display + Sora + Space Mono
+Bayu = viento (Vayu). Arkamia Brandbook: Off White + Lightning Yellow + Bolt Black · Playfair Display + Sora + Space Mono.
 
 ---
 
-Propuesta generada con Claude Code · Versión v6.0 (27 mayo 2026)
+Hecho con Claude Code · v10 "Sunset Editorial" (junio 2026)
