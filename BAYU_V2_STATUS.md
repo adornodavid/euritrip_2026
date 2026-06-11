@@ -81,6 +81,28 @@
   AdMob+RevenueCat (no Stripe-only), Travelpayouts como red principal de
   afiliados, tablas renombradas a `bayu_*` en la migración v2.
 
+### Sesión 11 jun 2026 (Claude Code local — tarde) — búsqueda real de vuelos/hoteles portada de Bayu v1
+- **Auditoría de Bayu v1** (Next.js en `Proyectos Claude Code/Personal David/BAYU/bayu-app`):
+  la búsqueda real funcionaba con **Skyscanner vía RapidAPI** (`flights-sky`), no con
+  Amadeus (ese módulo apuntaba al sandbox de test y nunca se cableó a las rutas).
+  La key `RAPIDAPI_KEY` de v1 sigue viva (verificada con request real).
+- **`api/_skyscanner.js`** nuevo: port a JS vanilla del cliente de v1 — vuelos one-way/
+  roundtrip (con polling de resultados incompletos), hoteles con precios por partner +
+  booking URLs, autocomplete de lugares. Acepta ciudades en texto libre o IATA.
+  Retry con backoff (el upstream del provider da 502 intermitente). + helpers
+  `compactFlights`/`compactHotels` para no inflar tokens de Claudia.
+- **`api/search.js`** nuevo: endpoint GET (`type=airports|flights|hotels`) para el futuro
+  UI de búsqueda (Sprint D3+) sin gastar tokens de IA.
+- **Claudia: 2 tools nuevas** en `chat.js` — `search_flights` y `search_hotels` (resultados
+  compactos top 5-6, prompt actualizado con fallback honesto a web_search si el provider
+  falla). Sirve YA para el pendiente de definir hoteles de San Sebastián y Bilbao.
+- **`RAPIDAPI_KEY` configurada en Vercel** (Production + Preview) vía CLI/REST.
+- ⚠️ Probado en vivo: **vuelos OK** (BIO→MAD 18 resultados, $1,128 MXN directo Air Europa);
+  **hoteles intermitente** ese día (502 del upstream de RapidAPI) — el código degrada con
+  error honesto y Claudia ofrece web_search como plan B. Re-probar hoteles en vivo.
+- Sinergia futura: los resultados de hoteles traen `otherPrices` por partner → conecta
+  directo con la Fase 5 de afiliados (Travelpayouts) del master plan.
+
 <!-- Plantilla para nuevas sesiones:
 ### Sesión DD mmm AAAA
 - Qué se hizo / decisiones / commits / pendientes que dejó
