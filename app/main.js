@@ -18,8 +18,8 @@ async function initAuth(){
   sbc.auth.onAuthStateChange(async function(ev,sn){
     SESSION=sn;
     if(ev==='PASSWORD_RECOVERY'){const np=await promptSheet('Nueva contraseña','Mínimo 8 caracteres','Guardar');if(np){await sbc.auth.updateUser({password:np});showToast('Contraseña actualizada ✓');}}
-    if(ev==='SIGNED_IN'){hideAuth();ensureProfile();load();}
-    if(ev==='SIGNED_OUT'){DATA={};TRIPS=[];TRIP=null;chatStarted=false;chatMsgs=[];showAuth();}
+    if(ev==='SIGNED_IN'){hideAuth();ensureProfile();chatStarted=false;chatMsgs=[];var cl2=$('chat-log');if(cl2)cl2.innerHTML='';load();}
+    if(ev==='SIGNED_OUT'){DATA={};TRIPS=[];TRIP=null;chatStarted=false;chatMsgs=[];localStorage.removeItem('bayu_trip_id');var cl=$('chat-log');if(cl)cl.innerHTML='';var pr=$('planner-root');if(pr)pr.innerHTML='';var em=$('au-email');if(em)em.value='';var pw=$('au-pass');if(pw)pw.value='';showAuth();}
   });
   if(SESSION){hideAuth();ensureProfile();load();flushQueue();}else showAuth();
 }
@@ -30,7 +30,7 @@ async function authUp(){const em=$('au-email').value.trim(),pw=$('au-pass').valu
   const r=await sbc.auth.signUp({email:em,password:pw,options:{emailRedirectTo:location.origin}});
   if(r.error){showToast(r.error.message,true);return;}
   if(!r.data.session)infoSheet('Confirma tu correo','Te mandamos un link para activar la cuenta. Ábrelo y regresa aquí.');}
-async function authGoogle(){await sbc.auth.signInWithOAuth({provider:'google',options:{redirectTo:location.origin}});}
+async function authGoogle(){await sbc.auth.signInWithOAuth({provider:'google',options:{redirectTo:location.origin,queryParams:{prompt:'select_account'}}});}
 async function authForgot(){let em=$('au-email').value.trim();if(!em)em=await promptSheet('Tu email','correo@ejemplo.com','Enviar');if(!em)return;
   await sbc.auth.resetPasswordForEmail(em,{redirectTo:location.origin});infoSheet('Revisa tu correo','Si la cuenta existe, te llegará un link para restablecer la contraseña.');}
 async function logout(){if(await confirmSheet('¿Cerrar sesión?','Vuelves a entrar con tu mismo correo o Google cuando quieras.','Cerrar sesión'))await sbc.auth.signOut();}
