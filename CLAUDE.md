@@ -10,7 +10,8 @@ afiliados de vuelos/hoteles.
 
 ## 📋 Plan maestro v2
 
-**Antes de cualquier trabajo de v2, lee `BAYU_V2_MASTER_PLAN.md`.** Contiene:
+**Empieza SIEMPRE por `BAYU_V2_STATUS.md`** (estado actual + bitácora + siguiente
+paso). Luego, **antes de cualquier trabajo de v2, lee `BAYU_V2_MASTER_PLAN.md`.** Contiene:
 auditoría del código actual, arquitectura objetivo, 7 fases con checklists y
 criterios de aceptación, y el borrador de migración
 `sql/v2-draft-2026-06-11-auth-rls-multiuser.sql` (NO aplicado aún).
