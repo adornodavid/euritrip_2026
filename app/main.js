@@ -1,21 +1,14 @@
 'use strict';
+/* migración suave de claves localStorage eurotrip_* → bayu_* (v11 Fase 1) */
+(function(){try{['write_key','open','queue'].forEach(function(k){var o=localStorage.getItem('eurotrip_'+k);if(o!=null&&localStorage.getItem('bayu_'+k)==null)localStorage.setItem('bayu_'+k,o);localStorage.removeItem('eurotrip_'+k);});}catch(e){}})();
 const DOW=['DOM','LUN','MAR','MIÉ','JUE','VIE','SÁB'];
 const CAT={comida:'🍽️',museo:'🏛️',paseo:'🚶','viñedo':'🍷',vinedo:'🍷',actividad:'🎟️',compras:'🛍️',traslado:'🚄',logistica:'🧳',flex:'✨'};
 const MES=['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
 let CITIES=[];  // se construye desde DATA.trip_cities (multi-viaje)
-const SUGG={
-  'Paris':[{t:'Crucero por el Sena',img:'images/paris/sena.jpg',r:'8.1',rev:'13577',p:'$19',cat:'actividad'},{t:'Louvre sin filas',img:'images/paris/louvre.jpg',r:'8.5',rev:'9200',p:'$32',cat:'museo'},{t:'Cima de la Torre Eiffel',img:'images/paris/eiffel.jpg',r:'8.7',rev:'21043',p:'$45',cat:'actividad'},{t:'Versalles día completo',img:'images/paris/versalles.jpg',r:'8.6',rev:'7810',p:'$65',cat:'museo'}],
-  'Bordeaux':[{t:'Tour viñedos Saint-Émilion',img:'images/bordeaux/saint-emilion.jpg',r:'9.0',rev:'3412',p:'$115',cat:'viñedo'},{t:'Cité du Vin + cata',img:'images/bordeaux/cite-du-vin.jpg',r:'8.2',rev:'2104',p:'$22',cat:'museo'},{t:'Ostras + vino en el mercado',img:'images/bordeaux/oysters.jpg',r:'8.8',rev:'915',p:'$35',cat:'comida'}],
-  'San Sebastián':[{t:'Ruta de pintxos guiada',img:'images/san-sebastian/pintxos.jpg',r:'9.1',rev:'2630',p:'$89',cat:'comida'},{t:'Monte Igueldo + bahía',img:'images/san-sebastian/igueldo.jpg',r:'8.4',rev:'1180',p:'$15',cat:'actividad'},{t:'Donostia + Getaria',img:'images/san-sebastian/zurriola.jpg',r:'8.7',rev:'604',p:'$70',cat:'paseo'}],
-  'Bilbao':[{t:'Entrada Museo Guggenheim',img:'images/bilbao/guggenheim.jpg',r:'9.0',rev:'5421',p:'$16',cat:'museo'},{t:'Txikiteo de pintxos',img:'images/bilbao/mercado-ribera.jpg',r:'8.9',rev:'1106',p:'$55',cat:'comida'},{t:'Bilbao esencial a pie',img:'images/bilbao/casco-viejo.jpg',r:'8.5',rev:'842',p:'$25',cat:'paseo'}],
-  'Madrid':[{t:'Museo del Prado sin filas',img:'images/madrid/plaza-mayor.jpg',r:'8.6',rev:'12044',p:'$28',cat:'museo'},{t:'Show de flamenco',img:'images/madrid/tapas-madrid.jpg',r:'8.8',rev:'6530',p:'$35',cat:'actividad'},{t:'Toledo día completo',img:'images/madrid/toledo.jpg',r:'8.7',rev:'9012',p:'$55',cat:'museo'},{t:'Palacio Real',img:'images/madrid/palacio-real.jpg',r:'8.5',rev:'4310',p:'$18',cat:'museo'}]
-};
 let DATA={}, TRIPS=[], TRIP=null, gCity='', gPayer='', chatStarted=false, pendingReceipt=null;
 function activeTripId(){return localStorage.getItem('bayu_trip_id')||(TRIP&&TRIP.id)||'';}
-function tripStart(){return (TRIP&&TRIP.start_date)||'2026-10-16';}
-function tripEnd(){return (TRIP&&TRIP.end_date)||'2026-10-31';}
-const SEED_TRIP='e0000000-0000-4000-8000-000000000001';
-function isEurotrip(){return TRIP&&TRIP.id===SEED_TRIP;}
+function tripStart(){return (TRIP&&TRIP.start_date)||null;}
+function tripEnd(){return (TRIP&&TRIP.end_date)||tripStart();}
 const $=id=>document.getElementById(id);
 function esc(t){return (t==null?'':String(t)).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
 /* ícono SVG del sprite (#i-*) — la interfaz no usa emojis */
@@ -43,8 +36,11 @@ function confirmSheet(title,body,okLabel){return askSheet({title:title,body:body
 function promptSheet(title,placeholder,okLabel){return askSheet({title:title,input:true,placeholder:placeholder,okLabel:okLabel||'Guardar'});}
 function infoSheet(title,body){return askSheet({title:title,body:body,okLabel:'Entendido',cancel:false});}
 function dn(iso){const p=iso.split('-');const d=new Date(Date.UTC(+p[0],+p[1]-1,+p[2]));return DOW[d.getUTCDay()]+' '+(+p[2])+' '+MES[+p[1]-1];}
-async function wkey(){let k=localStorage.getItem('eurotrip_write_key');if(!k){k=await promptSheet('Clave de escritura','Tu clave compartida','Continuar');if(k)localStorage.setItem('eurotrip_write_key',k);}return k;}
-function money(n){return '$'+Number(n||0).toLocaleString('es-MX',{maximumFractionDigits:0});}
+async function wkey(){let k=localStorage.getItem('bayu_write_key');if(!k){k=await promptSheet('Clave de escritura','La clave compartida del viaje','Continuar');if(k)localStorage.setItem('bayu_write_key',k);}return k;}
+const CUR_SYM={MXN:'$',USD:'$',EUR:'€',GBP:'£',JPY:'¥',CAD:'$',COP:'$',ARS:'$',BRL:'R$',CHF:'CHF '};
+function curCode(){return (TRIP&&TRIP.home_currency)||'MXN';}
+function curSym(c){c=c||curCode();return CUR_SYM[c]!=null?CUR_SYM[c]:c+' ';}
+function money(n){return curSym()+Number(n||0).toLocaleString('es-MX',{maximumFractionDigits:0});}
 function emptyState(icon,title,sub,btn){return '<div class="empty-rich"><div class="ei">'+icon+'</div><div class="et">'+esc(title)+'</div>'+(sub?'<div class="es">'+esc(sub)+'</div>':'')+(btn||'')+'</div>';}
 let CITYKEYS=CITIES.map(c=>c.key);
 function cityByDate(date){const c=CITIES.find(c=>c.dates.includes(date));return c?c.key:null;}
@@ -53,18 +49,17 @@ function snapDateToCity(){const c=CITIES.find(c=>c.key===$('ma-city').value);if(
 function pad(n){return n<10?'0'+n:''+n;}
 function dateRange(s,e){const out=[];if(!s)return out;const a=new Date(s+'T00:00:00'),b=new Date((e||s)+'T00:00:00');for(let d=new Date(a);d<=b;d.setDate(d.getDate()+1))out.push(d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate()));return out;}
 function fmtRange(s,e){if(!s)return '';const sd=+s.slice(8,10),sm=+s.slice(5,7)-1;if(!e||e===s)return sd+' '+MES[sm]+' · parada';const ed=+e.slice(8,10),em=+e.slice(5,7)-1;const nights=Math.max(1,Math.round((new Date(e+'T00:00:00')-new Date(s+'T00:00:00'))/86400000));return sd+(sm!==em?' '+MES[sm]:'')+'–'+ed+' '+MES[em]+' · '+nights+'N';}
-const DAYTRIPS=['Versalles','Saint-Émilion','Toledo'];
 function rebuildCities(){
-  CITIES=(DATA.trip_cities||[]).map(tc=>({key:tc.name,name:tc.name,flag:tc.country_flag||'📍',img:tc.photo_url||'',custom:true,id:tc.id,start_date:tc.start_date,end_date:tc.end_date,notes:tc.notes,dates:dateRange(tc.start_date,tc.end_date),range:fmtRange(tc.start_date,tc.end_date)}))
+  CITIES=(DATA.trip_cities||[]).map(tc=>({key:tc.name,name:tc.name,flag:tc.country_flag||'📍',img:tc.photo_url||'',custom:true,id:tc.id,lat:tc.lat,lng:tc.lng,cc:tc.country_code,start_date:tc.start_date,end_date:tc.end_date,notes:tc.notes,dates:dateRange(tc.start_date,tc.end_date),range:fmtRange(tc.start_date,tc.end_date)}))
     .sort((a,b)=>((a.dates[0]||'9')<(b.dates[0]||'9'))?-1:((a.dates[0]||'9')>(b.dates[0]||'9')?1:0));
   CITYKEYS=CITIES.map(c=>c.key);
   const opts='<option value="">—</option>'+CITIES.map(c=>'<option value="'+esc(c.key)+'">'+esc(c.flag)+' '+esc(c.name)+'</option>').join('');
   ['me-city','mr-city','ml-city'].forEach(function(id){const s=$(id);if(s){const v=s.value;s.innerHTML=opts;s.value=v;}});
-  const sel=$('ma-city');if(sel){const v=sel.value;sel.innerHTML=opts+DAYTRIPS.map(d=>'<option value="'+d+'">🚏 '+d+'</option>').join('');sel.value=v;}
+  const sel=$('ma-city');if(sel){const v=sel.value;sel.innerHTML=opts;sel.value=v;}
 }
 function openCity(c){$('mc-id').value=c.id||'';$('mc-name').value=c.name||'';$('mc-flag').value=c.country_flag||c.flag||'📍';$('mc-start').value=c.start_date||'';$('mc-end').value=c.end_date||'';$('mc-photo').value=c.photo_url||c.img||'';$('mc-notes').value=c.notes||'';$('m-city').classList.add('open');}
 function openCity2(id){const c=(DATA.trip_cities||[]).find(x=>x.id===id);if(c)openCity(c);}
-async function saveCity(){const id=$('mc-id').value,n=$('mc-name').value.trim(),st=$('mc-start').value;if(!n||!st){showToast('Nombre y fecha de inicio requeridos',true);return;}const row={name:n,country_flag:$('mc-flag').value||'📍',start_date:st,end_date:$('mc-end').value||st,photo_url:$('mc-photo').value||null,notes:$('mc-notes').value||null};if(id)await write({action:'update',table:'trip_cities',id:id,patch:row},'Ciudad guardada ✓');else{row.created_by='manual';await write({action:'insert',table:'trip_cities',row:row},'Ciudad agregada ✓');}closeM('m-city');}
+async function saveCity(){const id=$('mc-id').value,n=$('mc-name').value.trim(),st=$('mc-start').value;if(!n||!st){showToast('Nombre y fecha de inicio requeridos',true);return;}const row={name:n,country_flag:$('mc-flag').value||'📍',start_date:st,end_date:$('mc-end').value||st,photo_url:$('mc-photo').value||null,notes:$('mc-notes').value||null};const geo=await geocode(n);if(geo){row.lat=geo.lat;row.lng=geo.lng;row.country_code=geo.country_code;}if(id)await write({action:'update',table:'trip_cities',id:id,patch:row},'Ciudad guardada ✓');else{row.created_by='manual';await write({action:'insert',table:'trip_cities',row:row},'Ciudad agregada ✓');}closeM('m-city');}
 async function delCity(id){if(await confirmSheet('¿Quitar esta parada?','Las actividades de esos días quedan guardadas.','Quitar'))await write({action:'delete',table:'trip_cities',id:id},'Quitada');}
 let toastT;
 function showToast(msg,err){const t=$('toast');if(!t)return;t.textContent=msg;t.className='toast show'+(err?' err':'');clearTimeout(toastT);toastT=setTimeout(()=>{t.className='toast'+(err?' err':'');},1900);}
@@ -75,8 +70,8 @@ function tripInfo(){if(!TRIP||!TRIP.start_date)return (TRIP&&TRIP.name)?('✦ '+
   return 'Día '+(Math.floor((now-start)/86400000)+1)+' del viaje ✈️';}
 function todayISO(){if(!TRIP||!TRIP.start_date)return null;const n=new Date(),start=new Date(tripStart()+'T00:00:00'),end=new Date(tripEnd()+'T23:59:59');if(n<start||n>end)return null;const z=new Date(n.getTime()-n.getTimezoneOffset()*60000);return z.toISOString().slice(0,10);}
 function defaultOpenKey(){const t=todayISO();if(t){const c=CITIES.find(c=>c.dates.includes(t));if(c)return c.key;}return CITIES[0]?CITIES[0].key:'';}
-function openKeys(){const st=localStorage.getItem('eurotrip_open');if(st){try{return new Set(JSON.parse(st));}catch(e){}}return new Set([defaultOpenKey()]);}
-function toggleCity(ci){const el=$('city-'+ci);el.classList.toggle('open');const set=openKeys();const k=CITIES[ci].key;if(el.classList.contains('open'))set.add(k);else set.delete(k);localStorage.setItem('eurotrip_open',JSON.stringify([...set]));}
+function openKeys(){const st=localStorage.getItem('bayu_open');if(st){try{return new Set(JSON.parse(st));}catch(e){}}return new Set([defaultOpenKey()]);}
+function toggleCity(ci){const el=$('city-'+ci);el.classList.toggle('open');const set=openKeys();const k=CITIES[ci].key;if(el.classList.contains('open'))set.add(k);else set.delete(k);localStorage.setItem('bayu_open',JSON.stringify([...set]));}
 
 function go(tab){
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
@@ -96,7 +91,7 @@ async function load(){
     const r=await fetch('/api/data'+(tid?'?trip='+encodeURIComponent(tid):''),{cache:'no-store'});const j=await r.json();
     DATA=j.data||{};TRIPS=j.trips||[];TRIP=j.trip||null;
     if(TRIP)localStorage.setItem('bayu_trip_id',TRIP.id);
-    applyTripChrome();rebuildCities();renderPlanner();renderGastos();
+    applyTripChrome();rebuildCities();renderPlanner();renderGastos();healCoords();migratePack();
     if($('s-viajes').classList.contains('active'))renderViajes();
     if($('s-perfil').classList.contains('active'))renderPerfil();
     if($('s-explore').classList.contains('active'))renderExplore();
@@ -120,7 +115,7 @@ function renderPlanner(){
   const acts=DATA.activities||[], hotels=DATA.hotel_choices||[], today=todayISO(), oset=openKeys();
   const wish=acts.filter(a=>!a.activity_date), dated=acts.filter(a=>a.activity_date);
   const totalA=dated.length, doneA=dated.filter(a=>a.status==='hecho').length, pg=totalA?Math.round(doneA/totalA*100):0;
-  const started=new Date()>=new Date('2026-10-16T00:00:00');
+  const started=!!(TRIP&&TRIP.start_date)&&new Date()>=new Date(tripStart()+'T00:00:00');
   let html='<div class="pl-summary"><div class="cd">'+tripInfo()+'</div>';
   if(started)html+='<div class="pg"><span>✓ Actividades hechas</span><span>'+doneA+' / '+totalA+' ('+pg+'%)</span></div><div class="bar"><i style="width:'+pg+'%"></i></div>';
   else html+='<div class="pg"><span>📋 '+totalA+' actividades · '+(DATA.reservations||[]).length+' reservas</span><span>'+CITIES.length+' ciudades</span></div>';
@@ -195,22 +190,26 @@ function optimizeDay(date){
   askClaudia('Optimiza el orden de mi día '+dn(date)+' ('+date+')'+(city?' en '+city:'')+'. Actividades con su id:\n'+list+'\n\nReordénalas en la secuencia más lógica por cercanía geográfica y horarios sensatos (comidas, apertura de museos) y propón una hora para cada una. Muéstrame el plan y pregúntame si confirmo; cuando confirme, aplícalo con la herramienta reorder_day usando date="'+date+'" y los ids en el nuevo orden.');
 }
 /* ---------- CLIMA POR DÍA (Open-Meteo · sin API key) ---------- */
-const WX_COORDS={'Paris':[48.857,2.352],'París':[48.857,2.352],'Bordeaux':[44.838,-0.579],'Burdeos':[44.838,-0.579],'San Sebastián':[43.318,-1.981],'Bilbao':[43.263,-2.935],'Madrid':[40.417,-3.703],'Versalles':[48.801,2.130],'Saint-Émilion':[44.893,-0.156],'Toledo':[39.862,-4.027],'Valencia':[39.470,-0.376],'Barcelona':[41.385,2.173],'Lisboa':[38.722,-9.139],'Lisbon':[38.722,-9.139]};
-const WX_OCT={'Paris':[16,9,2],'París':[16,9,2],'Bordeaux':[19,10,2],'Burdeos':[19,10,2],'San Sebastián':[20,13,61],'Bilbao':[20,12,61],'Madrid':[20,10,1],'Versalles':[16,8,2],'Saint-Émilion':[19,10,2],'Toledo':[20,9,1],'Valencia':[24,15,1],'Barcelona':[22,15,1],'Lisboa':[22,15,1],'Lisbon':[22,15,1]};
 function wxIcon(c){c=+c;if(c===0)return'☀️';if(c<=2)return'🌤️';if(c===3)return'☁️';if(c<=48)return'🌫️';if(c<=57)return'🌦️';if(c<=67)return'🌧️';if(c<=77)return'🌨️';if(c<=82)return'🌧️';if(c<=86)return'🌨️';return'⛈️';}
 function wxCache(k){try{const v=JSON.parse(localStorage.getItem('bayu_wx_'+k));if(v&&Date.now()-v.ts<6*3600e3)return v.d;}catch(e){}return null;}
 function wxStore(k,d){try{localStorage.setItem('bayu_wx_'+k,JSON.stringify({ts:Date.now(),d:d}));}catch(e){}}
-function wxFallback(city,date){const n=WX_OCT[city];if(!n||(+date.slice(5,7))!==10)return null;return {hi:n[0],lo:n[1],code:n[2],live:false};}
+async function geocode(name){try{const r=await fetch('https://geocoding-api.open-meteo.com/v1/search?name='+encodeURIComponent(name)+'&count=1&language=es');const j=await r.json();const g=j.results&&j.results[0];return g?{lat:g.latitude,lng:g.longitude,country_code:(g.country_code||'').toUpperCase()||null}:null;}catch(e){return null;}}
+const _healed={};
+async function healCoords(){if(!localStorage.getItem('bayu_write_key'))return;const tid=activeTripId();if(!tid)return;
+  for(const c of CITIES){if(!c.custom||c.lat!=null||_healed[c.id])continue;_healed[c.id]=1;
+    const g=await geocode(c.name);if(!g)continue;c.lat=g.lat;c.lng=g.lng;c.cc=g.country_code;
+    try{await fetch('/api/write',{method:'POST',headers:{'Content-Type':'application/json','X-Write-Key':localStorage.getItem('bayu_write_key')},body:JSON.stringify({action:'update',table:'trip_cities',id:c.id,patch:{lat:g.lat,lng:g.lng,country_code:g.country_code},trip_id:tid})});}catch(e){}}
+}
 async function fetchWx(city,date){
   const key=city+'|'+date,cached=wxCache(key);if(cached)return cached;
-  const co=WX_COORDS[city],days=Math.round((new Date(date+'T12:00:00')-new Date())/86400000);
+  const _c=CITIES.find(x=>x.key===city),co=(_c&&_c.lat!=null)?[_c.lat,_c.lng]:null,days=Math.round((new Date(date+'T12:00:00')-new Date())/86400000);
   if(co&&days>=0&&days<=15){
     try{const r=await fetch('https://api.open-meteo.com/v1/forecast?latitude='+co[0]+'&longitude='+co[1]+'&daily=weather_code,temperature_2m_max,temperature_2m_min&timezone=auto&start_date='+date+'&end_date='+date);
       const j=await r.json(),dd=j.daily;
       if(dd&&dd.time&&dd.time.length){const d={hi:Math.round(dd.temperature_2m_max[0]),lo:Math.round(dd.temperature_2m_min[0]),code:dd.weather_code[0],live:true};wxStore(key,d);return d;}
     }catch(e){}
   }
-  return wxFallback(city,date);
+  return null;
 }
 function hydrateWeather(){
   document.querySelectorAll('[data-wx]').forEach(async function(el){
@@ -231,14 +230,14 @@ function wishHtml(wish){
   return h;
 }
 function suggRow(key,name){
-  const sg=SUGG[key]||[]; if(!sg.length)return '';
-  let h='<div class="sugg-wrap"><div class="sugg-h">✨ Sugerencias para '+esc(name)+'</div><div class="sugg-row">';
-  sg.forEach((x,xi)=>{h+='<div class="sugg"><img src="'+x.img+'" alt="" onerror="this.style.display=\'none\'" onclick="openSug(\''+esc(key)+'\','+xi+')"/><div class="si"><div class="st">'+esc(x.t)+'</div><div class="sr">⭐ '+x.r+' · '+x.rev+' reseñas</div><div class="sp">desde '+x.p+'</div><button class="sadd" onclick="addSug(\''+esc(key)+'\','+xi+')">+ Agregar</button></div></div>';});
-  return h+'</div></div>';
+  const q=encodeURIComponent(name);
+  return '<div class="sugg-wrap"><div class="sugg-h">✨ Descubre '+esc(name)+'</div><div class="dt-quick" style="margin:.2rem 0 .6rem">'
+    +'<button onclick="window.open(\'https://www.getyourguide.com/s/?q='+q+'\',\'_blank\')">🎟️ Tours</button>'
+    +'<button onclick="window.open(\'https://www.google.com/search?q='+q+'+que+ver\',\'_blank\')">🗺️ Qué ver</button>'
+    +'<button onclick="window.open(\'https://www.youtube.com/results?search_query='+q+'\',\'_blank\')">▶️ Videos</button>'
+    +'<button class="tips" onclick="askClaudia(\'Dame 5 ideas imperdibles para nuestro paso por '+esc(name).replace(/'/g,'')+'\')">💡 Ideas IA</button>'
+    +'</div></div>';
 }
-function firstDay(key){const c=CITIES.find(c=>c.key===key);return c?c.dates[0]:tripStart();}
-function addSug(key,i){const x=(SUGG[key]||[])[i];if(!x)return;go('planner');openAct({title:x.t,category:x.cat,city:key});}
-function openSug(key,i){const x=(SUGG[key]||[])[i];if(!x)return;window.open('https://www.getyourguide.com/s/?q='+encodeURIComponent(x.t+' '+key),'_blank');}
 function openAct(a){$('ma-title').textContent=a.id?'Editar actividad':'Nueva actividad';$('ma-id').value=a.id||'';$('ma-date').value=a.activity_date||'';$('ma-time').value=a.start_time?a.start_time.slice(0,5):'';$('ma-tit').value=a.title||'';$('ma-cat').value=a.category||'';$('ma-city').value=a.city||'';$('ma-notes').value=a.notes||'';$('ma-link').value=a.link||'';$('ma-map').value=a.map_url||'';$('ma-tickets').value=a.tickets||'';$('m-act').classList.add('open');}
 function editAct(id){const a=(DATA.activities||[]).find(x=>x.id===id);if(a)openAct(a);}
 async function togAct(id,done){await write({action:'update',table:'activities',id:id,patch:{status:done?'pendiente':'hecho'}},done?'Pendiente':'¡Hecho! ✓');}
@@ -264,13 +263,18 @@ function renderGastos(){
   const totMin=budget.reduce((s,b)=>s+Number(b.projected_min_mxn||0),0),totMax=budget.reduce((s,b)=>s+Number(b.projected_max_mxn||0),0);
   const pct=totMax?Math.min(100,totSpent/totMax*100):0,byP=p=>exp.filter(e=>e.payer===p).reduce((s,e)=>s+Number(e.amount_mxn||0),0);
   let html='<div class="bcard"><div class="btot"><div><div class="lbl">Gastado</div><div class="big">'+money(totSpent)+'</div></div><div style="text-align:right"><div class="lbl">Presupuesto</div><div class="big" style="font-size:1.05rem;color:var(--muted)">'+money(totMin)+'–'+money(totMax)+'</div></div></div><div class="bar"><i style="width:'+pct+'%"></i></div>';
-  html+='<div class="split"><div><div class="who">👤 David</div><div class="amt2">'+money(byP('David'))+'</div></div><div><div class="who">👤 Paty</div><div class="amt2">'+money(byP('Paty'))+'</div></div><div><div class="who">🤝 Juntos</div><div class="amt2">'+money(byP('Joint'))+'</div></div></div></div>';
+  const TRV=DATA.trip_travelers||[];
+  let split='<div class="split">';
+  TRV.forEach(t=>{split+='<div><div class="who">👤 '+esc(t.name)+'</div><div class="amt2">'+money(byP(t.name))+'</div></div>';});
+  if(TRV.length>=2)split+='<div><div class="who">🤝 Juntos</div><div class="amt2">'+money(byP('Joint'))+'</div></div>';
+  html+=split+'</div></div>';
   html+='<div class="bcard">';
   budget.forEach(b=>{const sp=exp.filter(e=>e.category===b.category).reduce((s,e)=>s+Number(e.amount_mxn||0),0);const mx=Number(b.projected_max_mxn||0),p=mx?Math.min(100,sp/mx*100):0;
     html+='<div class="catrow" style="cursor:pointer" onclick="openBudget(\''+b.category+'\')"><div class="top"><span>'+(b.emoji||'')+' '+esc(b.label)+'</span><span>'+money(sp)+' <span class="sub">/ '+money(mx)+'</span></span></div><div class="bar"><i style="width:'+p+'%;background:'+(p>=100?'var(--red)':'var(--green)')+'"></i></div></div>';});
   html+='</div>';
   html+='<div class="chips"><div class="chip'+(gCity===''?' on':'')+'" onclick="setFilter(\'city\',\'\')">Todas</div>'+CITIES.map(c=>'<div class="chip'+(gCity===c.key?' on':'')+'" onclick="setFilter(\'city\',\''+esc(c.key)+'\')">'+c.flag+' '+esc(c.name)+'</div>').join('')+'</div>';
-  html+='<div class="chips">'+['','David','Paty','Joint'].map(p=>'<div class="chip'+(gPayer===p?' on':'')+'" onclick="setFilter(\'payer\',\''+p+'\')">'+(p===''?'Todos':(p==='Joint'?'🤝 Juntos':'👤 '+p))+'</div>').join('')+'</div>';
+  const payerOpts=['',...TRV.map(t=>t.name),...(TRV.length>=2?['Joint']:[])];
+  html+='<div class="chips">'+payerOpts.map(p=>'<div class="chip'+(gPayer===p?' on':'')+'" onclick="setFilter(\'payer\',\''+esc(p)+'\')">'+(p===''?'Todos':(p==='Joint'?'🤝 Juntos':'👤 '+esc(p)))+'</div>').join('')+'</div>';
   let list=exp.slice();if(gCity)list=list.filter(e=>e.city===gCity);if(gPayer)list=list.filter(e=>e.payer===gPayer);
   html+='<div class="bcard"><div class="lbl" style="margin-bottom:.3rem">Gastos'+(list.length?' ('+list.length+')':'')+'</div>';
   if(!list.length)html+=(gCity||gPayer)?emptyState('🔍','Sin gastos con ese filtro','Prueba quitar el filtro de ciudad o pagador.'):emptyState('💸','Aún no hay gastos','Registra tu primer gasto y mira cómo va tu presupuesto en vivo.','<button class="eb" onclick="openExp({})">+ Agregar gasto</button>');
@@ -279,45 +283,57 @@ function renderGastos(){
   html+='</div>';
   $('gastos-root').innerHTML=html;
   $('me-cat').innerHTML=budget.map(b=>'<option value="'+b.category+'">'+(b.emoji||'')+' '+esc(b.label)+'</option>').join('');
+  const pSel=$('me-payer');if(pSel){const pv=pSel.value;const opts=[...(TRV.length>=2?['Joint']:[]),...TRV.map(t=>t.name)];pSel.innerHTML=opts.map(p=>'<option value="'+esc(p)+'">'+(p==='Joint'?'🤝 Juntos':'👤 '+esc(p))+'</option>').join('');if(opts.includes(pv))pSel.value=pv;}
+  const cSel=$('me-cur');if(cSel){const cv=cSel.value;const curs=[...new Set([curCode(),'USD','EUR','MXN'])];cSel.innerHTML=curs.map(c=>'<option value="'+c+'">'+c+' '+curSym(c).trim()+'</option>').join('');cSel.value=curs.includes(cv)?cv:curCode();}
 }
 function editExpById(id){const e=(DATA.expenses||[]).find(x=>x.id===id);if(e)openExp(e);}
-function fxCalc(){const cur=$('me-cur').value,orig=parseFloat($('me-orig').value)||0;
-  if(cur==='MXN'){$('me-fxrow').style.display='none';$('me-mxn').value=orig||'';$('me-fxhint').textContent='';return;}
-  $('me-fxrow').style.display='flex';let fx=parseFloat($('me-fx').value);if(!fx){fx=cur==='EUR'?22:18;$('me-fx').value=fx;}
-  const mxn=Math.round(orig*fx);$('me-mxn').value=mxn||'';$('me-fxhint').textContent=orig?(cur==='EUR'?'€':'$')+orig+' × '+fx+' = '+money(mxn)+' MXN':'';}
-function openExp(e){$('me-title').textContent=e.id?'Editar gasto':'Nuevo gasto';$('me-id').value=e.id||'';$('me-desc').value=e.description||'';$('me-cur').value=e.currency||'MXN';$('me-orig').value=(e.currency&&e.currency!=='MXN')?(e.amount_original||''):(e.amount_mxn||'');$('me-fx').value=e.fx_rate||'';$('me-mxn').value=e.amount_mxn||'';$('me-cat').value=e.category||(DATA.budget&&DATA.budget[0]&&DATA.budget[0].category)||'';$('me-payer').value=e.payer||'Joint';$('me-city').value=e.city||'';$('me-notes').value=e.notes||'';pendingReceipt=null;$('me-photo').value='';$('me-preview').innerHTML=e.receipt_url?'<a href="'+e.receipt_url+'" target="_blank"><img src="'+e.receipt_url+'" style="max-height:90px;border-radius:8px"/></a>':'';fxCalc();$('m-exp').classList.add('open');}
+async function fxRate(from,to){const k='bayu_fx_'+from+'_'+to;try{const c=JSON.parse(localStorage.getItem(k)||'null');if(c&&Date.now()-c.ts<24*3600e3)return c.v;}catch(e){}
+  try{const r=await fetch('https://api.frankfurter.dev/v1/latest?base='+from+'&symbols='+to);const j=await r.json();const v=j.rates&&j.rates[to];if(v){localStorage.setItem(k,JSON.stringify({ts:Date.now(),v:v}));return v;}}catch(e){}return null;}
+function fxCalc(){const cur=$('me-cur').value,base=curCode(),orig=parseFloat($('me-orig').value)||0;
+  if(cur===base){$('me-fxrow').style.display='none';$('me-mxn').value=orig||'';$('me-fxhint').textContent='';return;}
+  $('me-fxrow').style.display='flex';let fx=parseFloat($('me-fx').value);
+  if(!fx){$('me-fxhint').textContent='Buscando tasa '+cur+'→'+base+'…';fxRate(cur,base).then(v=>{if(v&&!parseFloat($('me-fx').value)){$('me-fx').value=v.toFixed(2);fxCalc();}else if(!v)$('me-fxhint').textContent='Sin tasa automática — escríbela manual';});return;}
+  const mxn=Math.round(orig*fx);$('me-mxn').value=mxn||'';$('me-fxhint').textContent=orig?curSym(cur)+orig+' × '+fx+' = '+money(mxn):'';}
+function openExp(e){$('me-title').textContent=e.id?'Editar gasto':'Nuevo gasto';$('me-id').value=e.id||'';$('me-desc').value=e.description||'';$('me-cur').value=e.currency||curCode();$('me-orig').value=(e.currency&&e.currency!=='MXN')?(e.amount_original||''):(e.amount_mxn||'');$('me-fx').value=e.fx_rate||'';$('me-mxn').value=e.amount_mxn||'';$('me-cat').value=e.category||(DATA.budget&&DATA.budget[0]&&DATA.budget[0].category)||'';$('me-payer').value=e.payer||'Joint';$('me-city').value=e.city||'';$('me-notes').value=e.notes||'';pendingReceipt=null;$('me-photo').value='';$('me-preview').innerHTML=e.receipt_url?'<a href="'+e.receipt_url+'" target="_blank"><img src="'+e.receipt_url+'" style="max-height:90px;border-radius:8px"/></a>':'';fxCalc();$('m-exp').classList.add('open');}
 async function delExp(id){if(await confirmSheet('¿Borrar este gasto?',null,'Borrar'))await write({action:'delete',table:'expenses',id:id},'Borrado');}
-async function saveExp(){const id=$('me-id').value,desc=$('me-desc').value.trim(),cur=$('me-cur').value,mxn=parseFloat($('me-mxn').value);
+async function saveExp(){const id=$('me-id').value,desc=$('me-desc').value.trim(),cur=$('me-cur').value,mxn=parseFloat($('me-mxn').value);const base=curCode();
   if(!desc){showToast('Escribe la descripción',true);return;}if(isNaN(mxn)){showToast('Monto inválido',true);return;}
   const row={description:desc,amount_mxn:mxn,currency:cur,category:$('me-cat').value,payer:$('me-payer').value,city:$('me-city').value||null,notes:$('me-notes').value||null};
-  if(cur!=='MXN'){row.amount_original=parseFloat($('me-orig').value)||null;row.fx_rate=parseFloat($('me-fx').value)||null;}
+  if(cur!==base){row.amount_original=parseFloat($('me-orig').value)||null;row.fx_rate=parseFloat($('me-fx').value)||null;}
   if(pendingReceipt){showToast('Subiendo foto…');const u=await uploadReceipt(pendingReceipt);if(u)row.receipt_url=u;}
   if(id)await write({action:'update',table:'expenses',id:id,patch:row},'Guardado ✓');else{row.created_by='manual';await write({action:'insert',table:'expenses',row:row},'Gasto agregado ✓');}
   closeM('m-exp');}
 
 /* ---------- EXPLORE ---------- */
-const TIPS=[['🛂','Schengen / ETIAS','Sin visa para mexicanos (<90 días). ETIAS podría arrancar en 2026. Pasaporte con 6+ meses de vigencia.'],['📶','eSIM','Holafly o Airalo, ~€80 datos ilimitados Europa. Actívala al aterrizar en CDG.'],['🧳','Equipaje','3 maletas total entre los dos. Cambias de hotel cada 2-4 noches — viaja ligero.'],['🔌','Enchufe','Europa tipo C/E (clavijas redondas, 230V). Lleva 1-2 adaptadores.'],['💶','Tax-free','Compras grandes: factura tax-free (DIVA) sellada en Barajas antes de volar el 31.'],['🍢','Pintxos','De pie, de barra en barra. Pide 1-2 + txakoli. Bar Néstor: apúntate 30 min antes.'],['🎨','Guggenheim','Entrada online con horario (€16). Mejor foto desde el puente de La Salve.'],['🍷','Saint-Émilion','Octubre = post-vendimia. Tour medio día con cata. Suéter + zapatos cerrados.'],['🌧️','Clima Oct','París 12-18° · Bordeaux 10-19° · País Vasco 12-20° (lluvioso) · Madrid 10-19°.'],['✈️','Vuelos','Ida AM44 MTY 15 Oct→CDG 16 (29A/B). Regreso AM35 MAD 31 Oct 10:30am→MTY (34H/J).']];
-const TIPS_GENERIC=[['🛂','Documentos','Revisa visa/permisos de tu destino y que el pasaporte tenga 6+ meses de vigencia.'],['📶','Conectividad','Una eSIM (Holafly/Airalo) te deja con datos apenas aterrizas.'],['🔌','Enchufes','Checa el tipo de clavija y voltaje del país y lleva adaptador.'],['🧳','Equipaje','Viaja ligero si cambias de hotel seguido. Revisa límites de tu aerolínea.'],['💳','Dinero','Avisa a tu banco, lleva algo de efectivo local y una tarjeta sin comisión.'],['🤖','Pregúntale a Claudia','Pídele tips, clima, números de emergencia o ideas específicas de tu destino.']];
-function renderExplore(){const euro=isEurotrip();
+const TIPS=[['🛂','Documentos','Revisa visa/permisos de tu destino y que el pasaporte tenga 6+ meses de vigencia.'],['📶','Conectividad','Una eSIM (Holafly/Airalo) te deja con datos apenas aterrizas.'],['🔌','Enchufes','Checa el tipo de clavija y voltaje del país y lleva adaptador.'],['🧳','Equipaje','Viaja ligero si cambias de hotel seguido. Revisa límites de tu aerolínea.'],['💳','Dinero','Avisa a tu banco, lleva algo de efectivo local y una tarjeta sin comisión.'],['🤖','Pregúntale a Claudia','Pídele tips, clima, números de emergencia o ideas específicas de tu destino.']];
+function renderExplore(){
   let h='<button class="pf-btn" onclick="openTrans()">🌐 Traductor</button>'+docsHtml()+albumHtml()+exploreTop();
-  const tips=euro?TIPS:TIPS_GENERIC;
-  h+='<div class="sec-h">💡 Tips '+(euro?'del viaje':'de viaje')+'</div>'+tips.map(t=>'<div class="tip"><h3>'+t[0]+' '+t[1]+'</h3><p>'+t[2]+'</p></div>').join('');
-  const citiesWithSugg=CITIES.filter(c=>(SUGG[c.key]||[]).length);
-  if(citiesWithSugg.length){h+='<div class="sec-h">🎟️ Ideas para hacer</div>';citiesWithSugg.forEach(c=>{h+='<div style="font-weight:800;font-size:.86rem;margin:.6rem 0 .2rem">'+c.flag+' '+esc(c.name)+'</div>'+suggRow(c.key,c.name);});}
+  h+='<div class="sec-h">💡 Tips de viaje</div>'+TIPS.map(t=>'<div class="tip"><h3>'+t[0]+' '+t[1]+'</h3><p>'+t[2]+'</p></div>').join('');
+  if(CITIES.length){h+='<div class="sec-h">🎟️ Ideas para hacer</div>';CITIES.forEach(c=>{h+='<div style="font-weight:800;font-size:.86rem;margin:.6rem 0 .2rem">'+c.flag+' '+esc(c.name)+'</div>'+suggRow(c.key,c.name);});}
   h+=packingHtml()+emergencyHtml();
-  if(euro)h+='<a class="pf-btn" href="/guia" style="margin-top:1.2rem">📖 Abrir la guía completa por ciudad →</a>';
+  if(TRIP&&TRIP.guide_url)h+='<a class="pf-btn" href="'+esc(TRIP.guide_url)+'" style="margin-top:1.2rem">📖 Abrir la guía completa por ciudad →</a>';
   $('explore-root').innerHTML=h;}
 function openTrans(){$('tr-in').value='';$('tr-out').textContent='';$('m-trans').classList.add('open');}
 async function doTranslate(){const t=$('tr-in').value.trim();if(!t)return;$('tr-out').textContent='Traduciendo…';try{const r=await fetch('/api/translate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text:t,target:$('tr-lang').value})});const j=await r.json();$('tr-out').textContent=j.translation||j.error||'(sin resultado)';}catch(e){$('tr-out').textContent='Error: '+e.message;}}
-const PACK_DEFAULT=['Pasaporte','Visa/ETIAS (si aplica)','Adaptador EU tipo C/E','Cargadores + power bank','eSIM activada','Tarjetas + efectivo €','Medicinas personales','Ropa de otoño (capas)','Paraguas/impermeable','Zapatos cómodos','Copia de reservas','Cámara'];
-function packGet(){try{const v=localStorage.getItem('eurotrip_pack');if(v)return JSON.parse(v);}catch(e){}const init=PACK_DEFAULT.map(t=>({t:t,c:false}));localStorage.setItem('eurotrip_pack',JSON.stringify(init));return init;}
-function packSet(p){localStorage.setItem('eurotrip_pack',JSON.stringify(p));}
-function packingHtml(){const p=packGet(),done=p.filter(x=>x.c).length;let h='<div class="sec-h">🧳 Empaque ('+done+'/'+p.length+')</div><div class="bcard">';
-  p.forEach((x,i)=>{h+='<div class="act"><button class="chk" onclick="packTog('+i+')" style="'+(x.c?'background:var(--green);border-color:var(--green);color:#fff':'')+'">'+(x.c?'✓':'')+'</button><div class="a-body"><div class="a-title" style="'+(x.c?'text-decoration:line-through;opacity:.5':'')+'">'+esc(x.t)+'</div></div><button class="x" onclick="packDel('+i+')" aria-label="Quitar">'+I('trash',15)+'</button></div>';});
-  return h+'<button class="addbtn" onclick="packAdd()">+ Agregar al empaque</button></div>';}
-function packTog(i){const p=packGet();p[i].c=!p[i].c;packSet(p);renderExplore();}
-function packDel(i){const p=packGet();p.splice(i,1);packSet(p);renderExplore();}
-async function packAdd(){const t=await promptSheet('¿Qué agregas al empaque?','Ej: Bloqueador solar','Agregar');if(t){const p=packGet();p.push({t:t,c:false});packSet(p);renderExplore();showToast('Agregado al empaque');}}
+const PACK_BASIC=['Pasaporte / documentos','Visa o permisos (si aplica)','Adaptador de corriente','Cargadores + power bank','eSIM o plan de datos','Tarjetas + efectivo local','Medicinas personales','Ropa según el clima','Paraguas / impermeable','Zapatos cómodos','Copia de reservas','Cámara'];
+function packingHtml(){const p=DATA.packing_items||[],done=p.filter(x=>x.checked).length;
+  let h='<div class="sec-h">🧳 Empaque'+(p.length?' ('+done+'/'+p.length+')':'')+'</div><div class="bcard">';
+  if(!p.length)h+=emptyState('🧳','Empaque vacío','Arranca con una lista básica o pídele a Claudia una a la medida de tu destino y clima.','<button class="eb" onclick="packStarter()">+ Lista básica</button> <button class="eb" onclick="askClaudia(\'Génerame una lista de empaque para este viaje según destino, clima y duración, y guárdala\')">✨ Con Claudia</button>');
+  p.forEach(x=>{h+='<div class="act"><button class="chk" onclick="packTog(\''+x.id+'\','+(x.checked?'true':'false')+')" style="'+(x.checked?'background:var(--green);border-color:var(--green);color:#fff':'')+'">'+(x.checked?'✓':'')+'</button><div class="a-body"><div class="a-title" style="'+(x.checked?'text-decoration:line-through;opacity:.5':'')+'">'+esc(x.title)+'</div></div><button class="x" onclick="packDel(\''+x.id+'\')" aria-label="Quitar">'+I('trash',15)+'</button></div>';});
+  if(p.length)h+='<button class="addbtn" onclick="packAdd()">+ Agregar al empaque</button>';
+  return h+'</div>';}
+async function packTog(id,checked){await write({action:'update',table:'packing_items',id:id,patch:{checked:!checked}},checked?'Pendiente':'✓');}
+async function packDel(id){await write({action:'delete',table:'packing_items',id:id},'Quitado');}
+async function packAdd(){const t=await promptSheet('¿Qué agregas al empaque?','Ej: Bloqueador solar','Agregar');if(t)await write({action:'insert',table:'packing_items',row:{title:t,sort_order:(DATA.packing_items||[]).length+1,created_by:'manual'}},'Agregado al empaque ✓');}
+async function packStarter(){const k=await wkey();if(!k)return;const tid=activeTripId();showToast('Creando lista…');
+  for(let i=0;i<PACK_BASIC.length;i++){try{await fetch('/api/write',{method:'POST',headers:{'Content-Type':'application/json','X-Write-Key':k},body:JSON.stringify({action:'insert',table:'packing_items',row:{title:PACK_BASIC[i],sort_order:i+1,created_by:'manual'},trip_id:tid})});}catch(e){}}
+  await load();showToast('Lista básica creada ✓');}
+/* migración 1 vez: empaque viejo de localStorage → DB del viaje activo */
+async function migratePack(){try{const v=localStorage.getItem('eurotrip_pack');if(!v)return;const old=JSON.parse(v);
+  if((DATA.packing_items||[]).length||!old.length){localStorage.removeItem('eurotrip_pack');return;}
+  const k=localStorage.getItem('bayu_write_key');if(!k)return;const tid=activeTripId();if(!tid)return;
+  for(let i=0;i<old.length;i++){await fetch('/api/write',{method:'POST',headers:{'Content-Type':'application/json','X-Write-Key':k},body:JSON.stringify({action:'insert',table:'packing_items',row:{title:old[i].t,checked:!!old[i].c,sort_order:i+1,created_by:'migracion'},trip_id:tid})});}
+  localStorage.removeItem('eurotrip_pack');await load();}catch(e){}}
 let currentAlbumCity='';
 function docPick(){$('doc-file').click();}
 function docUpload(input){const f=input.files[0];if(f)uploadAndSave(f,'document','');input.value='';}
@@ -328,18 +344,17 @@ async function uploadAndSave(file,kind,city){const isImg=(file.type||'').startsW
 function docsHtml(){const docs=(DATA.media||[]).filter(m=>m.kind==='document');let h='<div class="sec-h">📄 Documentos <button class="chip" style="float:right" onclick="docPick()">+ Subir</button></div><div class="bcard">';if(!docs.length)h+=emptyState('📄','Sin documentos','Pasaporte, pases de abordar, vouchers, seguro… súbelos para tenerlos offline.','<button class="eb" onclick="docPick()">+ Subir documento</button>');docs.forEach(m=>{h+='<div class="doc-row"><a href="'+esc(m.url)+'" target="_blank">📎 '+esc(m.title||'documento')+'</a><button class="x" onclick="delMedia(\''+m.id+'\')" aria-label="Borrar">'+I('trash',15)+'</button></div>';});return h+'</div>';}
 function albumHtml(){const photos=(DATA.media||[]).filter(m=>m.kind==='photo'||m.kind==='video');let h='<div class="sec-h">📸 Álbum por ciudad</div>';CITIES.forEach(c=>{const ph=photos.filter(m=>m.city===c.key);h+='<div class="bcard"><div style="display:flex;justify-content:space-between;align-items:center"><strong>'+c.flag+' '+esc(c.name)+(ph.length?' · '+ph.length:'')+'</strong><button class="chip" onclick="albumPick(\''+esc(c.key)+'\')">+ Foto/Video</button></div>';if(ph.length)h+='<div class="media-grid">'+ph.map(m=>'<div class="media-item">'+(m.kind==='video'?'<video src="'+esc(m.url)+'" style="width:100%;aspect-ratio:1;object-fit:cover;border-radius:8px" onclick="window.open(\''+esc(m.url)+'\')"></video>':'<img src="'+esc(m.url)+'" onclick="window.open(\''+esc(m.url)+'\')"/>')+'<button class="del" onclick="delMedia(\''+m.id+'\')" aria-label="Borrar">'+I('x',13)+'</button></div>').join('')+'</div>';h+='</div>';});return h;}
 async function delMedia(id){if(await confirmSheet('¿Borrar este archivo?',null,'Borrar'))await write({action:'delete',table:'media',id:id},'Borrado');}
+
+
+const EMERGENCY={FR:[['SAMU médico','15'],['Policía','17']],ES:[['Policía Nacional','091'],['Urgencias médicas','061']],PT:[['Emergencias','112']],IT:[['Emergencias','112']],DE:[['Policía','110']],GB:[['Emergencias','999']],US:[['Emergencias','911']],MX:[['Emergencias','911']],CA:[['Emergencias','911']],JP:[['Policía','110'],['Ambulancia','119']],KR:[['Policía','112'],['Ambulancia','119']],CN:[['Policía','110'],['Ambulancia','120']],BR:[['Policía','190'],['Ambulancia','192']],AR:[['Emergencias','911']],CO:[['Emergencias','123']],AU:[['Emergencias','000']],NZ:[['Emergencias','111']]};
+const EU_CC=['FR','ES','PT','IT','DE','NL','BE','AT','GR','IE','FI','SE','DK','PL','CZ','HU','HR','CH','NO'];
 function emergencyHtml(){
-  if(!isEurotrip())return '<div class="sec-h">🆘 Emergencia</div><div class="bcard">'
-    +'<div class="pf-row"><span>🚨 Emergencia general (UE y varios países)</span><a href="tel:112" style="color:var(--red);font-weight:800">112</a></div>'
-    +'<div class="pf-row" style="color:var(--muted);font-size:.82rem">📌 Pídele a Claudia los números locales de emergencia, embajada de México y qué hacer si pierdes tarjetas en tu destino.</div>'
-    +'</div>';
-  return '<div class="sec-h">🆘 Emergencia</div><div class="bcard">'
-  +'<div class="pf-row"><span>🚨 Emergencias (toda la UE)</span><a href="tel:112" style="color:var(--red);font-weight:800">112</a></div>'
-  +'<div class="pf-row"><span>🇫🇷 Francia · SAMU médico</span><a href="tel:15" style="color:var(--red);font-weight:800">15</a></div>'
-  +'<div class="pf-row"><span>🇫🇷 Francia · Policía</span><a href="tel:17" style="color:var(--red);font-weight:800">17</a></div>'
-  +'<div class="pf-row"><span>🇪🇸 España · Policía Nacional</span><a href="tel:091" style="color:var(--red);font-weight:800">091</a></div>'
-  +'<div class="pf-row" style="color:var(--muted);font-size:.82rem">📌 Para tel. de embajada de México y cancelar tarjetas, pídeselo a Claudia (busca el actual) o guárdalos en una nota.</div>'
-  +'</div>';}
+  const ccs=[...new Set(CITIES.map(c=>c.cc).filter(Boolean))];
+  let h='<div class="sec-h">🆘 Emergencia</div><div class="bcard">';
+  if(!ccs.length||ccs.some(cc=>EU_CC.includes(cc)))h+='<div class="pf-row"><span>🚨 Emergencia general (UE y varios países)</span><a href="tel:112" style="color:var(--red);font-weight:800">112</a></div>';
+  ccs.forEach(cc=>{(EMERGENCY[cc]||[]).forEach(e=>{h+='<div class="pf-row"><span>'+esc(cc)+' · '+esc(e[0])+'</span><a href="tel:'+e[1]+'" style="color:var(--red);font-weight:800">'+e[1]+'</a></div>';});});
+  h+='<div class="pf-row" style="color:var(--muted);font-size:.82rem">📌 Pídele a Claudia los números locales, embajada y qué hacer si pierdes tarjetas en tu destino.</div></div>';
+  return h;}
 
 /* ---------- PERFIL ---------- */
 function renderPerfil(){const hotels=DATA.hotel_choices||[];
@@ -348,14 +363,21 @@ function renderPerfil(){const hotels=DATA.hotel_choices||[];
   h+='<div class="bcard"><div class="lbl" style="margin-bottom:.2rem">Hoteles</div>';
   CITIES.forEach(c=>{const ho=hotels.find(x=>x.city===c.key);h+='<div class="pf-row"><span>'+c.flag+' '+esc(c.name)+'</span><span style="color:var(--muted)">'+(ho?(ho.confirmed?'✅ '+esc(ho.hotel_name):'⏳ por definir'):'—')+'</span></div>';});
   h+='</div>';
+  const TRV=DATA.trip_travelers||[];
+  h+='<div class="bcard"><div class="lbl" style="margin-bottom:.2rem">Viajeros · moneda '+esc(curCode())+'</div>';
+  TRV.forEach(t=>{h+='<div class="pf-row"><span>👤 '+esc(t.name)+'</span><button class="x" onclick="delTraveler(\''+t.id+'\',\''+esc(t.name)+'\')" aria-label="Quitar">'+I('trash',14)+'</button></div>';});
+  h+='<button class="chip" onclick="addTraveler()">+ Agregar viajero</button></div>';
   const _pq=queueGet().length;if(_pq)h+='<div class="bcard" style="background:#FFF3B0;color:#7a6a00;font-weight:700">⏳ '+_pq+' cambios pendientes <button class="chip" onclick="flushQueue()">Sincronizar</button></div>';
   const _tm=localStorage.getItem('bayu_theme')||'auto';
   h+='<div class="bcard"><div class="lbl" style="margin-bottom:.4rem">🎨 Tema</div><div class="seg">'+['light','auto','dark'].map(function(x){return '<button class="seg-btn'+(_tm===x?' on':'')+'" onclick="setTheme(\''+x+'\')">'+({light:'☀️ Claro',auto:'🔄 Auto',dark:'🌙 Oscuro'}[x])+'</button>';}).join('')+'</div></div>';
-  h+='<button class="pf-btn" onclick="changeKey()">🔑 Cambiar clave de escritura</button><a class="pf-btn" href="/guia">📖 Guía editorial completa</a><button class="pf-btn" onclick="infoSheet(\'Instalar Bayu\',\'iPhone: Safari → Compartir → Agregar a pantalla de inicio. Android: Chrome → menú ⋮ → Instalar app.\')">📲 Cómo instalar la app</button><button class="pf-btn" onclick="load();showToast(\'Actualizado ✓\')">🔄 Recargar datos</button>';
-  h+='<div style="text-align:center;color:var(--muted);font-size:.74rem;margin-top:1rem">Bayu PWA v10 ✨ Sunset Editorial · Arkamia Lab</div>';$('perfil-root').innerHTML=h;}
+  h+='<button class="pf-btn" onclick="changeKey()">🔑 Cambiar clave de escritura</button>'+(TRIP&&TRIP.guide_url?'<a class="pf-btn" href="'+esc(TRIP.guide_url)+'">📖 Guía editorial completa</a>':'')+'<button class="pf-btn" onclick="infoSheet(\'Instalar Bayu\',\'iPhone: Safari → Compartir → Agregar a pantalla de inicio. Android: Chrome → menú ⋮ → Instalar app.\')">📲 Cómo instalar la app</button><button class="pf-btn" onclick="load();showToast(\'Actualizado ✓\')">🔄 Recargar datos</button>';
+  h+='<div style="text-align:center;color:var(--muted);font-size:.74rem;margin-top:1rem">Bayu v11 · Arkamia Lab</div>';$('perfil-root').innerHTML=h;}
 function applyTheme(){var m=localStorage.getItem('bayu_theme')||'auto';var d=m==='dark'||(m==='auto'&&matchMedia('(prefers-color-scheme:dark)').matches);document.documentElement.setAttribute('data-theme',d?'dark':'light');}
 function setTheme(m){localStorage.setItem('bayu_theme',m);applyTheme();renderPerfil();showToast('Tema: '+({light:'Claro',auto:'Auto',dark:'Oscuro'}[m]||m));}
-async function changeKey(){localStorage.removeItem('eurotrip_write_key');const k=await promptSheet('Nueva clave de escritura','Escribe la clave','Guardar');if(k){localStorage.setItem('eurotrip_write_key',k);showToast('Clave guardada ✓');}}
+async function addTraveler(){const n=await promptSheet('Nombre del viajero','Ej: Ana','Agregar');if(!n)return;
+  await write({action:'insert',table:'trip_travelers',row:{name:n,sort_order:(DATA.trip_travelers||[]).length+1,created_by:'manual'}},'Viajero agregado ✓');}
+async function delTraveler(id,name){if(await confirmSheet('¿Quitar a '+name+'?','Sus gastos registrados se conservan con su nombre.','Quitar'))await write({action:'delete',table:'trip_travelers',id:id},'Quitado');}
+async function changeKey(){localStorage.removeItem('bayu_write_key');const k=await promptSheet('Nueva clave de escritura','Escribe la clave','Guardar');if(k){localStorage.setItem('bayu_write_key',k);showToast('Clave guardada ✓');}}
 
 /* ---------- MIS VIAJES (multi-viaje) ---------- */
 function statusBadge(s){return s==='active'?'<span class="tstat ta">● En curso</span>':s==='completed'?'<span class="tstat tc">✓ Terminado</span>':'<span class="tstat tp">◷ Planeando</span>';}
@@ -374,15 +396,18 @@ function renderViajes(){
   $('viajes-root').innerHTML=h;
 }
 async function switchTrip(id){if(TRIP&&id===TRIP.id){go('planner');return;}localStorage.setItem('bayu_trip_id',id);DATA={};chatStarted=false;chatMsgs=[];var cl=$('chat-log');if(cl)cl.innerHTML='';showToast('Cambiando de viaje…');await load();go('planner');}
-function openTrip(t){$('mt-id').value=t.id||'';$('mt-name').value=t.name||'';$('mt-sub').value=t.subtitle||'';$('mt-flag').value=t.flag||'🌍';$('mt-start').value=t.start_date||'';$('mt-end').value=t.end_date||'';$('mt-cover').value=t.cover_image||'';$('mt-status').value=t.status||'planning';$('mt-del').style.display=t.id?'block':'none';$('mt-title').textContent=t.id?'Editar viaje':'Nuevo viaje';$('m-trip').classList.add('open');}
+function openTrip(t){$('mt-id').value=t.id||'';$('mt-name').value=t.name||'';$('mt-sub').value=t.subtitle||'';$('mt-flag').value=t.flag||'🌍';$('mt-start').value=t.start_date||'';$('mt-end').value=t.end_date||'';$('mt-cover').value=t.cover_image||'';$('mt-status').value=t.status||'planning';$('mt-cur').value=t.home_currency||'MXN';$('mt-del').style.display=t.id?'block':'none';$('mt-title').textContent=t.id?'Editar viaje':'Nuevo viaje';$('m-trip').classList.add('open');}
 function openTrip2(id){const t=TRIPS.find(x=>x.id===id);if(t)openTrip(t);}
 async function saveTrip(){const id=$('mt-id').value,name=$('mt-name').value.trim();if(!name){showToast('Ponle nombre al viaje',true);return;}
-  const row={name:name,subtitle:$('mt-sub').value||null,flag:$('mt-flag').value||'🌍',start_date:$('mt-start').value||null,end_date:$('mt-end').value||null,cover_image:$('mt-cover').value||null,status:$('mt-status').value||'planning'};
+  const row={name:name,subtitle:$('mt-sub').value||null,flag:$('mt-flag').value||'🌍',start_date:$('mt-start').value||null,end_date:$('mt-end').value||null,cover_image:$('mt-cover').value||null,status:$('mt-status').value||'planning',home_currency:$('mt-cur').value||'MXN'};
   if(id){await write({action:'update',table:'trips',id:id,patch:row},'Viaje guardado ✓');closeM('m-trip');return;}
   const k=await wkey();if(!k)return;row.created_by='manual';
   try{const r=await fetch('/api/write',{method:'POST',headers:{'Content-Type':'application/json','X-Write-Key':k},body:JSON.stringify({action:'insert',table:'trips',row:row})});const j=await r.json();
     if(!j.ok){showToast(j.error||'Error',true);return;}
-    if(j.inserted&&j.inserted.id)localStorage.setItem('bayu_trip_id',j.inserted.id);
+    if(j.inserted&&j.inserted.id){localStorage.setItem('bayu_trip_id',j.inserted.id);
+      const me=await promptSheet('¿Quién viaja? (tu nombre)','Ej: Ana','Continuar');
+      if(me)try{await fetch('/api/write',{method:'POST',headers:{'Content-Type':'application/json','X-Write-Key':k},body:JSON.stringify({action:'insert',table:'trip_travelers',row:{name:me,sort_order:1,created_by:'manual'},trip_id:j.inserted.id})});}catch(e){}
+    }
     closeM('m-trip');showToast('Viaje creado ✓ — agrégale ciudades');await load();go('planner');
   }catch(e){showToast('Sin red',true);}
 }
@@ -395,9 +420,13 @@ async function delTrip(){const id=$('mt-id').value;if(!id)return;
 
 /* ---------- CLAUDIA ---------- */
 let chatMsgs=[];
-const CHIPS_EURO=['¿Cuánto llevamos gastado?','Agrega cena €80 en San Sebastián el 23','Mueve Versalles al 18','¿Qué falta por reservar?'];
-const CHIPS_GENERIC=['¿Cuánto llevamos gastado?','¿Qué falta por reservar?','Dame ideas para este viaje','Agrega una actividad a un día'];
-function startChat(){if(chatStarted)return;chatStarted=true;const chips=isEurotrip()?CHIPS_EURO:CHIPS_GENERIC;$('chat-chips').innerHTML=chips.map(c=>'<div class="chat-chip" onclick="chipSend(this)">'+esc(c)+'</div>').join('');pushBub('assistant','¡Hola! Soy Claudia'+(TRIP&&TRIP.name?' — tu asistente para '+TRIP.name:'')+'. Puedo armar tu plan, registrar gastos y resolver dudas del viaje. Dime qué necesitas o toca una sugerencia 👇');}
+const CHIPS=['¿Cuánto llevamos gastado?','¿Qué falta por reservar?','Busca hoteles para una ciudad','Dame ideas para este viaje'];
+async function startChat(){if(chatStarted)return;chatStarted=true;
+  $('chat-chips').innerHTML=CHIPS.map(c=>'<div class="chat-chip" onclick="chipSend(this)">'+esc(c)+'</div>').join('');
+  try{const r=await fetch('/api/chat?trip='+encodeURIComponent(activeTripId()));const j=await r.json();
+    if(j.ok&&j.messages&&j.messages.length){j.messages.forEach(m=>{pushBub(m.role==='user'?'user':'assistant',m.content);chatMsgs.push({role:m.role,content:m.content});});return;}
+  }catch(e){}
+  pushBub('assistant','¡Hola! Soy Claudia'+(TRIP&&TRIP.name?' — tu asistente para '+TRIP.name:'')+'. Puedo armar tu plan, registrar gastos, buscar vuelos y hoteles con precios reales, y resolver dudas del viaje. Dime qué necesitas o toca una sugerencia 👇');}
 function chipSend(el){$('chat-in').value=el.textContent;sendChat();}
 function mdInline(s){return s
   .replace(/!\[([^\]]*)\]\((https?:[^)\s]+)\)/g,'<img class="md-img" src="$2" alt="$1" loading="lazy" onclick="window.open(this.src,\'_blank\')" onerror="this.remove()"/>')
@@ -473,15 +502,15 @@ function closeM(id){$(id).classList.remove('open');}
 async function write(body,okMsg){const k=await wkey();if(!k)return;
   if(body.table!=='trips'&&!body.trip_id)body.trip_id=activeTripId();
   try{const r=await fetch('/api/write',{method:'POST',headers:{'Content-Type':'application/json','X-Write-Key':k},body:JSON.stringify(body)});const j=await r.json();
-    if(!j.ok){showToast(j.error||'Error',true);if(/clave/i.test(j.error||''))localStorage.removeItem('eurotrip_write_key');return;}
+    if(!j.ok){showToast(j.error||'Error',true);if(/clave/i.test(j.error||''))localStorage.removeItem('bayu_write_key');return;}
     await load();showToast(okMsg||'Listo ✓');}catch(e){queuePush(body);showToast('Sin red: guardado, sincroniza al reconectar ⏳');}}
 async function writeMany(items,okMsg){const k=await wkey();if(!k)return;const tid=activeTripId();
   try{for(const it of items){await fetch('/api/write',{method:'POST',headers:{'Content-Type':'application/json','X-Write-Key':k},body:JSON.stringify({action:'update',table:'activities',id:it.id,patch:it.patch,trip_id:tid})});}await load();showToast(okMsg||'Listo ✓');}catch(e){items.forEach(it=>queuePush({action:'update',table:'activities',id:it.id,patch:it.patch,trip_id:tid}));showToast('Sin red ⏳');}}
 
 /* offline queue + recibos (Push D) */
-function queueGet(){try{return JSON.parse(localStorage.getItem('eurotrip_queue')||'[]');}catch(e){return [];}}
-function queuePush(b){const q=queueGet();q.push(b);localStorage.setItem('eurotrip_queue',JSON.stringify(q));}
-async function flushQueue(){let q=queueGet();if(!q.length)return;const k=localStorage.getItem('eurotrip_write_key');if(!k)return;const left=[];for(const b of q){try{const r=await fetch('/api/write',{method:'POST',headers:{'Content-Type':'application/json','X-Write-Key':k},body:JSON.stringify(b)});const j=await r.json();if(!j.ok)left.push(b);}catch(e){left.push(b);}}localStorage.setItem('eurotrip_queue',JSON.stringify(left));if(left.length<q.length){await load();showToast('Sincronizado ✓');}}
+function queueGet(){try{return JSON.parse(localStorage.getItem('bayu_queue')||'[]');}catch(e){return [];}}
+function queuePush(b){const q=queueGet();q.push(b);localStorage.setItem('bayu_queue',JSON.stringify(q));}
+async function flushQueue(){let q=queueGet();if(!q.length)return;const k=localStorage.getItem('bayu_write_key');if(!k)return;const left=[];for(const b of q){try{const r=await fetch('/api/write',{method:'POST',headers:{'Content-Type':'application/json','X-Write-Key':k},body:JSON.stringify(b)});const j=await r.json();if(!j.ok)left.push(b);}catch(e){left.push(b);}}localStorage.setItem('bayu_queue',JSON.stringify(left));if(left.length<q.length){await load();showToast('Sincronizado ✓');}}
 window.addEventListener('online',flushQueue);
 function fileToB64Resized(file,max,cb){const rd=new FileReader();rd.onload=e=>{const img=new Image();img.onload=()=>{let w=img.width,h=img.height;if(w>h&&w>max){h=Math.round(h*max/w);w=max;}else if(h>=w&&h>max){w=Math.round(w*max/h);h=max;}const c=document.createElement('canvas');c.width=w;c.height=h;c.getContext('2d').drawImage(img,0,0,w,h);cb(c.toDataURL('image/jpeg',0.82).split(',')[1]);};img.src=e.target.result;};rd.readAsDataURL(file);}
 function pickReceipt(input){const f=input.files&&input.files[0];if(!f)return;fileToB64Resized(f,1200,b64=>{pendingReceipt=b64;document.getElementById('me-preview').innerHTML='<img src="data:image/jpeg;base64,'+b64+'" style="max-height:90px;border-radius:8px"/>';showToast('Foto lista, guarda el gasto');});}

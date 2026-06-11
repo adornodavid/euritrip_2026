@@ -41,12 +41,12 @@
 <section id="s-planner" class="screen active">
   <div class="app-bar"><div class="brandbar" onclick="openTrips()" role="button" aria-label="Cambiar de viaje"><img src="app/icon-192.png" alt="Bayu"/><div><div class="bn">Bayu</div><div class="sub" id="brand-sub">Tu viaje</div></div></div></div>
   <div class="hero" id="hero" onclick="openTrips()">
-    <img id="hero-img" src="images/paris/eiffel.jpg" alt="" onerror="this.style.display='none'"/>
+    <img id="hero-img" src="" alt="" style="display:none" onerror="this.style.display='none'"/>
     <div class="ov"></div>
     <div class="ht">
       <span class="hero-kicker" id="hero-kicker">✦ Tu próximo viaje</span>
-      <h2 id="hero-title">Eurotrip · Francia + País Vasco</h2>
-      <div class="hero-meta"><span class="pill" id="hero-pill">📅 16 Oct → 31 Oct 2026</span><span class="hero-switch" id="hero-switch">Cambiar ▾</span></div>
+      <h2 id="hero-title">Tu viaje</h2>
+      <div class="hero-meta"><span class="pill" id="hero-pill">📅 …</span><span class="hero-switch" id="hero-switch">Cambiar ▾</span></div>
     </div>
   </div>
   <div class="wrap"><div id="planner-root" class="loading">Cargando tu plan…</div></div>
@@ -117,10 +117,10 @@
 <div id="m-act" class="modal"><div class="sheet">
   <h3 id="ma-title">Nueva actividad</h3>
   <input type="hidden" id="ma-id"/>
-  <div class="row2"><div><label>Día (opcional)</label><input type="date" id="ma-date" min="2026-10-16" max="2026-10-31"/></div><div><label>Hora</label><input type="time" id="ma-time"/></div></div>
+  <div class="row2"><div><label>Día (opcional)</label><input type="date" id="ma-date"/></div><div><label>Hora</label><input type="time" id="ma-time"/></div></div>
   <label>Actividad</label><input type="text" id="ma-tit" placeholder="Ej: Museo Guggenheim"/>
   <div class="row2"><div><label>Categoría</label><select id="ma-cat"><option value="">—</option><option>comida</option><option>museo</option><option>paseo</option><option>actividad</option><option>viñedo</option><option>compras</option><option>traslado</option><option>logistica</option><option>flex</option></select></div>
-  <div><label>Ciudad</label><select id="ma-city" onchange="snapDateToCity()"><option value="">—</option><option>Paris</option><option>Bordeaux</option><option>San Sebastián</option><option>Bilbao</option><option>Madrid</option><option>Versalles</option><option>Saint-Émilion</option><option>Toledo</option></select></div></div>
+  <div><label>Ciudad</label><select id="ma-city" onchange="snapDateToCity()"><option value="">—</option></select></div></div>
   <label>Notas</label><textarea id="ma-notes" rows="2"></textarea>
   <label>🔗 Link de info (opcional)</label><input type="url" id="ma-link" placeholder="https://..."/>
   <label>🧭 Cómo llegar / ruta (URL)</label><input type="url" id="ma-map" placeholder="Google Maps, web del lugar…"/>
@@ -135,10 +135,10 @@
   <input type="hidden" id="me-id"/>
   <label>Descripción</label><input type="text" id="me-desc" placeholder="Ej: Cena en Arzak"/>
   <div class="row2"><div><label>Moneda</label><select id="me-cur" onchange="fxCalc()"><option value="MXN">MXN $</option><option value="EUR">EUR €</option><option value="USD">USD $</option></select></div><div><label>Monto</label><input type="number" id="me-orig" inputmode="decimal" placeholder="0" oninput="fxCalc()"/></div></div>
-  <div class="row2" id="me-fxrow"><div><label>Tasa →MXN</label><input type="number" id="me-fx" inputmode="decimal" oninput="fxCalc()"/></div><div><label>= MXN</label><input type="number" id="me-mxn" inputmode="decimal" placeholder="0"/></div></div>
+  <div class="row2" id="me-fxrow"><div><label>Tasa →MXN</label><input type="number" id="me-fx" inputmode="decimal" oninput="fxCalc()"/></div><div><label>= moneda base</label><input type="number" id="me-mxn" inputmode="decimal" placeholder="0"/></div></div>
   <div id="me-fxhint" style="font-size:.74rem;color:var(--muted);margin-top:.35rem;font-weight:600;"></div>
-  <div class="row2"><div><label>Categoría</label><select id="me-cat"></select></div><div><label>Pagó</label><select id="me-payer"><option>Joint</option><option>David</option><option>Paty</option></select></div></div>
-  <label>Ciudad</label><select id="me-city"><option value="">—</option><option>Paris</option><option>Bordeaux</option><option>San Sebastián</option><option>Bilbao</option><option>Madrid</option></select>
+  <div class="row2"><div><label>Categoría</label><select id="me-cat"></select></div><div><label>Pagó</label><select id="me-payer"></select></div></div>
+  <label>Ciudad</label><select id="me-city"><option value="">—</option></select>
   <label>Notas</label><input type="text" id="me-notes"/>
   <label>📷 Recibo (opcional)</label>
   <input type="file" id="me-photo" accept="image/*" onchange="pickReceipt(this)"/>
@@ -171,9 +171,9 @@
 <div id="m-res" class="modal"><div class="sheet">
   <h3>Reserva</h3>
   <input type="hidden" id="mr-id"/>
-  <div class="row2"><div><label>Tipo</label><select id="mr-type"><option value="flight">✈️ Vuelo</option><option value="hotel">🏨 Hotel</option><option value="restaurant">🍽️ Restaurante</option><option value="train">🚄 Tren</option><option value="tour">🎟️ Tour</option><option value="transfer">🚐 Traslado</option><option value="activity">🎫 Actividad</option><option value="other">📋 Otro</option></select></div><div><label>Ciudad</label><select id="mr-city"><option value="">—</option><option>Paris</option><option>Bordeaux</option><option>San Sebastián</option><option>Bilbao</option><option>Madrid</option></select></div></div>
+  <div class="row2"><div><label>Tipo</label><select id="mr-type"><option value="flight">✈️ Vuelo</option><option value="hotel">🏨 Hotel</option><option value="restaurant">🍽️ Restaurante</option><option value="train">🚄 Tren</option><option value="tour">🎟️ Tour</option><option value="transfer">🚐 Traslado</option><option value="activity">🎫 Actividad</option><option value="other">📋 Otro</option></select></div><div><label>Ciudad</label><select id="mr-city"><option value="">—</option></select></div></div>
   <label>Título</label><input type="text" id="mr-title" placeholder="Ej: Cena en Arzak"/>
-  <div class="row2"><div><label>Fecha</label><input type="date" id="mr-date" min="2026-10-15" max="2026-10-31"/></div><div><label>Hora</label><input type="time" id="mr-time"/></div></div>
+  <div class="row2"><div><label>Fecha</label><input type="date" id="mr-date"/></div><div><label>Hora</label><input type="time" id="mr-time"/></div></div>
   <div class="row2"><div><label>Código</label><input type="text" id="mr-code"/></div><div><label>Costo</label><input type="text" id="mr-cost" placeholder="€340"/></div></div>
   <label>Link</label><input type="text" id="mr-link" placeholder="https://..."/>
   <label>Notas</label><input type="text" id="mr-notes"/>
@@ -186,7 +186,7 @@
   <input type="hidden" id="ml-id"/>
   <label>Título</label><input type="text" id="ml-title" placeholder="Ej: Reseña del restaurante"/>
   <label>URL</label><input type="url" id="ml-url" placeholder="https://..."/>
-  <label>Ciudad</label><select id="ml-city"><option value="">—</option><option>Paris</option><option>Bordeaux</option><option>San Sebastián</option><option>Bilbao</option><option>Madrid</option></select>
+  <label>Ciudad</label><select id="ml-city"><option value="">—</option></select>
   <button class="save" onclick="saveLink()">Guardar</button>
   <button class="cancel" onclick="closeM('m-link')">Cancelar</button>
 </div></div>
@@ -195,7 +195,7 @@
   <h3>Ciudad / parada</h3>
   <input type="hidden" id="mc-id"/>
   <div class="row2"><div><label>Nombre</label><input type="text" id="mc-name" placeholder="Ej: Bayonne"/></div><div><label>Bandera</label><input type="text" id="mc-flag" value="📍" maxlength="4"/></div></div>
-  <div class="row2"><div><label>Desde</label><input type="date" id="mc-start" min="2026-10-15" max="2026-10-31"/></div><div><label>Hasta</label><input type="date" id="mc-end" min="2026-10-15" max="2026-10-31"/></div></div>
+  <div class="row2"><div><label>Desde</label><input type="date" id="mc-start"/></div><div><label>Hasta</label><input type="date" id="mc-end"/></div></div>
   <label>Foto de fondo (URL, opcional)</label><input type="url" id="mc-photo" placeholder="https://..."/>
   <label>Notas</label><input type="text" id="mc-notes"/>
   <button class="save" onclick="saveCity()">Guardar</button>
@@ -208,7 +208,8 @@
   <div class="row2"><div><label>Nombre</label><input type="text" id="mt-name" placeholder="Ej: Japón 2027"/></div><div style="flex:0 0 78px"><label>Emoji</label><input type="text" id="mt-flag" value="🌍" maxlength="4"/></div></div>
   <label>Subtítulo (opcional)</label><input type="text" id="mt-sub" placeholder="Ej: Tokio + Kioto + Osaka"/>
   <div class="row2"><div><label>Desde</label><input type="date" id="mt-start"/></div><div><label>Hasta</label><input type="date" id="mt-end"/></div></div>
-  <div class="row2"><div><label>Estado</label><select id="mt-status"><option value="planning">◷ Planeando</option><option value="active">● En curso</option><option value="completed">✓ Terminado</option></select></div><div><label>Foto portada (URL)</label><input type="url" id="mt-cover" placeholder="https://..."/></div></div>
+  <div class="row2"><div><label>Moneda base</label><select id="mt-cur"><option value="MXN">MXN $</option><option value="USD">USD $</option><option value="EUR">EUR €</option><option value="GBP">GBP £</option><option value="JPY">JPY ¥</option></select></div><div><label>Estado</label><select id="mt-status"><option value="planning">◷ Planeando</option><option value="active">● En curso</option><option value="completed">✓ Terminado</option></select></div></div>
+  <label>Foto portada (URL)</label><input type="url" id="mt-cover" placeholder="https://..."/>
   <button class="save" onclick="saveTrip()">Guardar</button>
   <button class="pf-btn" id="mt-del" onclick="delTrip()" style="display:none;color:var(--red);text-align:center;margin-top:.6rem;font-weight:700">🗑️ Borrar este viaje y todo su contenido</button>
   <button class="cancel" onclick="closeM('m-trip')">Cancelar</button>
@@ -216,7 +217,7 @@
 
 <div id="m-trans" class="modal"><div class="sheet">
   <h3>🌐 Traductor</h3>
-  <label>Traducir a</label><select id="tr-lang"><option value="francés">🇫🇷 Francés</option><option value="euskera">🟢 Euskera</option><option value="inglés">🇬🇧 Inglés</option><option value="español">🇪🇸 Español</option></select>
+  <label>Traducir a</label><select id="tr-lang"><option value="inglés">🇬🇧 Inglés</option><option value="francés">🇫🇷 Francés</option><option value="italiano">🇮🇹 Italiano</option><option value="alemán">🇩🇪 Alemán</option><option value="portugués">🇵🇹 Portugués</option><option value="japonés">🇯🇵 Japonés</option><option value="español">🇪🇸 Español</option></select>
   <label>Texto</label><textarea id="tr-in" rows="3" placeholder="Escribe lo que quieras traducir…"></textarea>
   <button class="save" onclick="doTranslate()">Traducir</button>
   <div id="tr-out" style="margin-top:1rem;font-size:1.05rem;font-weight:600;min-height:1.5rem;background:var(--bg);border-radius:10px;padding:.7rem;white-space:pre-wrap"></div>

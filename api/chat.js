@@ -3,17 +3,17 @@
 // Claudia puede llamar tools para guardar notas, bookmarks, reservaciones, hoteles, etc.
 
 import Anthropic from '@anthropic-ai/sdk';
-import { getSupabase, TABLES, tableName, DEFAULT_TRIP_ID } from './_supabase.js';
+import { getSupabase, TABLES, tableName } from './_supabase.js';
 import { hasKey as hasSkyKey, searchFlights as skyFlights, searchHotels as skyHotels, compactFlights, compactHotels } from './_skyscanner.js';
 
 // Prompt GENÉRICO (aplica a cualquier viaje). El contexto del viaje activo se inyecta dinámico abajo.
-const ROLE_PROMPT = `Eres "Claudia", la asistente de viaje de David y Paty dentro de la app Bayu.
+const ROLE_PROMPT = `Eres "Claudia", la asistente de viaje dentro de la app Bayu.
 
-TU ROL: Responder preguntas sobre el VIAJE ACTIVO y ayudarles a guardar información mientras chatean: notas, links útiles, reservaciones (vuelos, hoteles, restaurantes, tours, trenes), hoteles elegidos por ciudad, gastos, actividades del planner, ciudades/paradas y presupuesto.
+TU ROL: Responder preguntas sobre el VIAJE ACTIVO y ayudar a sus viajeros a guardar información mientras chatean: notas, links útiles, reservaciones (vuelos, hoteles, restaurantes, tours, trenes), hoteles elegidos por ciudad, gastos, actividades del planner, ciudades/paradas, empaque y presupuesto. Los nombres de los viajeros vienen en el bloque "=== VIAJE ACTIVO ===" — dirígete a ellos por su nombre.
 
 MULTI-VIAJE (IMPORTANTE): La app maneja varios viajes. TODO lo que guardes o consultes aplica SOLO al viaje activo (ver "=== VIAJE ACTIVO ===" abajo). Nunca mezcles datos entre viajes. Si te piden algo de otro viaje, diles que lo cambien en la pestaña ✈️ Viajes. Las fechas de actividades/gastos/reservas deben caer dentro del rango del viaje activo.
 
-EL PLANNER (tabla activities): el plan de cada día vive en actividades editables. David y Paty las agregan, quitan, editan y marcan como hechas. Usa add_activity cuando mencionen algo que quieran hacer un día concreto; update_record/delete_record (table="activities") para mover, editar o quitar.
+EL PLANNER (tabla activities): el plan de cada día vive en actividades editables. Los viajeros las agregan, quitan, editan y marcan como hechas. Usa add_activity cuando mencionen algo que quieran hacer un día concreto; update_record/delete_record (table="activities") para mover, editar o quitar.
 
 TUS PODERES (CRUD COMPLETO sobre el viaje activo): CREAR, EDITAR y BORRAR actividades, gastos, reservas, hoteles, notas, links, ciudades/paradas (add_trip_city) y editar presupuesto. Si te piden "investiga y llénale info a la actividad X", usa web_search para datos reales y guárdalos con update_record en los campos link (info), map_url (cómo llegar), tickets (boletos), notes, rating.
 
@@ -25,9 +25,10 @@ CÓMO USAR TUS HERRAMIENTAS (sin preguntar, salvo que falte info crítica):
 3. add_reservation — vuelos/hoteles/restaurantes/tours/trenes YA confirmados con código/link.
 4. set_hotel_choice — cuando deciden EL hotel de una ciudad.
 5. set_day_plan — cambios a un día específico.
-6. add_expense — gasto REAL ya pagado. Categorías: flights, hotels, trains, food, attractions, transport, shopping, misc. Si dan EUR/USD, convierte a MXN (tasa ~22 MXN/EUR salvo que digan otra). Defaults: payer="Joint", expense_date=hoy.
+6. add_expense — gasto REAL ya pagado. Categorías: flights, hotels, trains, food, attractions, transport, shopping, misc. El monto va en la MONEDA BASE del viaje (ver bloque VIAJE ACTIVO); si pagaron en otra moneda, convierte con la tasa que te digan (o pregúntala/búscala — no inventes una). Defaults: payer="Joint" si hay 2+ viajeros, si no el único viajero; expense_date=hoy.
 7. add_activity — agregar actividad al planner de un día. Puedes ENRIQUECERLA con update_record (link, map_url, tickets, notes, rating).
 8. list_saved — ver qué hay guardado.
+8b. add_packing_items — agregar varios ítems a la lista de empaque del viaje de una vez (genera listas según destino, clima y duración). Editar/quitar/palomear: update_record/delete_record con table="packing_items".
 9. update_record — editar un registro. SIEMPRE pide confirmación. Para 'budget' el id es la category; para lo demás el id es el UUID (obténlo con list_saved). patch = solo los campos a cambiar.
 10. delete_record — borrar un registro. SIEMPRE pide confirmación.
 11. search_flights — BÚSQUEDA REAL de vuelos con precios en vivo (Skyscanner). Úsala cuando pidan "busca vuelos", precios o comparar opciones aéreas. Prefiérela SIEMPRE sobre web_search para vuelos. Acepta ciudades en texto libre o código IATA. Muestra 3-5 opciones con precio, horarios, escalas y el [link para reservar](url) — recuérdales que la compra la completan ellos.
@@ -50,31 +51,19 @@ FALLBACK DE BÚSQUEDAS: si search_flights o search_hotels devuelven error o 0 re
 
 ACCESO A INTERNET (web_search): úsalo para info que cambia (horarios, precios, links oficiales, reseñas, clima) o que no tengas en contexto. Cita las fuentes con [link](url). NO lo uses para info que ya tienes en este prompt. NO uses tool calls para preguntas simples informacionales.`;
 
-// Conocimiento RICO del Eurotrip — SOLO se inyecta cuando el viaje activo es el Eurotrip semilla.
-const EUROTRIP_KNOWLEDGE = `
-
-=== CONOCIMIENTO ESPECÍFICO DEL EUROTRIP ===
-Eurotrip 2026 · 15-31 octubre · viaje de David y Paty por Francia + País Vasco + Madrid.
-
-FUENTE DE VERDAD DE LA RUTA: usa SIEMPRE la lista de ciudades/fechas/noches del bloque "=== VIAJE ACTIVO ===" de arriba — se actualiza solo cuando editan el viaje. NO asumas noches, day trips ni orden de memoria; si algo no cuadra, confía en esa lista (o usa list_saved). Si una ciudad dura 1 día (start = end) es un day trip, no una noche de hotel. No preguntes por destinos que ya están en la lista como si fueran nuevos.
-
-Contexto de zona: Hondarribia es un pueblo fronterizo vasco (escapada desde San Sebastián). La Guardia / Laguardia es el pueblo medieval de la Rioja Alavesa (vino, bodegas, calados) — entre Bilbao y Madrid.
-Vuelos (pagados, fijos): AM44 MTY 15 oct 3:25PM → CDG 16 oct 9:40AM (asientos 29A+29B) · AM35 MAD 31 oct 10:30AM → MTY 3:45PM (34H+34J).
-Presupuesto pareja: Económico ~$145K MXN · Premium ~$156K MXN.
-Restaurantes de referencia: Paris (Bistrot Paul Bert, Bouillon Chartier, Café de Flore, L'As du Fallafel) · Bordeaux (La Tupina, Le Petit Commerce, Garopapilles) · San Sebastián pintxos (La Cuchara de San Telmo, Gandarias, Bar Néstor, Borda Berri) y alta cocina (Arzak, Mugaritz, Akelarre) · Bilbao (Mercado de la Ribera, Café Iruña, La Viña del Ensanche) y alta cocina (Azurmendi, Nerua) · Madrid (Casa Botín, Casa Lucio, La Bola, Mercado de San Miguel).
-Traslados típicos: Paris→Bordeaux TGV ~2h · Bordeaux→San Sebastián tren a Hendaya+Euskotren o bus ~3-4h · San Sebastián→Bilbao ~1h15 · Bilbao→Madrid Renfe ~4.5h o vuelo.
-Logística: 3 maletas total entre los dos, NO visa Schengen (mexicanos <90 días), ETIAS posible Q4 2026, eSIM Holafly ~€80, tax-free DIVA en Barajas, pasaporte con 6 meses de vigencia.`;
-
 // Contexto dinámico del viaje activo (cualquier viaje), armado desde la DB.
-function tripContextBlock(trip, cities, hotels) {
+function tripContextBlock(trip, cities, hotels, travelers) {
   if (!trip) return '\n\n=== VIAJE ACTIVO ===\n(no se pudo cargar el viaje activo)';
   let s = `\n\n=== VIAJE ACTIVO ===\nNombre: ${trip.name}${trip.subtitle ? ' · ' + trip.subtitle : ''}\n`;
   if (trip.start_date) s += `Fechas: ${trip.start_date} a ${trip.end_date || trip.start_date}\n`;
   else s += `Fechas: sin definir aún\n`;
   s += `Estado: ${trip.status || 'planning'}\n`;
+  s += `Moneda base del viaje: ${trip.home_currency || 'MXN'} (todos los montos de gastos/presupuesto van en esta moneda)\n`;
+  if (travelers && travelers.length) s += `Viajeros: ${travelers.map(t => t.name).join(', ')}${travelers.length > 1 ? ' (pagador "Joint" = gasto compartido)' : ''}\n`;
   if (cities && cities.length) s += `Ciudades/paradas:\n` + cities.map(c => `- ${c.name} (${c.start_date || '?'} → ${c.end_date || c.start_date || '?'})`).join('\n') + '\n';
   else s += `Aún no tiene ciudades cargadas — sugiere agregar la primera con add_trip_city.\n`;
   if (hotels && hotels.length) s += `Hoteles: ` + hotels.map(h => `${h.city}: ${h.hotel_name}${h.confirmed ? ' (confirmado)' : ' (por definir)'}`).join(' · ') + '\n';
+  s += `\nFUENTE DE VERDAD DE LA RUTA: usa SIEMPRE esta lista de ciudades/fechas — se actualiza sola cuando editan el viaje. NO asumas noches, day trips ni orden de memoria; si algo no cuadra, confía en esta lista (o usa list_saved). Si una ciudad dura 1 día (start = end) es un day trip, no una noche de hotel. No preguntes por destinos que ya están en la lista como si fueran nuevos. Datos finos del viaje (logística, referencias) pueden vivir como notas — consúltalas con list_saved(table="notes").\n`;
   return s;
 }
 
@@ -88,7 +77,7 @@ const TOOLS = [
       properties: {
         text: { type: 'string', description: 'Texto de la nota' },
         category: { type: 'string', enum: ['general', 'todo', 'idea', 'reminder', 'warning'], description: 'Categoría' },
-        city: { type: 'string', description: 'Ciudad asociada (opcional): Paris, Bordeaux, San Sebastián, Bilbao, Madrid' }
+        city: { type: 'string', description: 'Ciudad del viaje asociada (opcional)' }
       },
       required: ['text']
     }
@@ -133,7 +122,7 @@ const TOOLS = [
     input_schema: {
       type: 'object',
       properties: {
-        city: { type: 'string', description: 'Paris, Bordeaux, San Sebastián, Bilbao, o Madrid' },
+        city: { type: 'string', description: 'Ciudad del viaje' },
         hotel_name: { type: 'string' },
         zone: { type: 'string', description: 'Zona/barrio del hotel' },
         price_per_night: { type: 'string', description: 'Ej: "€180"' },
@@ -150,7 +139,7 @@ const TOOLS = [
     input_schema: {
       type: 'object',
       properties: {
-        date: { type: 'string', description: 'Fecha YYYY-MM-DD (ej: 2026-10-19)' },
+        date: { type: 'string', description: 'Fecha YYYY-MM-DD' },
         new_plan: { type: 'string', description: 'Nuevo plan del día' },
         notes: { type: 'string' }
       },
@@ -159,17 +148,17 @@ const TOOLS = [
   },
   {
     name: 'add_expense',
-    description: 'Registrar un gasto REAL del viaje. Usa cuando David o Paty mencionen que YA gastaron, pagaron o compraron algo.',
+    description: 'Registrar un gasto REAL del viaje. Usa cuando un viajero mencione que YA gastaron, pagaron o compraron algo.',
     input_schema: {
       type: 'object',
       properties: {
         category: { type: 'string', enum: ['flights', 'hotels', 'trains', 'food', 'attractions', 'transport', 'shopping', 'misc'], description: 'Categoría del gasto' },
-        description: { type: 'string', description: 'Qué fue el gasto (ej: "Cena Bistrot Paul Bert", "Hotel Emile Paris noche 1")' },
-        amount_mxn: { type: 'number', description: 'Monto en MXN. Si el gasto fue en EUR, convertir a MXN con la tasa fx_rate' },
-        amount_original: { type: 'number', description: 'Monto en moneda original (opcional, solo si fue en EUR/USD)' },
-        currency: { type: 'string', enum: ['MXN', 'EUR', 'USD'], description: 'Moneda original (default MXN)' },
-        fx_rate: { type: 'number', description: 'Tasa de cambio aplicada (ej: 22 si 1 EUR = 22 MXN)' },
-        payer: { type: 'string', enum: ['David', 'Paty', 'Joint'], description: 'Quién pagó (default Joint)' },
+        description: { type: 'string', description: 'Qué fue el gasto (ej: "Cena en restaurante", "Hotel noche 1")' },
+        amount_mxn: { type: 'number', description: 'Monto en la MONEDA BASE del viaje (ver contexto). Si pagaron en otra moneda, convertir con fx_rate' },
+        amount_original: { type: 'number', description: 'Monto en moneda original (opcional, solo si difiere de la moneda base)' },
+        currency: { type: 'string', description: 'Código ISO de la moneda original en que pagaron (default = moneda base del viaje)' },
+        fx_rate: { type: 'number', description: 'Tasa de cambio aplicada a moneda base (opcional)' },
+        payer: { type: 'string', description: 'Quién pagó: nombre de un viajero del viaje, o "Joint" si fue compartido' },
         expense_date: { type: 'string', description: 'Fecha del gasto YYYY-MM-DD (opcional)' },
         city: { type: 'string', description: 'Ciudad asociada al gasto (opcional)' },
         notes: { type: 'string', description: 'Notas adicionales' }
@@ -179,15 +168,15 @@ const TOOLS = [
   },
   {
     name: 'add_activity',
-    description: 'Agregar una actividad al planner de un dia especifico (museo, comida, paseo, traslado, etc.). Usa cuando David o Paty digan que quieren hacer algo un dia concreto del viaje.',
+    description: 'Agregar una actividad al planner de un dia especifico (museo, comida, paseo, traslado, etc.). Usa cuando un viajero diga que quiere hacer algo un dia concreto del viaje.',
     input_schema: {
       type: 'object',
       properties: {
-        activity_date: { type: 'string', description: 'Fecha YYYY-MM-DD (ej: 2026-10-23)' },
-        title: { type: 'string', description: 'Que van a hacer (ej: Museo Guggenheim, Ruta de pintxos)' },
+        activity_date: { type: 'string', description: 'Fecha YYYY-MM-DD' },
+        title: { type: 'string', description: 'Que van a hacer (ej: Museo, Ruta gastronómica)' },
         start_time: { type: 'string', description: 'Hora HH:MM (opcional, ej: 09:30)' },
         category: { type: 'string', description: 'Tipo: comida, museo, paseo, actividad, vinedo, compras, traslado, logistica, flex' },
-        city: { type: 'string', description: 'Ciudad: Paris, Bordeaux, San Sebastian, Bilbao, Madrid, Versalles, Saint-Emilion, Toledo' },
+        city: { type: 'string', description: 'Ciudad del viaje a la que pertenece (de la lista del contexto)' },
         notes: { type: 'string', description: 'Notas (opcional)' },
         link: { type: 'string', description: 'URL de info del lugar (opcional)' },
         map_url: { type: 'string', description: 'URL de como llegar / Google Maps (opcional)' },
@@ -199,8 +188,23 @@ const TOOLS = [
     }
   },
   {
+    name: 'add_packing_items',
+    description: 'Agregar uno o varios ítems a la lista de empaque del viaje. Úsalo para generar una lista inicial según destino/clima/duración o para agregar cosas que mencionen.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        items: {
+          type: 'array',
+          description: 'Ítems a agregar, en orden',
+          items: { type: 'string', description: 'Ej: "Adaptador de corriente", "Bloqueador solar"' }
+        }
+      },
+      required: ['items']
+    }
+  },
+  {
     name: 'add_trip_city',
-    description: 'Agregar una ciudad o parada al itinerario (ej: Bayonne como stopover entre Bordeaux y San Sebastian). Usa cuando David quiera meter una ciudad nueva a la ruta.',
+    description: 'Agregar una ciudad o parada al itinerario del viaje activo (ciudades nuevas o stopovers en la ruta).',
     input_schema: {
       type: 'object',
       properties: {
@@ -315,18 +319,19 @@ const TOOLS = [
 ];
 
 // Ejecutor de tools
-async function executeTool(sb, tripId, name, input) {
+async function executeTool(sb, tripId, name, input, ctx) {
+  ctx = ctx || {};
   const tagged = { ...input, created_by: 'claudia', trip_id: tripId };
   try {
     // Búsquedas reales (Skyscanner) — no tocan la DB, no requieren confirmación
     if (name === 'search_flights') {
-      if (!hasSkyKey()) return { ok: false, error: 'RAPIDAPI_KEY no configurada — avisa a David que falta en Vercel' };
+      if (!hasSkyKey()) return { ok: false, error: 'RAPIDAPI_KEY no configurada en Vercel' };
       const flights = await skyFlights(input);
       if (!flights.length) return { ok: true, count: 0, message: 'Sin resultados para esa búsqueda' };
       return { ok: true, count: flights.length, results: compactFlights(flights) };
     }
     if (name === 'search_hotels') {
-      if (!hasSkyKey()) return { ok: false, error: 'RAPIDAPI_KEY no configurada — avisa a David que falta en Vercel' };
+      if (!hasSkyKey()) return { ok: false, error: 'RAPIDAPI_KEY no configurada en Vercel' };
       const hotels = await skyHotels(input);
       if (!hotels.length) return { ok: true, count: 0, message: 'Sin resultados para esa búsqueda' };
       return { ok: true, count: hotels.length, results: compactHotels(hotels) };
@@ -358,11 +363,21 @@ async function executeTool(sb, tripId, name, input) {
     }
     if (name === 'add_expense') {
       const row = { ...tagged };
-      if (!row.payer) row.payer = 'Joint';
-      if (!row.currency) row.currency = 'MXN';
+      const travelers = ctx.travelers || [];
+      if (!row.payer) row.payer = travelers.length >= 2 ? 'Joint' : (travelers[0]?.name || 'Joint');
+      if (!row.currency) row.currency = ctx.homeCurrency || 'MXN';
       const { data, error } = await sb.from(tableName('expenses')).insert(row).select().single();
       if (error) throw error;
-      return { ok: true, message: `Gasto registrado: ${data.description} · $${Number(data.amount_mxn).toLocaleString('es-MX')} MXN`, data };
+      return { ok: true, message: `Gasto registrado: ${data.description} · $${Number(data.amount_mxn).toLocaleString('es-MX')} ${ctx.homeCurrency || 'MXN'}`, data };
+    }
+    if (name === 'add_packing_items') {
+      const items = (input.items || []).filter(Boolean);
+      if (!items.length) return { ok: false, error: 'items[] vacío' };
+      const { count } = await sb.from(tableName('packing_items')).select('*', { count: 'exact', head: true }).eq('trip_id', tripId);
+      const rows = items.map((t, i) => ({ trip_id: tripId, title: String(t).slice(0, 120), sort_order: (count || 0) + i + 1, created_by: 'claudia' }));
+      const { data, error } = await sb.from(tableName('packing_items')).insert(rows).select();
+      if (error) throw error;
+      return { ok: true, message: `${data.length} ítems agregados al empaque`, count: data.length };
     }
     if (name === 'add_activity') {
       const row = { ...tagged };
@@ -439,9 +454,26 @@ async function executeTool(sb, tripId, name, input) {
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
   if (req.method === 'OPTIONS') return res.status(200).end();
+
+  // GET → historial de chat del viaje (persistente por trip)
+  if (req.method === 'GET') {
+    try {
+      const tid = req.query?.trip;
+      if (!tid) return res.status(400).json({ error: 'trip requerido' });
+      const sb = getSupabase();
+      const { data, error } = await sb.from(tableName('chat_messages'))
+        .select('role,content,created_at').eq('trip_id', tid)
+        .order('created_at', { ascending: false }).limit(30);
+      if (error) throw error;
+      return res.status(200).json({ ok: true, messages: (data || []).reverse() });
+    } catch (e) {
+      return res.status(500).json({ ok: false, error: e.message });
+    }
+  }
+
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
   const apiKey = process.env.ANTHROPIC_API_KEY;
@@ -452,25 +484,28 @@ export default async function handler(req, res) {
     if (!Array.isArray(messages) || messages.length === 0) {
       return res.status(400).json({ error: 'messages[] requerido' });
     }
-    const tripId = trip_id || DEFAULT_TRIP_ID;
+    if (!trip_id) return res.status(400).json({ error: 'trip_id requerido — selecciona un viaje activo' });
+    const tripId = trip_id;
 
     const client = new Anthropic({ apiKey });
     let sb = null;
     try { sb = getSupabase(); } catch (e) { /* Supabase opcional, sin él Claudia chatea pero no escribe */ }
 
     // Contexto dinámico del viaje activo (cualquier viaje)
-    let trip = null, cities = [], hotels = [];
+    let trip = null, cities = [], hotels = [], travelers = [];
     if (sb) {
       try {
-        const [tr, ci, ho] = await Promise.all([
+        const [tr, ci, ho, tv] = await Promise.all([
           sb.from('eurotrip_trips').select('*').eq('id', tripId).single(),
           sb.from(tableName('trip_cities')).select('name,start_date,end_date').eq('trip_id', tripId).order('start_date', { ascending: true, nullsFirst: false }),
-          sb.from(tableName('hotel_choices')).select('city,hotel_name,confirmed').eq('trip_id', tripId)
+          sb.from(tableName('hotel_choices')).select('city,hotel_name,confirmed').eq('trip_id', tripId),
+          sb.from(tableName('trip_travelers')).select('name,emoji').eq('trip_id', tripId).order('sort_order', { ascending: true })
         ]);
-        trip = tr.data || null; cities = ci.data || []; hotels = ho.data || [];
+        trip = tr.data || null; cities = ci.data || []; hotels = ho.data || []; travelers = tv.data || [];
       } catch (e) { /* sin contexto, Claudia sigue con prompt base */ }
     }
-    const system = ROLE_PROMPT + tripContextBlock(trip, cities, hotels) + (tripId === DEFAULT_TRIP_ID ? EUROTRIP_KNOWLEDGE : '');
+    const toolCtx = { travelers, homeCurrency: trip?.home_currency || 'MXN' };
+    const system = ROLE_PROMPT + tripContextBlock(trip, cities, hotels, travelers);
 
     // Sliding window de 12 turnos (antes 20) — reduce input tokens ~40% en conversaciones largas
     let conversation = messages.slice(-12);
@@ -490,6 +525,7 @@ export default async function handler(req, res) {
       // Si terminó normal sin tools, devuelve respuesta
       if (response.stop_reason !== 'tool_use') {
         const reply = response.content.filter(b => b.type === 'text').map(b => b.text).join('\n');
+        await persistChat(sb, tripId, messages, reply);
         return res.status(200).json({ reply, usage: response.usage, tool_events: toolEvents });
       }
 
@@ -498,7 +534,7 @@ export default async function handler(req, res) {
       const toolResults = [];
       for (const block of response.content) {
         if (block.type !== 'tool_use') continue;
-        const result = await executeTool(sb, tripId, block.name, block.input);
+        const result = await executeTool(sb, tripId, block.name, block.input, toolCtx);
         toolEvents.push({ tool: block.name, input: block.input, result });
         toolResults.push({
           type: 'tool_result',
@@ -510,6 +546,7 @@ export default async function handler(req, res) {
       // Si no hay custom tools que ejecutar (solo server tools), regresar respuesta
       if (toolResults.length === 0) {
         const reply = response.content.filter(b => b.type === 'text').map(b => b.text).join('\n');
+        await persistChat(sb, tripId, messages, reply);
         return res.status(200).json({ reply, usage: response.usage, tool_events: toolEvents });
       }
 
@@ -523,4 +560,17 @@ export default async function handler(req, res) {
     console.error('chat.js error:', error);
     return res.status(500).json({ error: error?.message || 'Error interno' });
   }
+}
+
+// Persiste el último turno (mensaje del usuario + respuesta) en el historial del viaje.
+// Best-effort: si falla, el chat sigue funcionando (solo se pierde el historial).
+async function persistChat(sb, tripId, messages, reply) {
+  if (!sb || !tripId || !reply) return;
+  try {
+    const lastUser = [...messages].reverse().find(m => m.role === 'user' && typeof m.content === 'string');
+    const rows = [];
+    if (lastUser) rows.push({ trip_id: tripId, role: 'user', content: lastUser.content.slice(0, 4000) });
+    rows.push({ trip_id: tripId, role: 'assistant', content: String(reply).slice(0, 8000) });
+    await sb.from(tableName('chat_messages')).insert(rows);
+  } catch (e) { /* best-effort */ }
 }

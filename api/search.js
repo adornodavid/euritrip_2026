@@ -1,7 +1,7 @@
 // Vercel Serverless Function · búsqueda real de vuelos/hoteles/aeropuertos (Skyscanner via RapidAPI)
 // GET /api/search?type=airports&q=bilbao
-// GET /api/search?type=flights&origin=MTY&destination=CDG&date=2026-10-15&returnDate=2026-10-31&adults=2
-// GET /api/search?type=hotels&city=San%20Sebastián&checkin=2026-10-22&checkout=2026-10-24&adults=2
+// GET /api/search?type=flights&origin=MTY&destination=CDG&date=YYYY-MM-DD[&returnDate=YYYY-MM-DD]&adults=2
+// GET /api/search?type=hotels&city=<ciudad>&checkin=YYYY-MM-DD&checkout=YYYY-MM-DD&adults=2
 // origin/destination/city aceptan texto libre (se resuelven con autocomplete) o código IATA.
 import { hasKey, searchAirports, searchFlights, searchHotels } from './_skyscanner.js';
 
