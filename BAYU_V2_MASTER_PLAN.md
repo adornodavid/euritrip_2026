@@ -485,6 +485,8 @@ Fase 0 (auth+RLS) ──► Fase 1 (de-hardcodeo) ──► Fase 2 (Capacitor)
 
 - 0 y 1 son secuenciales y bloqueantes (la seguridad primero; sin ella, todo lo
   demás es construir sobre arena).
+- **El rediseño visual/UX vive en `BAYU_V2_DESIGN_SYSTEM.md`** (sprints D1-D4):
+  correrlo en paralelo con la Fase 1, porque ambos reescriben las mismas pantallas.
 - 3 puede avanzar en paralelo con 2 (es mayormente backend+UI web).
 - 4 requiere 2 (los SDKs de ads/IAP son nativos).
 - 5 puede empezar su parte de API/UI tras la Fase 1 (los deep links funcionan en
