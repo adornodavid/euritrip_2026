@@ -25,8 +25,8 @@
 - ✅ Plan maestro v2 + borrador SQL + `CLAUDE.md` (PR #1).
 - ✅ Design system RÁFAGA documentado (PR #2).
 
-### Hecho y en la rama `claude/euritrip-analysis-updates-ugm10o` (NO en main aún)
-- ✅ **Sprint D1 + orbe D2 IMPLEMENTADOS** (commit `0ec6f47`):
+- ✅ **Rediseño RÁFAGA (Sprint D1 + orbe D2) EN PRODUCCIÓN** (PR #3, aprobado
+  por David tras revisar el preview). Detalle de lo implementado:
   - `app/ui.css` nueva: design tokens RÁFAGA (azul `#3056F5`, un gradiente de
     firma azul→violeta, ámbar `--live` solo para HOY), reemplaza las 5 capas
     de CSS inline de `index.html`.
@@ -39,27 +39,21 @@
     los `confirm()/prompt()/alert()` nativos; validaciones → toasts.
   - `wkey()` ahora es async (sheet en vez de prompt). manifest + theme-color
     al azul nuevo. sw.js cache `bayu-v11-rafaga`.
-- 🔍 **Preview en vivo** (Vercel lo genera automático al pushear la rama):
-  https://euritrip-2026-git-claude-96bd33-adornodavid-gmailcoms-projects.vercel.app
-  (protegido con Vercel Authentication — entrar logueado en Vercel, o generar
-  link compartible con el tool `get_access_to_vercel_url` del MCP de Vercel).
-  ⚠️ El preview usa la MISMA DB de producción: lo que guardes ahí es real.
-
-### Pendiente de decisión de David
-- [ ] **Aprobar el rediseño RÁFAGA** (verlo en el preview) → al aprobar, merge
-      de la rama a `main` = el rediseño sale a producción.
+- 💡 Tip de previews: Vercel genera un preview automático con cada push a la
+  rama (protegido con Vercel Authentication — entrar logueado, o generar link
+  compartible con el tool `get_access_to_vercel_url` del MCP de Vercel).
+  ⚠️ Los previews usan la MISMA DB de producción: lo que guardes ahí es real.
 
 ---
 
 ## 🧭 Siguientes pasos (en orden recomendado)
 
-1. **Aprobar/ajustar rediseño** y mergear la rama (lleva el rediseño a prod).
-2. **Fase 0 del master plan** (BLOQUEANTE): Supabase Auth + RLS real.
+1. **Fase 0 del master plan** (BLOQUEANTE): Supabase Auth + RLS real.
    Prompt: *"Lee BAYU_V2_MASTER_PLAN.md y ejecuta la Fase 0"*.
-3. **Fase 1**: de-hardcodeo total (inventario completo en §1.3 del master plan).
-4. **Sprints D3-D4 del diseño**: Modo HOY, wizard de viaje, gastos fintech.
+2. **Fase 1**: de-hardcodeo total (inventario completo en §1.3 del master plan).
+3. **Sprints D3-D4 del diseño**: Modo HOY, wizard de viaje, gastos fintech.
    Prompt: *"Lee BAYU_V2_DESIGN_SYSTEM.md y ejecuta el Sprint D3"*.
-5. Fases 2-6: Capacitor → Explore dinámico → ads+Pro → afiliados → stores.
+4. Fases 2-6: Capacitor → Explore dinámico → ads+Pro → afiliados → stores.
 
 ---
 
@@ -80,8 +74,9 @@
   con evidencia (color de Airbnb `#FF5A5F`, emojis como íconos, confirm()
   nativos, CSS en 5 capas), identidad RÁFAGA, navegación 5 tabs + orbe,
   Modo HOY, wizard conversacional, sprints D1-D4.
-- **Sprint D1+orbe IMPLEMENTADO** en la rama (commit `0ec6f47`) y verificado
-  con preview deploy de Vercel. main NO tocado.
+- **Sprint D1+orbe IMPLEMENTADO** (commit `0ec6f47`), verificado en preview
+  de Vercel, aprobado por David y **mergeado a producción (PR #3)**.
+- `BAYU_V2_STATUS.md` creado como punto de entrada para retomar sesiones.
 - Decisiones tomadas: Capacitor (no React Native), Supabase Auth (no Auth0),
   AdMob+RevenueCat (no Stripe-only), Travelpayouts como red principal de
   afiliados, tablas renombradas a `bayu_*` en la migración v2.
