@@ -48,12 +48,16 @@
 
 ## 🧭 Siguientes pasos (en orden recomendado)
 
-1. **Fase 0 del master plan** (BLOQUEANTE): Supabase Auth + RLS real.
-   Prompt: *"Lee BAYU_V2_MASTER_PLAN.md y ejecuta la Fase 0"*.
-2. **Fase 1**: de-hardcodeo total (inventario completo en §1.3 del master plan).
-3. **Sprints D3-D4 del diseño**: Modo HOY, wizard de viaje, gastos fintech.
+1. **Fase 0 del master plan** (BLOQUEANTE para friends & family): Supabase Auth + RLS real.
+   Prompt: *"Lee BAYU_V2_MASTER_PLAN.md y ejecuta la Fase 0"*. (David decidió 11-jun
+   ejecutar Fase 1 primero; Fase 0 sigue siendo requisito antes de invitar usuarios.)
+2. **Sprints D3-D4 del diseño**: Modo HOY, wizard de viaje, gastos fintech.
    Prompt: *"Lee BAYU_V2_DESIGN_SYSTEM.md y ejecuta el Sprint D3"*.
-4. Fases 2-6: Capacitor → Explore dinámico → ads+Pro → afiliados → stores.
+3. Fases 2-6: Capacitor → Explore dinámico → ads+Pro → afiliados → stores.
+
+> ✅ **Fase 1 (de-hardcodeo) EJECUTADA el 11-jun** — ver bitácora abajo. Pendientes
+> menores de Fase 1: onboarding-wizard completo (es parte de D4/Fase 0) y normales
+> climáticas para fechas >16 días (se quitó el fallback hardcodeado de octubre).
 
 ---
 
@@ -80,6 +84,30 @@
 - Decisiones tomadas: Capacitor (no React Native), Supabase Auth (no Auth0),
   AdMob+RevenueCat (no Stripe-only), Travelpayouts como red principal de
   afiliados, tablas renombradas a `bayu_*` en la migración v2.
+
+### Sesión 11 jun 2026 (Claude Code local — tarde 2) — FASE 1: de-hardcodeo total ejecutada
+- **Migración DB aplicada** (`sql/2026-06-11-fase1-dehardcodeo.sql`): `trips.home_currency`
+  + `trips.guide_url` · `trip_cities.lat/lng/country_code` (backfill 7 ciudades Eurotrip) ·
+  tablas nuevas `eurotrip_trip_travelers` (seed David+Paty), `eurotrip_packing_items`,
+  `eurotrip_chat_messages` (RLS + GRANTs + reload schema). Conocimiento del prompt viejo
+  de Claudia → 3 notas del viaje en DB.
+- **api/**: fuera `DEFAULT_TRIP_ID` (sin trip activo = error 400 explícito), fuera
+  `EUROTRIP_KNOWLEDGE`, prompt de Claudia 100% dinámico (viajeros + moneda base del trip),
+  historial de chat persistente por viaje (GET /api/chat?trip= + insert post-turno),
+  tool nueva `add_packing_items`, TABLES += trip_travelers/packing_items.
+- **app/main.js + index.html**: pagadores dinámicos desde `trip_travelers` (split, chips,
+  modal) · `money()`/fxCalc por `home_currency` con tasa en vivo (frankfurter.dev, caché
+  24h, fallback manual) · clima por geocoding Open-Meteo (al guardar ciudad + auto-heal
+  de ciudades sin coords; fuera WX_COORDS/WX_OCT) · tips/chips/emergencia genéricos
+  (emergencia = dataset por país ISO de las ciudades) · empaque en DB con migración 1-vez
+  desde localStorage + "lista básica"/Claudia · sugerencias hardcodeadas fuera (cards
+  genéricas Tours/Qué ver/Videos/Ideas IA hasta el motor de Fase 3) · guía `/guia` gated
+  por `trips.guide_url` · localStorage `eurotrip_*`→`bayu_*` con migración suave ·
+  viajeros editables en Perfil · moneda base en modal de viaje · sw cache `bayu-v12-fase1`.
+- **Regla de oro verificada**: `grep -riE "david|paty|eurotrip|2026-10|<ciudades>" app/ api/ index.html sw.js`
+  = 0 hits funcionales (solo claves localStorage legacy en código de migración).
+- Diferido consciente: wizard onboarding completo (D4), normales climáticas >16 días,
+  rename de tablas `eurotrip_*`→`bayu_*` (va con la migración v2 de Fase 0).
 
 ### Sesión 11 jun 2026 (Claude Code local — tarde) — búsqueda real de vuelos/hoteles portada de Bayu v1
 - **Auditoría de Bayu v1** (Next.js en `Proyectos Claude Code/Personal David/BAYU/bayu-app`):

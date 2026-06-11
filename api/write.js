@@ -1,7 +1,7 @@
 // POST /api/write → escribir en cualquier tabla del viaje activo
-// Requiere header X-Write-Key con la clave EUROTRIP_WRITE_KEY (David + Paty la conocen)
+// Requiere header X-Write-Key con la clave EUROTRIP_WRITE_KEY (compartida del viaje — muere con auth en Fase 0)
 // Multi-viaje: las tablas de datos se escopan por trip_id (del body); la tabla 'trips' es global.
-import { getSupabase, WRITE_TABLES, tableName, checkWriteKey, DEFAULT_TRIP_ID } from './_supabase.js';
+import { getSupabase, WRITE_TABLES, tableName, checkWriteKey } from './_supabase.js';
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -19,8 +19,11 @@ export default async function handler(req, res) {
   }
 
   const isTrips = table === 'trips';
-  // trip activo: del body (trip_id) o, como red de seguridad, el viaje semilla
-  const tripId = isTrips ? null : (req.body?.trip_id || DEFAULT_TRIP_ID);
+  // trip activo: SIEMPRE explícito del body — sin viaje activo no hay escritura
+  const tripId = isTrips ? null : req.body?.trip_id;
+  if (!isTrips && !tripId) {
+    return res.status(400).json({ error: 'trip_id requerido — selecciona un viaje activo' });
+  }
 
   try {
     const sb = getSupabase();

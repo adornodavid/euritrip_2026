@@ -28,7 +28,9 @@ export default async function handler(req, res) {
     // budget se ordena por sort_order ASC; expenses por expense_date DESC; demás por created_at DESC
     const ORDER = {
       budget: { col: 'sort_order', asc: true },
-      expenses: { col: 'expense_date', asc: false }
+      expenses: { col: 'expense_date', asc: false },
+      trip_travelers: { col: 'sort_order', asc: true },
+      packing_items: { col: 'sort_order', asc: true }
     };
     for (const logical of TABLES) {
       let q = sb.from(tableName(logical)).select('*');

@@ -15,15 +15,12 @@ export function getSupabase() {
 }
 
 // Tablas de datos por-viaje (todas tienen trip_id). data.js itera sobre estas.
-export const TABLES = ['notes', 'bookmarks', 'reservations', 'hotel_choices', 'day_overrides', 'expenses', 'budget', 'activities', 'trip_cities', 'media'];
+export const TABLES = ['notes', 'bookmarks', 'reservations', 'hotel_choices', 'day_overrides', 'expenses', 'budget', 'activities', 'trip_cities', 'media', 'trip_travelers', 'packing_items'];
 // Tablas escribibles = las de datos + la tabla de viajes (sin trip_id propio)
 export const WRITE_TABLES = [...TABLES, 'trips'];
 export const tableName = (logical) => `eurotrip_${logical}`;
 
-// Viaje semilla (Eurotrip) — fallback si un cliente no manda trip_id
-export const DEFAULT_TRIP_ID = 'e0000000-0000-4000-8000-000000000001';
-
-// Verifica write key (clave compartida David/Paty)
+// Verifica write key (clave compartida del viaje — muere con auth real en Fase 0)
 export function checkWriteKey(req) {
   const writeKey = process.env.EUROTRIP_WRITE_KEY;
   if (!writeKey) return { ok: false, error: 'EUROTRIP_WRITE_KEY no configurada en Vercel' };

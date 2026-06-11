@@ -1,6 +1,6 @@
-const CACHE='bayu-v11-rafaga';
+const CACHE='bayu-v12-fase1';
 const CORE=['/','/manifest.json','/app/main.js','/app/ui.css','/app/icon-192.png','/app/icon-512.png','/app/apple-touch.png','/app/favicon.png'];
-const IMGS=['/images/paris/eiffel.jpg','/images/bordeaux/place-bourse.jpg','/images/san-sebastian/bahia.jpg','/images/bilbao/panoramica.jpg','/images/madrid/palacio-real.jpg'];
+const IMGS=[]; // covers de viajes son URLs dinámicas — sin precache de imágenes fijas
 self.addEventListener('install',e=>{e.waitUntil((async()=>{
   const c=await caches.open(CACHE);
   await c.addAll(CORE);                 // core: si falla, falla install (correcto)
