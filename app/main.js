@@ -444,8 +444,8 @@ function renderPerfil(){const hotels=DATA.hotel_choices||[];
   const _pq=queueGet().length;if(_pq)h+='<div class="bcard" style="background:#FFF3B0;color:#7a6a00;font-weight:700">⏳ '+_pq+' cambios pendientes <button class="chip" onclick="flushQueue()">Sincronizar</button></div>';
   const _tm=localStorage.getItem('bayu_theme')||'auto';
   h+='<div class="bcard"><div class="lbl" style="margin-bottom:.4rem">🎨 Tema</div><div class="seg">'+['light','auto','dark'].map(function(x){return '<button class="seg-btn'+(_tm===x?' on':'')+'" onclick="setTheme(\''+x+'\')">'+({light:'☀️ Claro',auto:'🔄 Auto',dark:'🌙 Oscuro'}[x])+'</button>';}).join('')+'</div></div>';
-  h+=''+(TRIP&&TRIP.guide_url?'<a class="pf-btn" href="'+esc(TRIP.guide_url)+'">📖 Guía editorial completa</a>':'')+'<button class="pf-btn" onclick="infoSheet(\'Instalar Bayu\',\'iPhone: Safari → Compartir → Agregar a pantalla de inicio. Android: Chrome → menú ⋮ → Instalar app.\')">📲 Cómo instalar la app</button><button class="pf-btn" onclick="load();showToast(\'Actualizado ✓\')">🔄 Recargar datos</button><button class="pf-btn" onclick="logout()" style="color:var(--red);font-weight:700">🚪 Cerrar sesión</button>';
-  h+='<div style="text-align:center;color:var(--muted);font-size:.74rem;margin-top:1rem">Bayu v12 · Arkamia Lab</div>';$('perfil-root').innerHTML=h;}
+  h+=''+(TRIP&&TRIP.guide_url?'<a class="pf-btn" href="'+esc(TRIP.guide_url)+'">📖 Guía editorial completa</a>':'')+'<button class="pf-btn" onclick="infoSheet(\'Instalar Bayu\',\'iPhone: Safari → Compartir → Agregar a pantalla de inicio. Android: Chrome → menú ⋮ → Instalar app.\')">📲 Cómo instalar la app</button><button class="pf-btn" onclick="load();showToast(\'Actualizado ✓\')">🔄 Recargar datos</button><button class="pf-btn" onclick="forceUpdate()">⬆️ Actualizar app</button><button class="pf-btn" onclick="logout()" style="color:var(--red);font-weight:700">🚪 Cerrar sesión</button>';
+  h+='<div style="text-align:center;color:var(--muted);font-size:.74rem;margin-top:1rem">Bayu v13.4 · Arkamia Lab</div>';$('perfil-root').innerHTML=h;}
 function applyTheme(){var m=localStorage.getItem('bayu_theme')||'auto';var d=m==='dark'||(m==='auto'&&matchMedia('(prefers-color-scheme:dark)').matches);document.documentElement.setAttribute('data-theme',d?'dark':'light');}
 function setTheme(m){localStorage.setItem('bayu_theme',m);applyTheme();renderPerfil();showToast('Tema: '+({light:'Claro',auto:'Auto',dark:'Oscuro'}[m]||m));}
 async function addTraveler(){const n=await promptSheet('Nombre del viajero','Ej: Ana','Agregar');if(!n)return;
@@ -613,4 +613,15 @@ document.addEventListener('touchend',()=>{if(ptrOn&&$('ptr').classList.contains(
 initAuth();
 if(!localStorage.getItem('bayu_onboarded')){var _o=document.getElementById('onb');if(_o)_o.classList.add('show');}
 function closeOnb(){var o=document.getElementById('onb');if(o)o.classList.remove('show');localStorage.setItem('bayu_onboarded','1');}
-if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('/sw.js').catch(()=>{}));}
+async function forceUpdate(){showToast('Buscando versión nueva…');
+  try{const rs=await navigator.serviceWorker.getRegistrations();await Promise.all(rs.map(r=>r.unregister()));}catch(e){}
+  try{const ks=await caches.keys();await Promise.all(ks.map(k=>caches.delete(k)));}catch(e){}
+  location.reload();}
+if('serviceWorker' in navigator){
+  window.addEventListener('load',()=>navigator.serviceWorker.register('/sw.js').catch(()=>{}));
+  let _swReloaded=false;
+  navigator.serviceWorker.addEventListener('controllerchange',function(){
+    if(_swReloaded)return;_swReloaded=true;
+    if(navigator.serviceWorker.controller){showToast('Versión nueva — actualizando…');setTimeout(()=>location.reload(),600);}
+  });
+}
