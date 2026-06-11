@@ -105,8 +105,13 @@
   Murió `wkey()`/EUROTRIP_WRITE_KEY.
 - **Criterio de aceptación PASS** (usuarios de prueba A/B): B no lee ni escribe NADA de A
   ni del Eurotrip (REST directo 0 rows/403 y API 401/403); login E2E en browser limpio.
-- **PENDIENTE INMEDIATO**: David+Paty se registran → ownership migration (owner_id +
-  Paty editor) → drop vistas compat → quitar EUROTRIP_WRITE_KEY de Vercel.
+- **CIERRE (misma noche)**: Google rebotaba a Stream Match → causa: `uri_allow_list`
+  del proyecto compartido solo tenía el dominio de Stream Match; parcheada vía
+  Management API (token del CLI en keychain) agregando Bayu prod + previews, SIN tocar
+  Site URL. La cuenta de David **ya existía** (adorno.david@gmail.com, de Stream Match
+  feb-2026) → ownership aplicado: 2 viajes → David owner + perfil creado. Vistas compat
+  `eurotrip_*` ELIMINADAS. `EUROTRIP_WRITE_KEY` borrada de Vercel. Falta: Paty se
+  registra y David la invita desde Perfil (self-service).
 - Pendiente Fase 0.5: bucket privado de Storage con URLs firmadas (media sigue en bucket
   público `eurotrip`); SMTP propio si las confirmaciones de email se activan.
 
