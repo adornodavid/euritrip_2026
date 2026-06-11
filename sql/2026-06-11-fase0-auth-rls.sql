@@ -191,3 +191,9 @@ notify pgrst, 'reload schema';
 --      insert into bayu_trip_members (trip_id,user_id,role) ... Paty como editor del Eurotrip.
 --   3. (opcional, semanas después) drop table v1_bayu_*;
 -- ============================================================================
+
+-- FIX post-aplicación: policies públicas viejas con nombres no estandarizados
+-- (de migraciones v7/v8) que sobrevivieron al rename — eliminadas.
+-- activities_select_public/write_service · eurotrip_budget public read/service write
+-- · eurotrip_expenses public read/service write · media_select_public/write_service
+-- · tc_select_public/tc_write_service
