@@ -33,7 +33,13 @@ async function authUp(){const em=$('au-email').value.trim(),pw=$('au-pass').valu
 async function authGoogle(){await sbc.auth.signInWithOAuth({provider:'google',options:{redirectTo:location.origin,queryParams:{prompt:'select_account'}}});}
 async function authForgot(){let em=$('au-email').value.trim();if(!em)em=await promptSheet('Tu email','correo@ejemplo.com','Enviar');if(!em)return;
   await sbc.auth.resetPasswordForEmail(em,{redirectTo:location.origin});infoSheet('Revisa tu correo','Si la cuenta existe, te llegará un link para restablecer la contraseña.');}
-async function logout(){if(await confirmSheet('¿Cerrar sesión?','Vuelves a entrar con tu mismo correo o Google cuando quieras.','Cerrar sesión'))await sbc.auth.signOut();}
+async function logout(){if(!await confirmSheet('¿Cerrar sesión?','Vuelves a entrar con tu mismo correo o Google cuando quieras.','Cerrar sesión'))return;
+  try{await sbc.auth.signOut({scope:'local'});}catch(e){}
+  /* limpieza forzada: aunque el signOut remoto falle, esta sesión local MUERE */
+  try{Object.keys(localStorage).filter(function(k){return k.indexOf('sb-')===0;}).forEach(function(k){localStorage.removeItem(k);});}catch(e){}
+  SESSION=null;DATA={};TRIPS=[];TRIP=null;chatStarted=false;chatMsgs=[];localStorage.removeItem('bayu_trip_id');
+  var cl=$('chat-log');if(cl)cl.innerHTML='';var pr=$('planner-root');if(pr)pr.innerHTML='';
+  showAuth();showToast('Sesión cerrada ✓');go('planner');}
 async function exportData(){try{const r=await fetch('/api/account?action=export',{headers:authHeaders()});const j=await r.json();const b=new Blob([JSON.stringify(j,null,1)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='bayu-export.json';a.click();showToast('Export descargado ✓');}catch(e){showToast('Error al exportar',true);}}
 async function deleteAccount(){const c=await promptSheet('⚠️ Borra tu cuenta y TODOS tus viajes. Escribe BORRAR para confirmar','BORRAR','Borrar todo');if(c!=='BORRAR')return;
   try{const r=await fetch('/api/account',{method:'POST',headers:Object.assign({'Content-Type':'application/json'},authHeaders()),body:JSON.stringify({action:'delete',confirm:'BORRAR'})});const j=await r.json();
