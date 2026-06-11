@@ -4,6 +4,7 @@
 
 import Anthropic from '@anthropic-ai/sdk';
 import { getSupabase, TABLES, tableName, DEFAULT_TRIP_ID } from './_supabase.js';
+import { hasKey as hasSkyKey, searchFlights as skyFlights, searchHotels as skyHotels, compactFlights, compactHotels } from './_skyscanner.js';
 
 // Prompt GENÉRICO (aplica a cualquier viaje). El contexto del viaje activo se inyecta dinámico abajo.
 const ROLE_PROMPT = `Eres "Claudia", la asistente de viaje de David y Paty dentro de la app Bayu.
@@ -29,7 +30,9 @@ CÓMO USAR TUS HERRAMIENTAS (sin preguntar, salvo que falte info crítica):
 8. list_saved — ver qué hay guardado.
 9. update_record — editar un registro. SIEMPRE pide confirmación. Para 'budget' el id es la category; para lo demás el id es el UUID (obténlo con list_saved). patch = solo los campos a cambiar.
 10. delete_record — borrar un registro. SIEMPRE pide confirmación.
-11. reorder_day — OPTIMIZAR/REORDENAR un día completo del planner de una sola vez. Cuando te pidan "optimizar el día" (o el mensaje ya trae las actividades con sus ids): propón el nuevo orden lógico por cercanía geográfica + horarios sensatos (comidas, apertura de museos) con una hora para cada una, MUÉSTRALO y pregunta "¿confirmas?" UNA sola vez; al recibir el sí, llama reorder_day con date y order=[{id,start_time},...] en el nuevo orden cronológico. No hagas update_record uno por uno para esto.
+11. search_flights — BÚSQUEDA REAL de vuelos con precios en vivo (Skyscanner). Úsala cuando pidan "busca vuelos", precios o comparar opciones aéreas. Prefiérela SIEMPRE sobre web_search para vuelos. Acepta ciudades en texto libre o código IATA. Muestra 3-5 opciones con precio, horarios, escalas y el [link para reservar](url) — recuérdales que la compra la completan ellos.
+12. search_hotels — BÚSQUEDA REAL de hoteles con precios en vivo por noche y links de reserva (Skyscanner). Úsala cuando pidan opciones de hotel en una ciudad (ej: definir hotel de San Sebastián o Bilbao). Prefiérela SIEMPRE sobre web_search para hoteles. Muestra las mejores 3-5 opciones (nombre, estrellas, review, zona, precio/noche, [link](url) y foto si hay). Si eligen uno, ofrécete a guardarlo con set_hotel_choice.
+13. reorder_day — OPTIMIZAR/REORDENAR un día completo del planner de una sola vez. Cuando te pidan "optimizar el día" (o el mensaje ya trae las actividades con sus ids): propón el nuevo orden lógico por cercanía geográfica + horarios sensatos (comidas, apertura de museos) con una hora para cada una, MUÉSTRALO y pregunta "¿confirmas?" UNA sola vez; al recibir el sí, llama reorder_day con date y order=[{id,start_time},...] en el nuevo orden cronológico. No hagas update_record uno por uno para esto.
 
 REGLA CRÍTICA UPDATE/DELETE — OBLIGATORIA:
 1) Si no sabes el id exacto, usa list_saved primero. 2) Resume qué exacto vas a cambiar/borrar (descripción + id corto). 3) Termina con "¿Confirmas?" y ESPERA un sí. 4) Solo entonces ejecuta. INSERT (add_*, set_*) NO requiere confirmación.
@@ -42,6 +45,8 @@ CÓMO RESPONDER — ES UNA CONVERSACIÓN, no un reporte:
 - FOTOS y LINKS: puedes mostrar imágenes con Markdown ![descripción](url-de-imagen) y enlaces con [texto](url). Cuando uses web_search y encuentres una foto o página útil, inclúyela así. Usa URLs reales que encuentres, no inventadas.
 - Tras guardar algo, confirma breve: "✅ Anoté que…".
 - Precios en MXN y, si aplica, en su moneda original. No inventes datos; si no sabes, dilo o usa web_search.
+
+FALLBACK DE BÚSQUEDAS: si search_flights o search_hotels devuelven error o 0 resultados, dilo honesto ("el buscador de precios anda fallando ahorita") y ofrece intentar con web_search como plan B. NO inventes precios.
 
 ACCESO A INTERNET (web_search): úsalo para info que cambia (horarios, precios, links oficiales, reseñas, clima) o que no tengas en contexto. Cita las fuentes con [link](url). NO lo uses para info que ya tienes en este prompt. NO uses tool calls para preguntas simples informacionales.`;
 
@@ -268,6 +273,38 @@ const TOOLS = [
       required: ['date', 'order']
     }
   },
+  {
+    name: 'search_flights',
+    description: 'Búsqueda REAL de vuelos con precios en vivo (Skyscanner). Devuelve hasta 5 opciones ordenadas por precio con horarios, escalas y link para reservar. Usar SIEMPRE en vez de web_search para precios de vuelos.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        origin: { type: 'string', description: 'Ciudad o aeropuerto de origen (texto libre o IATA, ej: "Monterrey" o "MTY")' },
+        destination: { type: 'string', description: 'Ciudad o aeropuerto destino (ej: "Bilbao" o "BIO")' },
+        date: { type: 'string', description: 'Fecha de salida YYYY-MM-DD' },
+        returnDate: { type: 'string', description: 'Fecha de regreso YYYY-MM-DD (solo si es redondo)' },
+        adults: { type: 'number', description: 'Pasajeros adultos (default 1)' },
+        cabinClass: { type: 'string', enum: ['economy', 'premium_economy', 'business', 'first'], description: 'Cabina (default economy)' },
+        currency: { type: 'string', enum: ['MXN', 'EUR', 'USD'], description: 'Moneda de precios (default MXN)' }
+      },
+      required: ['origin', 'destination', 'date']
+    }
+  },
+  {
+    name: 'search_hotels',
+    description: 'Búsqueda REAL de hoteles con precios en vivo por noche, reviews y links de reserva (Skyscanner). Devuelve hasta 6 opciones. Usar SIEMPRE en vez de web_search para precios de hoteles.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        city: { type: 'string', description: 'Ciudad (texto libre, ej: "San Sebastián")' },
+        checkin: { type: 'string', description: 'Fecha check-in YYYY-MM-DD' },
+        checkout: { type: 'string', description: 'Fecha check-out YYYY-MM-DD' },
+        adults: { type: 'number', description: 'Huéspedes adultos (default 2)' },
+        currency: { type: 'string', enum: ['MXN', 'EUR', 'USD'], description: 'Moneda de precios (default MXN)' }
+      },
+      required: ['city', 'checkin', 'checkout']
+    }
+  },
   // Server-side web search tool — Anthropic ejecuta la búsqueda y retorna resultados con citations
   // max_uses bajo para reducir consumo de tokens (cada búsqueda mete ~5KB de contexto)
   {
@@ -281,6 +318,19 @@ const TOOLS = [
 async function executeTool(sb, tripId, name, input) {
   const tagged = { ...input, created_by: 'claudia', trip_id: tripId };
   try {
+    // Búsquedas reales (Skyscanner) — no tocan la DB, no requieren confirmación
+    if (name === 'search_flights') {
+      if (!hasSkyKey()) return { ok: false, error: 'RAPIDAPI_KEY no configurada — avisa a David que falta en Vercel' };
+      const flights = await skyFlights(input);
+      if (!flights.length) return { ok: true, count: 0, message: 'Sin resultados para esa búsqueda' };
+      return { ok: true, count: flights.length, results: compactFlights(flights) };
+    }
+    if (name === 'search_hotels') {
+      if (!hasSkyKey()) return { ok: false, error: 'RAPIDAPI_KEY no configurada — avisa a David que falta en Vercel' };
+      const hotels = await skyHotels(input);
+      if (!hotels.length) return { ok: true, count: 0, message: 'Sin resultados para esa búsqueda' };
+      return { ok: true, count: hotels.length, results: compactHotels(hotels) };
+    }
     if (name === 'add_note') {
       const { data, error } = await sb.from(tableName('notes')).insert(tagged).select().single();
       if (error) throw error;
@@ -433,7 +483,7 @@ export default async function handler(req, res) {
         model: 'claude-haiku-4-5-20251001',
         max_tokens: 1536,
         system,
-        tools: sb ? TOOLS : TOOLS.filter(t => t.type === 'web_search_20250305'),
+        tools: sb ? TOOLS : TOOLS.filter(t => t.type === 'web_search_20250305' || t.name === 'search_flights' || t.name === 'search_hotels'),
         messages: conversation
       });
 

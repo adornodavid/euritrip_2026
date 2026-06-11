@@ -6,6 +6,9 @@
     },
     "api/upload.js": {
       "maxDuration": 30
+    },
+    "api/search.js": {
+      "maxDuration": 30
     }
   },
   "headers": [
