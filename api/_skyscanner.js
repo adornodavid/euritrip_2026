@@ -192,7 +192,17 @@ export async function searchHotels(params) {
     locale: 'es-MX'
   });
 
-  const data = await skyGet(`/hotels/search?${qs}`);
+  // La búsqueda de hoteles es asíncrona del lado de Skyscanner: mientras
+  // status.finalStatus no es COMPLETED, hotelCards puede venir vacío → re-pedir
+  let data = await skyGet(`/hotels/search?${qs}`);
+  for (let i = 0; i < 3; i++) {
+    const cards = data.data?.results?.hotelCards;
+    const status = data.data?.status?.finalStatus;
+    if (cards?.length && status === 'COMPLETED') break;
+    if (cards?.length && i >= 1) break; // hay resultados aunque no esté COMPLETED
+    await new Promise((r) => setTimeout(r, 2500));
+    data = await skyGet(`/hotels/search?${qs}`);
+  }
   if (!data.data?.results?.hotelCards) return [];
 
   const nights = Math.max(1, Math.round(
