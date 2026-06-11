@@ -445,7 +445,7 @@ function renderPerfil(){const hotels=DATA.hotel_choices||[];
   const _tm=localStorage.getItem('bayu_theme')||'auto';
   h+='<div class="bcard"><div class="lbl" style="margin-bottom:.4rem">🎨 Tema</div><div class="seg">'+['light','auto','dark'].map(function(x){return '<button class="seg-btn'+(_tm===x?' on':'')+'" onclick="setTheme(\''+x+'\')">'+({light:'☀️ Claro',auto:'🔄 Auto',dark:'🌙 Oscuro'}[x])+'</button>';}).join('')+'</div></div>';
   h+=''+(TRIP&&TRIP.guide_url?'<a class="pf-btn" href="'+esc(TRIP.guide_url)+'">📖 Guía editorial completa</a>':'')+'<button class="pf-btn" onclick="infoSheet(\'Instalar Bayu\',\'iPhone: Safari → Compartir → Agregar a pantalla de inicio. Android: Chrome → menú ⋮ → Instalar app.\')">📲 Cómo instalar la app</button><button class="pf-btn" onclick="load();showToast(\'Actualizado ✓\')">🔄 Recargar datos</button><button class="pf-btn" onclick="forceUpdate()">⬆️ Actualizar app</button><button class="pf-btn" onclick="logout()" style="color:var(--red);font-weight:700">🚪 Cerrar sesión</button>';
-  h+='<div style="text-align:center;color:var(--muted);font-size:.74rem;margin-top:1rem">Bayu v13.4 · Arkamia Lab</div>';$('perfil-root').innerHTML=h;}
+  h+='<div style="text-align:center;color:var(--muted);font-size:.74rem;margin-top:1rem">Bayu v13.5 · Arkamia Lab</div>';$('perfil-root').innerHTML=h;}
 function applyTheme(){var m=localStorage.getItem('bayu_theme')||'auto';var d=m==='dark'||(m==='auto'&&matchMedia('(prefers-color-scheme:dark)').matches);document.documentElement.setAttribute('data-theme',d?'dark':'light');}
 function setTheme(m){localStorage.setItem('bayu_theme',m);applyTheme();renderPerfil();showToast('Tema: '+({light:'Claro',auto:'Auto',dark:'Oscuro'}[m]||m));}
 async function addTraveler(){const n=await promptSheet('Nombre del viajero','Ej: Ana','Agregar');if(!n)return;
@@ -475,6 +475,7 @@ async function saveTrip(){const id=$('mt-id').value,name=$('mt-name').value.trim
   const row={name:name,subtitle:$('mt-sub').value||null,flag:$('mt-flag').value||'🌍',start_date:$('mt-start').value||null,end_date:$('mt-end').value||null,cover_image:$('mt-cover').value||null,status:$('mt-status').value||'planning',home_currency:$('mt-cur').value||'MXN'};
   if(id){await write({action:'update',table:'trips',id:id,patch:row},'Viaje guardado ✓');closeM('m-trip');return;}
   if(!SESSION){showAuth();return;}
+  if(saveTrip._busy)return;saveTrip._busy=true;setTimeout(function(){saveTrip._busy=false;},3000);
   row.created_by='manual';row.owner_id=SESSION.user.id;
   try{const r=await execWrite({action:'insert',table:'trips',row:row});
     if(!r.ok){showToast(r.error||'Error',true);return;}
@@ -486,7 +487,6 @@ async function saveTrip(){const id=$('mt-id').value,name=$('mt-name').value.trim
   }catch(e){showToast('Sin red',true);}
 }
 async function delTrip(){const id=$('mt-id').value;if(!id)return;
-  if(TRIPS.length<=1){showToast('No puedes borrar tu único viaje',true);return;}
   if(!await confirmSheet('¿Borrar este viaje?','Se borra TODO su contenido: actividades, gastos, fotos y reservas. No se puede deshacer.','Borrar todo'))return;
   if(TRIP&&TRIP.id===id)localStorage.removeItem('bayu_trip_id');
   closeM('m-trip');await write({action:'delete',table:'trips',id:id},'Viaje borrado');go('viajes');
@@ -588,6 +588,7 @@ async function execWrite(body){
 }
 async function write(body,okMsg){
   if(!SESSION){showAuth();return;}
+  if(write._busy)return;write._busy=true;setTimeout(function(){write._busy=false;},2200);
   try{const r=await execWrite(body);
     if(!r.ok){showToast(r.error||'Error',true);return;}
     await load();showToast(okMsg||'Listo ✓');
