@@ -504,7 +504,7 @@ export default async function handler(req, res) {
     if (sb) {
       try {
         const [tr, ci, ho, tv] = await Promise.all([
-          sb.from('eurotrip_trips').select('*').eq('id', tripId).single(),
+          sb.from('bayu_trips').select('*').eq('id', tripId).single(),
           sb.from(tableName('trip_cities')).select('name,start_date,end_date').eq('trip_id', tripId).order('start_date', { ascending: true, nullsFirst: false }),
           sb.from(tableName('hotel_choices')).select('city,hotel_name,confirmed').eq('trip_id', tripId),
           sb.from(tableName('trip_travelers')).select('name,emoji').eq('trip_id', tripId).order('sort_order', { ascending: true })
