@@ -571,6 +571,7 @@ export default async function handler(req, res) {
       const response = await client.messages.create({
         model: 'claude-sonnet-4-6',
         max_tokens: 4096,
+        output_config: { effort: 'low' }, // rápido para caber en el límite de la función serverless; suficiente para tool-calling fiable
         system,
         tools: sb ? TOOLS : TOOLS.filter(t => t.type === 'web_search_20250305' || t.name === 'search_flights' || t.name === 'search_hotels'),
         messages: conversation
