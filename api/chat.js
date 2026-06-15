@@ -10,6 +10,9 @@ import { hasKey as hasSkyKey, searchFlights as skyFlights, searchHotels as skyHo
 // Prompt GENÉRICO (aplica a cualquier viaje). El contexto del viaje activo se inyecta dinámico abajo.
 const ROLE_PROMPT = `Eres "Claudia", la asistente de viaje dentro de la app Bayu.
 
+⛔ REGLA #1 — ACTÚA, NO PROMETAS (la más importante):
+Cuando decidas guardar/agregar/editar/borrar algo, EMITE la llamada a la herramienta en ESTE MISMO turno. JAMÁS respondas solo con texto tipo "voy a agregar ahora", "déjame guardarlo", "permíteme un momento", "lo hago ya 🚀" sin incluir la tool call: eso NO guarda nada y deja al viajero esperando algo que nunca pasa. Si vas a usar una herramienta, úsala YA en la misma respuesta. Nada de anunciar acciones futuras. O ejecutas en el acto, o (si te falta un dato crítico) preguntas — nunca prometas. Si tienes que agregar varias actividades, usa add_activities (plural) y mételas TODAS en una sola llamada.
+
 TU ROL: Responder preguntas sobre el VIAJE ACTIVO y ayudar a sus viajeros a guardar información mientras chatean: notas, links útiles, reservaciones (vuelos, hoteles, restaurantes, tours, trenes), hoteles elegidos por ciudad, gastos, actividades del planner, ciudades/paradas, empaque y presupuesto. Los nombres de los viajeros vienen en el bloque "=== VIAJE ACTIVO ===" — dirígete a ellos por su nombre.
 
 MULTI-VIAJE (IMPORTANTE): La app maneja varios viajes. TODO lo que guardes o consultes aplica SOLO al viaje activo (ver "=== VIAJE ACTIVO ===" abajo). Nunca mezcles datos entre viajes. Si te piden algo de otro viaje, diles que lo cambien en la pestaña ✈️ Viajes. Las fechas de actividades/gastos/reservas deben caer dentro del rango del viaje activo.
@@ -27,7 +30,8 @@ CÓMO USAR TUS HERRAMIENTAS (sin preguntar, salvo que falte info crítica):
 4. set_hotel_choice — cuando deciden EL hotel de una ciudad.
 5. set_day_plan — cambios a un día específico.
 6. add_expense — gasto REAL ya pagado. Categorías: flights, hotels, trains, food, attractions, transport, shopping, misc. El monto va en la MONEDA BASE del viaje (ver bloque VIAJE ACTIVO); si pagaron en otra moneda, convierte con la tasa que te digan (o pregúntala/búscala — no inventes una). Defaults: payer="Joint" si hay 2+ viajeros, si no el único viajero; expense_date=hoy.
-7. add_activity — agregar actividad al planner de un día. Puedes ENRIQUECERLA con update_record (link, map_url, tickets, notes, rating).
+7. add_activity — agregar UNA actividad al planner de un día. Puedes ENRIQUECERLA con update_record (link, map_url, tickets, notes, rating).
+7b. add_activities — agregar VARIAS actividades de una sola vez (varios días, o un día con varias paradas + comidas). PREFIÉRELA siempre que vayas a agregar más de una; cada una con su date, title, city, start_time, category, notes y link. Una sola llamada las guarda todas.
 8. list_saved — ver qué hay guardado.
 8b. add_packing_items — agregar varios ítems a la lista de empaque del viaje de una vez (genera listas según destino, clima y duración). Editar/quitar/palomear: update_record/delete_record con table="packing_items".
 9. update_record — editar un registro. SIEMPRE pide confirmación. Para 'budget' el id es la category; para lo demás el id es el UUID (obténlo con list_saved). patch = solo los campos a cambiar.
@@ -186,6 +190,35 @@ const TOOLS = [
         sort_order: { type: 'number', description: 'Orden dentro del dia (opcional)' }
       },
       required: ['activity_date', 'title']
+    }
+  },
+  {
+    name: 'add_activities',
+    description: 'Agregar VARIAS actividades al planner de una sola vez (varios días, o un día con varias paradas/comidas). Úsala SIEMPRE que vayas a agregar más de una actividad — una sola llamada las guarda todas. No la uses para una sola (usa add_activity).',
+    input_schema: {
+      type: 'object',
+      properties: {
+        items: {
+          type: 'array',
+          description: 'Lista de actividades a agregar',
+          items: {
+            type: 'object',
+            properties: {
+              activity_date: { type: 'string', description: 'Fecha YYYY-MM-DD' },
+              title: { type: 'string', description: 'Qué van a hacer' },
+              start_time: { type: 'string', description: 'Hora HH:MM (opcional)' },
+              category: { type: 'string', description: 'comida, museo, paseo, actividad, vinedo, compras, traslado, logistica, flex' },
+              city: { type: 'string', description: 'Ciudad del viaje (de la lista del contexto)' },
+              notes: { type: 'string', description: 'Notas/descripción (opcional)' },
+              link: { type: 'string', description: 'URL de info (opcional)' },
+              map_url: { type: 'string', description: 'URL cómo llegar (opcional)' },
+              tickets: { type: 'string', description: 'Boletos (opcional)' }
+            },
+            required: ['activity_date', 'title']
+          }
+        }
+      },
+      required: ['items']
     }
   },
   {
@@ -394,6 +427,14 @@ async function executeTool(sb, tripId, name, input, ctx) {
       if (error) throw error;
       return { ok: true, message: `Actividad agregada al ${data.activity_date}: ${data.title}`, data };
     }
+    if (name === 'add_activities') {
+      const items = (input.items || []).filter(it => it && it.activity_date && it.title);
+      if (!items.length) return { ok: false, error: 'items[] vacío o sin date/title' };
+      const rows = items.map((it, i) => ({ ...it, trip_id: tripId, created_by: 'claudia', status: 'pendiente', is_suggestion: false, sort_order: it.sort_order != null ? it.sort_order : i + 1 }));
+      const { data, error } = await sb.from(tableName('activities')).insert(rows).select();
+      if (error) throw error;
+      return { ok: true, message: `${data.length} actividades agregadas al planner`, count: data.length, data };
+    }
     if (name === 'add_trip_city') {
       const row = { ...tagged };
       if (!row.end_date) row.end_date = row.start_date;
@@ -525,11 +566,11 @@ export default async function handler(req, res) {
     let safety = 0;
     const toolEvents = [];
 
-    while (safety < 5) {
+    while (safety < 8) {
       safety++;
       const response = await client.messages.create({
-        model: 'claude-haiku-4-5-20251001',
-        max_tokens: 1536,
+        model: 'claude-sonnet-4-6',
+        max_tokens: 4096,
         system,
         tools: sb ? TOOLS : TOOLS.filter(t => t.type === 'web_search_20250305' || t.name === 'search_flights' || t.name === 'search_hotels'),
         messages: conversation
